@@ -1,11 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const { update, upload } = vi.hoisted(() => ({ update: vi.fn(), upload: vi.fn() }))
+const { update, upload, chars } = vi.hoisted(() => ({ update: vi.fn(), upload: vi.fn(), chars: vi.fn() }))
+vi.mock('@/api/wristo/bitmapFont', () => ({ listBitmapFontChars: chars }))
 vi.mock('@/api/wristo/design', () => ({ designApi: { updateDesign: update } }))
 vi.mock('@/api/wristo/upload', () => ({ uploadPersistentDesignAsset: upload }))
 import { saveJsonProject, restoreJsonProject, hydrateJsonProjectFiles, clearJsonProjectFiles } from './jsonProject'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from './packageAssetRegistry'
 const config = () => ({ designId: 'source', name: 'Face', elements: [], properties: {} } as any)
 beforeEach(() => {
+  chars.mockReset().mockResolvedValue({ code: 0, data: [] })
   clearJsonProjectFiles()
   packageFonts.clear(); packageFontBuildFiles.clear(); packageBitmapChars.clear(); packageArchiveExtras.files.clear()
   packageArchiveExtras.productImages = []; packageArchiveExtras.preview = undefined
@@ -142,4 +144,28 @@ it('skips unused library fonts, glyphs and build files before reading or uploadi
   expect(resources.fontBuildFiles).toEqual([])
   expect(resources.files).toEqual([])
   expect(packageFonts.has('unused')).toBe(true)
+})
+
+it('preserves directly referenced bitmap time glyphs independently of text font IDs', async () => {
+  const glyphs = [{ charValue: '0', image: { url: 'https://assets.test/zero.png' } }]
+  packageBitmapChars.set(144, glyphs as any)
+  await saveJsonProject('target', { ...config(), elements: [{ eleType: 'time', fontRenderType: 'bitmap', bitmapFontId: 144, fontFamily: 'roboto-condensed-regular' }] })
+  expect(update.mock.calls[0][0].configJson.studioResources.bitmapChars).toEqual([[144, glyphs]])
+  expect(chars).not.toHaveBeenCalled()
+})
+it('snapshots missing active bitmap glyphs and ignores stale IDs on TTF elements', async () => {
+  const glyphs = [{ charValue: '0', image: { url: 'https://assets.test/zero.png' } }]
+  chars.mockResolvedValue({ code: 0, data: glyphs })
+  await saveJsonProject('target', { ...config(), elements: [
+    { fontRenderType: 'bitmap', bitmapFontId: '144' },
+    { fontRenderType: 'bitmap', bitmapFontId: 144 },
+    { fontRenderType: 'ttf', bitmapFontId: 99 },
+  ] })
+  expect(chars).toHaveBeenCalledTimes(1)
+  expect(chars).toHaveBeenCalledWith(144)
+  expect(update.mock.calls[0][0].configJson.studioResources.bitmapChars).toEqual([[144, glyphs]])
+})
+it('refuses to save an active bitmap reference without glyphs', async () => {
+  await expect(saveJsonProject('target', { ...config(), elements: [{ fontRenderType: 'bitmap', bitmapFontId: 144 }] })).rejects.toThrow(/144/)
+  expect(update).not.toHaveBeenCalled()
 })

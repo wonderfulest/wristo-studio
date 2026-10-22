@@ -1,5 +1,6 @@
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { SaveWrtProgress } from './saveWrtProject'
+import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
 import { designApi } from '@/api/wristo/design'
 import { uploadPersistentDesignAsset } from '@/api/wristo/upload'
 import { migrateWeekdayTokens } from '@/engine/expression/weekdayTokenMigration'
@@ -114,7 +115,8 @@ export async function hydrateJsonProjectFiles(): Promise<void> {
   }
 }
 /** Select dependencies without mutating the editor's registry (undo may still need them). */
-function selectResources(design: unknown) {
+async function selectResources(design: unknown) {
+  const bitmapIds = new Set<number>()
   const slugs = new Set<string>()
   const paths = new Set<string>()
   const walk = (value: any, key = ''): void => {
@@ -122,7 +124,10 @@ function selectResources(design: unknown) {
       paths.add(value)
       if (['fontFamily', 'iconFont', 'assetFontFamily'].includes(key)) slugs.add(canonicalFontSlug(value))
     } else if (Array.isArray(value)) value.forEach(child => walk(child, key))
-    else if (value && typeof value === 'object') Object.entries(value).forEach(([key, child]) => walk(child, key))
+    else if (value && typeof value === 'object') {
+      if (value.fontRenderType === 'bitmap' && Number(value.bitmapFontId) > 0) bitmapIds.add(Number(value.bitmapFontId))
+      Object.entries(value).forEach(([key, child]) => walk(child, key))
+    }
   }
   walk(design)
   // Preserve explicitly attached export images and preview for WRT round trips.
@@ -130,16 +135,23 @@ function selectResources(design: unknown) {
   walk(packageArchiveExtras.preview)
   const fonts = [...packageFonts].filter(([slug]) => slugs.has(canonicalFontSlug(slug)))
   const ids = new Set(fonts.map(([, font]) => font.id))
+  const bitmapChars = new Map([...packageBitmapChars].filter(([id]) => ids.has(id) || bitmapIds.has(id)))
+  for (const id of bitmapIds) {
+    if (bitmapChars.get(id)?.length) continue
+    const response = await listBitmapFontChars(id)
+    if (response.code !== 0 || !response.data?.length) throw new Error(`Missing bitmap glyphs: ${id}`)
+    bitmapChars.set(id, response.data)
+  }
   return {
     fonts,
-    bitmapChars: [...packageBitmapChars].filter(([id]) => ids.has(id)),
+    bitmapChars: [...bitmapChars],
     builds: [...packageFontBuildFiles].filter(([slug]) => slugs.has(canonicalFontSlug(slug))),
     deferredBuilds: deferredBuildFiles.filter(([slug]) => slugs.has(canonicalFontSlug(slug))),
     files: [...packageArchiveExtras.files].filter(([path]) => paths.has(path)),
     deferredFiles: deferredFiles.filter(([path]) => paths.has(path)),
   }
 }
-type SelectedResources = ReturnType<typeof selectResources>
+type SelectedResources = Awaited<ReturnType<typeof selectResources>>
 async function snapshotResources(resources: SelectedResources): Promise<JsonProjectResources> {
   const builds = new Map(resources.deferredBuilds.map(([slug, files]) => [slug, new Map(files)]))
   for (const [slug, files] of resources.builds) {
@@ -193,7 +205,7 @@ export async function saveJsonProject(designUid: string, config: RuntimeDesignCo
   if (!designUid) throw new Error('A design ID is required to save a project')
   options.onSaveProgress?.({ stage: 'assets' })
   const { studioResources: _previous, ...design } = config
-  const resources = selectResources(design)
+  const resources = await selectResources(design)
   await persistResources(design, resources, options.previewDataUrl, options.onSaveProgress)
   const persisted = await persistValue(migrateWeekdayTokens({ ...design, designId: designUid }))
   persisted.studioResources = await snapshotResources(resources)
