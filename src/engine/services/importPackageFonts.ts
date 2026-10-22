@@ -15,9 +15,10 @@ export async function importPackageFonts(config: unknown, isCurrent = () => true
     checkCurrent()
     let remote: DesignFontVO | undefined
     try {
-      remote = (await getFontBySlug(slug)).data
+      remote = (await getFontBySlug(slug, { allowMissing: true })).data
     } catch (error: any) {
-      if (Number(error?.code ?? error?.response?.status) !== 404) throw error
+      // Axios code is ERR_BAD_REQUEST for HTTP 404; the HTTP response takes precedence.
+      if (Number(error?.response?.status ?? error?.code) !== 404) throw error
     }
     checkCurrent()
     if (!remote) {

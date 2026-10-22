@@ -103,8 +103,9 @@ export const getFontByName = (name: string): Promise<ApiResponse<DesignFontVO>> 
 }
 
 // 根据 slug 获取字体详情
-export const getFontBySlug = (slug: string): Promise<ApiResponse<DesignFontVO>> => {
-  return instance.get(`/${useUserStore().isAuthenticated ? 'dsn' : 'public'}/fonts/get-by-slug/${encodeURIComponent(slug)}?populate=ttf`)
+export const getFontBySlug = (slug: string, options: { allowMissing?: boolean } = {}): Promise<ApiResponse<DesignFontVO>> => {
+  return instance.get(`/${useUserStore().isAuthenticated ? 'dsn' : 'public'}/fonts/get-by-slug/${encodeURIComponent(slug)}?populate=ttf`,
+    options.allowMissing ? { suppressHttpErrorStatuses: [404], suppressBusinessErrorCodes: [404] } : undefined)
 }
 
 export const getFontById = (id: number): Promise<ApiResponse<DesignFontVO>> => {

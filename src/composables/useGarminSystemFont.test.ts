@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useFontStore } from '@/stores/fontStore'
 import { getSavedFontFamily } from '@/utils/systemFontElement'
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import {
   applyCurrentElementBitmapFontPreview,
   applyCurrentElementPreviewFont,
@@ -13,6 +14,20 @@ import {
 describe('resolveCurrentElementPreviewFont', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    packageFonts.clear()
+  })
+
+  it('keeps packaged icon previews when the catalog returns only the registered source font', () => {
+    const slug = 'asset-imported-icon'
+    packageFonts.set(slug, {
+      slug, bitmapCanvasPreviewSize: 312,
+      bitmapCanvasPreviewDescriptorUrl: 'https://assets.test/imported.fnt',
+      bitmapCanvasPreviewAtlasUrl: 'https://assets.test/imported.png',
+    } as any)
+    // Recent/system font lists do not include preview files uploaded with the design.
+    useFontStore().serverFonts.set(slug, { slug, ttfFile: { url: 'https://assets.test/icon.ttf' } } as any)
+    expect(resolveCurrentElementPreviewFont({ fontFamily: slug, fontSize: 30 }, '0').bitmapPreviewAssets)
+      .toMatchObject({ descriptorUrl: 'https://assets.test/imported.fnt', atlasUrl: 'https://assets.test/imported.png', sourceSize: 312 })
   })
 
   it('looks up a normalized recipe by the actual font slug and maps it with current size and fill', () => {

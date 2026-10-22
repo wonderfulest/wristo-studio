@@ -1,6 +1,7 @@
 import { resolvePreviewFontFamily } from '@/utils/contentFontFallback'
 import { useFontStore } from '@/stores/fontStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { packageFonts } from '@/engine/services/packageAssetRegistry'
 import { applyFabricRecipePreviewPropsToObject, recipeToFabricProps, savedTextStyle } from '@/features/bitmap-font-maker/recipePreview'
 import type { FabricRecipePreviewProps } from '@/features/bitmap-font-maker/recipePreview'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
@@ -39,7 +40,9 @@ export const resolveCurrentElementPreviewFont = (config: TextFontPreviewConfig, 
     fontFamily: resolvePreviewFontFamily(content, slug),
     fontSize: config.fontSize
   }
-  const font = useFontStore().serverFonts.get(canonicalFontSlug(slug))
+  // Imported designs retain their bitmap previews even when catalog refreshes
+  // return only the newly registered TTF metadata.
+  const font = packageFonts.get(canonicalFontSlug(slug)) || useFontStore().serverFonts.get(canonicalFontSlug(slug))
   const preview = recipeToFabricProps(font?.bitmapRecipe, config.fontSize, config.fill)
   const previewSize = Number(font?.bitmapPreviewSize)
   const legacyPreviewAssets = font?.bitmapPreviewDescriptorUrl

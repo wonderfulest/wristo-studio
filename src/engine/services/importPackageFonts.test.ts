@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
+import { AxiosError } from 'axios'
 vi.mock('@/api/wristo/fonts', () => ({ getFontBySlug: vi.fn(), uploadFontFile: vi.fn() }))
 import { getFontBySlug, uploadFontFile } from '@/api/wristo/fonts'
 import { packageFonts, packageFontBuildFiles } from './packageAssetRegistry'
@@ -22,6 +23,26 @@ it('reuses existing fonts without uploading', async () => {
   packageFonts.set('text', font('text'))
   vi.mocked(getFontBySlug).mockResolvedValue({ data: font('text') } as any)
   await importPackageFonts({ fontFamily: 'text' })
+  expect(uploadFontFile).not.toHaveBeenCalled()
+})
+it('uploads packaged fonts after an Axios HTTP 404', async () => {
+  packageFonts.set('text', font('text'))
+  const error = new AxiosError('Request failed with status code 404', 'ERR_BAD_REQUEST', undefined, undefined, {
+    status: 404, data: { code: 'STUDIO_ASSET_ERROR', message: '素材不存在' },
+  } as any)
+  vi.mocked(getFontBySlug).mockRejectedValue(error)
+  vi.mocked(uploadFontFile).mockResolvedValue({ data: font('registered-text') } as any)
+  const config = { fontFamily: 'text' }
+  await importPackageFonts(config)
+  expect(getFontBySlug).toHaveBeenCalledWith('text', { allowMissing: true })
+  expect(uploadFontFile).toHaveBeenCalledTimes(1)
+  expect(config.fontFamily).toBe('registered-text')
+})
+it.each([403, 500])('does not upload fonts after HTTP %s', async status => {
+  packageFonts.set('text', font('text'))
+  const error = new AxiosError('request failed', 'ERR_BAD_REQUEST', undefined, undefined, { status } as any)
+  vi.mocked(getFontBySlug).mockRejectedValue(error)
+  await expect(importPackageFonts({ fontFamily: 'text' })).rejects.toBe(error)
   expect(uploadFontFile).not.toHaveBeenCalled()
 })
 it('does not treat network errors as missing fonts', async () => {
@@ -55,7 +76,7 @@ it.runIf(Boolean(process.env.WRISTO_IMPORT_TEST_WRT))('registers the supplied WR
     const bytes = await zip.file(entry.path)!.async('base64')
     packageFonts.set(entry.slug, { ...entry.metadata, ttfFile: { url: `data:font/ttf;base64,${bytes}` } })
   }
-  vi.mocked(getFontBySlug).mockResolvedValue({ data: null } as any)
+  vi.mocked(getFontBySlug).mockRejectedValue(new AxiosError('Not found', 'ERR_BAD_REQUEST', undefined, undefined, { status: 404 } as any))
   vi.mocked(uploadFontFile).mockImplementation(async (file, type) => ({ data: font(`registered-${file.name.replace(/\.ttf$/, '')}`, type) }) as any)
   await importPackageFonts(design)
   expect(uploadFontFile).toHaveBeenCalledTimes(manifest.fonts.length)

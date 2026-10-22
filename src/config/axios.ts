@@ -11,6 +11,7 @@ import { forbiddenRedirectPath } from './authFailureRedirect'
 declare module 'axios' {
   interface AxiosRequestConfig {
     suppressBusinessErrorCodes?: Array<number | string>
+    suppressHttpErrorStatuses?: number[]
     suppressForbiddenRedirect?: boolean
   }
 }
@@ -110,7 +111,7 @@ instance.interceptors.response.use(
       redirectToLogin(error, getResponseMessage(error.response?.data, 'auth.sessionExpired'))
     } else if (status === 403) {
       handleForbidden(error, error.config, getResponseMessage(error.response?.data, 'auth.forbidden'))
-    } else {
+    } else if (!error.config?.suppressHttpErrorStatuses?.includes(status)) {
       showErrorOnce(error, getResponseMessage(error.response?.data, 'auth.networkError'))
     }
     return Promise.reject(error)

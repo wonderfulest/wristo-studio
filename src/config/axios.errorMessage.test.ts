@@ -41,4 +41,13 @@ describe('request and caller error notification ownership', () => {
     expect(ElMessage.error).toHaveBeenCalledTimes(1)
     expect(ElMessage.error).toHaveBeenCalledWith('Submission failed')
   })
+  it.each([404, 500])('suppresses only the expected HTTP 404, not HTTP %s', async status => {
+    const adapter: AxiosAdapter = async config => {
+      throw new AxiosError('Request failed', 'ERR_BAD_REQUEST', config, undefined, {
+        data: { msg: '素材不存在' }, status, statusText: 'Error', headers: {}, config,
+      })
+    }
+    await expect(instance.get('/font-probe', { adapter, suppressHttpErrorStatuses: [404] })).rejects.toBeInstanceOf(AxiosError)
+    expect(ElMessage.error).toHaveBeenCalledTimes(status === 404 ? 0 : 1)
+  })
 })
