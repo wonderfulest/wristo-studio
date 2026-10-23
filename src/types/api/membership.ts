@@ -7,6 +7,8 @@ export type StudioMembershipLevel =
   | 'premium_30d'
 
 export interface StudioMembership {
+  consumer?: boolean
+  unlockedDesignCount?: number
   level: StudioMembershipLevel | string
   roleCode: string
   baseDesignLimit?: number | null

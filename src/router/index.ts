@@ -195,6 +195,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'design-unlocks/:uid',
+        name: 'DesignUnlock',
+        component: () => import('@/views/DesignUnlock.vue'),
+        meta: { allowsAllUsers: true },
+      },
+      {
         path: 'design-slots',
         name: 'DesignSlots',
         component: () => import('@/views/DesignSlots.vue'),
@@ -238,6 +244,9 @@ router.onError((error, to) => {
 // 导航守卫
 router.beforeEach(async (to) => {
   const userStore = useUserStore()
+  if (userStore.isAuthenticated && userStore.isStudioConsumer && ['/credits', '/design-slots', '/pricing'].includes(to.path)) {
+    return '/designs'
+  }
   // 检查路由是否需要认证
   const requiresAuth = requiresStudioLogin(to.path)
 

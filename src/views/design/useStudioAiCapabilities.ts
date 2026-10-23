@@ -1,14 +1,17 @@
-import { onScopeDispose, ref } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { computed, onScopeDispose, ref } from 'vue'
 import { getAiCapabilities, type AiCapabilities } from '@/api/wristo/studioAi'
 
 const unavailable = (): AiCapabilities => ({ TAGS: false, DESCRIPTION: false, BANNER: false, WATCHFACE: false, WATCHFACE_ADJUST: false })
 
 export function useStudioAiCapabilities() {
+  const user = useUserStore()
   const capabilities = ref<AiCapabilities>(unavailable())
   let version = 0
   const refresh = async () => {
     const current = ++version
     capabilities.value = unavailable()
+    if (user.isStudioConsumer) return
     try {
       const response = await getAiCapabilities()
       if (current !== version || response.code !== 0 || !response.data) return
@@ -18,5 +21,5 @@ export function useStudioAiCapabilities() {
     } catch { /* Keep AI entries hidden when availability cannot be confirmed. */ }
   }
   onScopeDispose(() => { version += 1 })
-  return { capabilities, refresh }
+  return { capabilities: computed(() => user.isStudioConsumer ? unavailable() : capabilities.value), refresh }
 }

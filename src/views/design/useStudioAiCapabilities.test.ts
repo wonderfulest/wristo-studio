@@ -1,10 +1,23 @@
 import { effectScope } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+const user = vi.hoisted(() => ({ isStudioConsumer: false }))
+vi.mock('@/stores/user', () => ({ useUserStore: () => user }))
 const api = vi.hoisted(() => vi.fn())
 vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: api }))
 import { useStudioAiCapabilities } from './useStudioAiCapabilities'
 
 describe('editor AI capabilities', () => {
+  it('never requests AI capabilities for ordinary users', async () => {
+    user.isStudioConsumer = true
+    api.mockClear()
+    const scope = effectScope()
+    const state = scope.run(() => useStudioAiCapabilities())!
+    await state.refresh()
+    expect(api).not.toHaveBeenCalled()
+    expect(state.capabilities.value.WATCHFACE).toBe(false)
+    scope.stop()
+    user.isStudioConsumer = false
+  })
   it('hides entries until loaded and fails closed after an unsuccessful refresh', async () => {
     const scope = effectScope()
     const state = scope.run(() => useStudioAiCapabilities())!

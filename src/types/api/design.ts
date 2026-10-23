@@ -188,6 +188,8 @@ export interface DesignDetailParams {
 
 /** The fixed /dsn/design/cards response; full editor fields are loaded by UID. */
 export interface DesignListItem {
+  installUnlocked?: boolean
+  canInstall?: boolean
   id: number
   designUid: string
   name: string

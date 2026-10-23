@@ -56,7 +56,7 @@
         <div class="user-dropdown-identity">
           <strong>{{ userDisplayName }}</strong>
           <span>{{ userEmail }}</span>
-          <StudioCredits />
+          <StudioCredits v-if="!userStore.isStudioConsumer" />
         </div>
         <span class="user-dropdown-status" :class="{ premium: isPremiumMember }">
           {{ accountStatusLabel }}
@@ -81,7 +81,7 @@
           </span>
           <span v-if="pendingPublishStore.count > 0" class="menu-badge">{{ pendingPublishStore.count }}</span>
         </button>
-        <button v-if="!userStore.isMerchantUser" type="button" class="dropdown-item" @click="openMembership">
+        <button v-if="!userStore.isStudioConsumer && !userStore.isMerchantUser" type="button" class="dropdown-item" @click="openMembership">
           <span class="user-dropdown-icon accent"><Icon icon="material-symbols:workspace-premium" /></span>
           <span class="user-dropdown-copy">
             <strong>{{ t('nav.membership') }}</strong>

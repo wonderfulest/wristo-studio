@@ -4,7 +4,8 @@
       <div v-if="!failed" class="copy-entry-spinner" aria-hidden="true"></div>
       <h1>{{ title }}</h1>
       <p>{{ failed || description }}</p>
-      <RouterLink v-if="quotaReached" to="/design-slots">Add slots or upgrade</RouterLink>
+      <RouterLink v-if="quotaReached && !userStore.isStudioConsumer" to="/design-slots">Add slots or upgrade</RouterLink>
+      <p v-if="quotaReached && userStore.isStudioConsumer">Delete a draft or unlock an existing design to make room.</p>
       <RouterLink v-if="failed" to="/designs">My designs</RouterLink>
       <button v-if="failed && sourceDesignId" @click="copyDesign">Try again</button>
     </div>

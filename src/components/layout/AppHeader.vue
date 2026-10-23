@@ -135,13 +135,23 @@ const saveDesign = async () => {
   }
 }
 const buildDesign = async () => {
-  if (busy.value || !editorReady.value || !membershipGate.requireExport()) return
+  if (busy.value || !editorReady.value) return
+  if (!userStore.isStudioConsumer && !membershipGate.requireExport()) return
   const deviceId = userStore.editorDevice?.deviceId
   if (!deviceId) {
     deviceDisplay.value?.openSelector()
     return
   }
   if (!await saveDesign()) return
+  if (userStore.isStudioConsumer) {
+    try {
+      const response = await designUnlocksApi.status(String(baseStore.id))
+      if (!response.data?.canInstall) {
+        await router.push(`/design-unlocks/${encodeURIComponent(String(baseStore.id))}`)
+        return
+      }
+    } catch (error) { showErrorOnce(error, 'Unable to check design access'); return }
+  }
   await submitDesignDialog.value?.show({ designUid: baseStore.id }, { mode: 'prg-build', deviceId })
 }
 const openBuilds = () => router.push('/designs')

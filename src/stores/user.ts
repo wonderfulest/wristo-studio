@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { getUserInfo, logout as logoutApi, updateMyInfo } from '@/api/wristo/auth'
 import { type UserInfo, type GarminDeviceVO } from '@/types/user'
+import { isStudioConsumer } from '@/auth/consumerAccess'
 import { hasStudioAccess } from '@/auth/studioAccess'
 
 const GUEST_DEVICE_KEY = 'wristo-studio-guest-device'
@@ -27,6 +28,7 @@ export const useUserStore = defineStore('user', {
       return hasToken && hasUserInfo
     },
     editorDevice: (state) => state.guestDevice || state.userInfo?.device || null,
+    isStudioConsumer: (state) => isStudioConsumer(state.userInfo),
     studioMembership: (state) => state.userInfo?.studioMembership || null,
     hasFullStudioAccess: (state) => hasStudioAccess(state.userInfo),
     canUsePremiumStudioAssets: (state) => {

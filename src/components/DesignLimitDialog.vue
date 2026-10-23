@@ -1,10 +1,12 @@
 <template>
   <el-dialog v-model="visible" title="Design allowance reached" width="min(480px, 94vw)" append-to-body>
-    <p>Open an existing design, delete one to free a slot, or add more room for your next design.</p>
-    <p>Redeem credits or buy permanent slots. You can also upgrade your Studio membership.</p>
+    <p v-if="user.isStudioConsumer">Your draft allowance is full. Delete a draft or unlock one for $1.99 to make room. Unlocked designs do not use draft space.</p>
+    <p v-else>Open an existing design, delete one to free a slot, or add more room for your next design.</p>
+    <p v-if="!user.isStudioConsumer">Redeem credits or buy permanent slots. You can also upgrade your Studio membership.</p>
     <template #footer>
       <el-button @click="visible = false">Keep Editing</el-button>
-      <a href="/design-slots" target="_blank" rel="noopener" @click="visible = false">Add slots / upgrade ↗</a>
+      <a v-if="!user.isStudioConsumer" href="/design-slots" target="_blank" rel="noopener" @click="visible = false">Add slots / upgrade ↗</a>
+      <a v-else href="/designs" @click="visible = false">My designs</a>
     </template>
   </el-dialog>
 </template>

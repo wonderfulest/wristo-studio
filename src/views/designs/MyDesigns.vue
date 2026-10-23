@@ -1,8 +1,9 @@
 <template>
   <div class="my-designs">
     <div v-if="userStore.studioMembership" class="design-capacity">
-      <span>{{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns ?? '∞' }} {{ t('membership.appsUsed') }}</span>
-      <RouterLink to="/design-slots">{{ t('membership.addSlots') }}</RouterLink>
+      <span v-if="userStore.isStudioConsumer">Drafts {{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns }} · Unlocked {{ userStore.studioMembership.unlockedDesignCount ?? 0 }}</span>
+      <span v-else>{{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns ?? '∞' }} {{ t('membership.appsUsed') }}</span>
+      <RouterLink v-if="!userStore.isStudioConsumer" to="/design-slots">{{ t('membership.addSlots') }}</RouterLink>
     </div>
     <!-- 搜索栏 -->
     <div class="search-bar">
@@ -113,6 +114,11 @@
     </div>
     <div class="design-collection" :class="`design-collection--${viewMode}`">
       <div class="design-item" v-for="design in designs" :key="design.id">
+        <div v-if="userStore.isStudioConsumer" class="consumer-design-actions">
+          <span>{{ design.installUnlocked ? 'Unlocked' : 'Draft' }}</span>
+          <el-button v-if="!design.canInstall" type="primary" @click="router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`)">Unlock this design · $1.99</el-button>
+          <el-button v-else type="primary" @click="buildPrg(design)">Build for my watch</el-button>
+        </div>
         <DesignCard
           :design="design"
           :view-mode="viewMode"
@@ -257,6 +263,7 @@
 </template>
 
 <script setup lang="ts">
+import { designUnlocksApi } from '@/api/wristo/designUnlocks'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import { ref, computed, h, onMounted, onUnmounted, watch } from 'vue'
@@ -870,9 +877,10 @@ const executeDuplicateDesign = async (design: Design, targetLanguage: AppLanguag
 const copyDesign = async (design: DesignListItem) => {
   if (loadingStates.value.copy.has(design.id)) return
   if (!userStore.canCreateDesign) {
+    if (userStore.isStudioConsumer) window.dispatchEvent(new Event('studio-design-limit-reached'))
     const max = userStore.studioMembership?.maxDesigns
     messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
-    router.push('/design-slots')
+    router.push(userStore.isStudioConsumer ? '/designs' : '/design-slots')
     return
   }
 
@@ -958,7 +966,11 @@ const submitDesign = async (design: DesignListItem) => {
 
 // 提交 PRG 打包任务
 const buildPrg = async (design: DesignListItem) => {
-  if (!membershipGate.requireExport()) return
+  if (userStore.isStudioConsumer && design.canInstall !== true) {
+    await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`)
+    return
+  }
+  if (!userStore.isStudioConsumer && !membershipGate.requireExport()) return
   if (loadingStates.value.prgBuild.has(design.id)) return
 
   // 获取当前设备 ID：优先使用用户资料中的设备，其次尝试本地已选设备
@@ -1013,7 +1025,12 @@ const downloadPackage = async (design: DesignListItem) => {
 
 // 运行 PRG：跳转下载 prgUrl
 const runPrg = async (design: DesignListItem) => {
-  if (!membershipGate.requireExport()) return
+  if (userStore.isStudioConsumer) {
+    try {
+      const response = await designUnlocksApi.status(design.designUid)
+      if (!response.data?.canInstall) { await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`); return }
+    } catch (error) { showErrorOnce(error, 'Unable to check design access'); return }
+  } else if (!membershipGate.requireExport()) return
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
     await downloadPackageFile(url, design.product?.name || design.name, 'prg')
