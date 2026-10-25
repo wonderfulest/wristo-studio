@@ -38,7 +38,10 @@ describe('first design guide UI', () => {
     expect(wrapper.text()).toContain('2 / 7')
     mocks.elements.elements = [{ eleType: 'date' }]; await flushPromises(); expect(onboarding.progress.step).toBe('time')
     mocks.elements.elements.push({ eleType: 'time' }); await flushPromises(); expect(wrapper.text()).toContain('3 / 7')
-    savedOnboardingDesign('first'); await flushPromises(); await click('前往应用详情')
+    savedOnboardingDesign('first'); await router.push('/designs'); await flushPromises()
+    expect(wrapper.text()).toContain('点击刚创建的设计')
+    expect(wrapper.text()).not.toContain('前往应用详情')
+    await router.push('/designs/first')
     expect(router.currentRoute.value.path).toBe('/designs/first')
     observeOnboardingDesign({ designUid: 'first' } as any, 'venu3'); await flushPromises()
     expect(wrapper.text()).toContain('5 / 7')
@@ -78,6 +81,19 @@ describe('first design guide UI', () => {
     expect(onboarding.progress.step).toBe('build')
     expect(onboarding.progress.submittedAt).toBe(0)
     expect(onboarding.progress.releaseId).toBeUndefined()
+  })
+  it('highlights the saved design on the list and returns there when resuming', async () => {
+    vi.useFakeTimers()
+    const router = await setup(); await click('创建我的第一个表盘')
+    onboarding.progress.step = 'detail'
+    const card = document.createElement('a'); card.dataset.onboarding = 'detail'
+    card.getClientRects = () => [{ width: 80 }] as any; document.body.append(card)
+    await router.push('/designs'); await flushPromises(); await vi.advanceTimersByTimeAsync(350)
+    expect(card.classList.contains('onboarding-target')).toBe(true)
+    await router.push('/design?id=first'); await flushPromises(); await vi.advanceTimersByTimeAsync(350)
+    expect(card.classList.contains('onboarding-target')).toBe(false)
+    await click('返回当前步骤')
+    expect(router.currentRoute.value.path).toBe('/designs')
   })
   it('highlights download only on the matching face route', async () => {
     vi.useFakeTimers()

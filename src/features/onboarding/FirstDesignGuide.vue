@@ -26,7 +26,6 @@
         <button v-if="!onExpectedRoute" class="primary" @click="returnToStep">{{ c.return }}</button>
         <button v-else-if="reviewStep" class="primary" @click="nextStep">{{ c.forward }}</button>
         <button v-else-if="step === 'create'" class="primary" :disabled="!canConfirm" @click="confirmCreate">{{ c.next }}</button>
-        <button v-else-if="step === 'detail'" class="primary" @click="returnToStep">{{ c.detail }}</button>
         <template v-if="step === 'install'">
           <p class="hint">{{ c.download }}</p>
           <button v-if="route.path !== '/prg-installer'" class="primary" @click="router.push('/prg-installer')">{{ c.installer }}</button>
@@ -66,11 +65,11 @@ const canConfirm = computed(() => !!base.id && base.id === p.value.designId && !
 const editorStep = computed(() => ['create', 'time', 'save'].includes(step.value))
 const onExpectedRoute = computed(() => {
   if (editorStep.value) return route.path === '/design' && (!p.value.designId || String(route.query.id || '') === p.value.designId)
-  if (step.value === 'detail') return true
+  if (step.value === 'detail') return route.path === '/designs'
   if (step.value === 'install') return route.path === '/prg-installer' || route.path === detailPath.value
   return route.path === detailPath.value
 })
-const needsTarget = computed(() => ['create', 'time', 'save', 'build', 'download'].includes(step.value))
+const needsTarget = computed(() => ['create', 'time', 'save', 'detail', 'build', 'download'].includes(step.value))
 const spotlightTargets = shallowRef<HTMLElement[]>([])
 const guidePlacement = ref<Record<string, string>>({})
 let highlighted: HTMLElement[] = []
@@ -124,6 +123,7 @@ function hide() {
 }
 async function returnToStep() {
   if (editorStep.value) await router.push(p.value.designId ? { path: '/design', query: { id: p.value.designId } } : '/design')
+  else if (step.value === 'detail') await router.push('/designs')
   else if (step.value === 'install') await router.push('/prg-installer')
   else await router.push(detailPath.value)
 }
@@ -143,7 +143,7 @@ watch(() => p.value.step, () => {
 async function resume() {
   p.value.status = 'active'; expanded.value = true
   await returnToStep()
-  if (['detail', 'build', 'download'].includes(p.value.step)) {
+  if (['build', 'download'].includes(p.value.step)) {
     const account = owner.value, id = p.value.designId
     try {
       const response = await designApi.getDesignByUid(id, { device: p.value.deviceId })

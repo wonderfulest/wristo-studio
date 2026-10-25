@@ -49,12 +49,12 @@ describe('Studio toolbar actions', () => {
     expect(router.currentRoute.value.fullPath).toBe('/designs')
     wrapper.unmount()
   })
-  it('keeps a guided save on the canvas until the user opens details', async () => {
+  it('returns a guided save to the personal design list', async () => {
     startOnboarding('existing'); onboarding.progress.step = 'save'
     const { wrapper, router } = await setup()
     await wrapper.get('.save-button').trigger('click'); await flushPromises()
     expect(onboarding.progress.step).toBe('detail')
-    expect(router.currentRoute.value.fullPath).toBe('/design?id=existing')
+    expect(router.currentRoute.value.fullPath).toBe('/designs')
     wrapper.unmount()
   })
   it('does not advance the guide after a failed save', async () => {

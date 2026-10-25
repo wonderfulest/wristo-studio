@@ -232,6 +232,7 @@ import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { onboarding } from '@/features/onboarding/progress'
 import { Icon } from '@iconify/vue'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
@@ -363,7 +364,8 @@ const writeDesignSearchPreference = (preference: DesignSearchPreference) => {
   }
 }
 
-const savedDesignSearch = readDesignSearchPreference()
+const guidedList = onboarding.progress.status === 'active' && onboarding.progress.step === 'detail'
+const savedDesignSearch = guidedList ? defaultDesignSearchPreference() : readDesignSearchPreference()
 const initialSort = normalizeDesignSort(savedDesignSearch.sortField, savedDesignSearch.sortOrder, userStore.isAdminUser)
 const initialDesignSearch = { ...savedDesignSearch, sortField: initialSort.field, sortOrder: initialSort.order }
 const packagedVersion = ref(initialDesignSearch.packagedVersion)
@@ -432,7 +434,7 @@ const getPreferredDesignScope = (isAdmin: boolean): DesignScope => {
   return readDesignScopePreference() || 'all'
 }
 
-const initialDesignScope = getPreferredDesignScope(isAdminUser.value)
+const initialDesignScope = guidedList ? 'mine' : getPreferredDesignScope(isAdminUser.value)
 
 // 添加作者显示控制
 const showCreator = ref(isAdminUser.value && initialDesignScope === 'all')  // 管理员默认查看全部设计时展示作者

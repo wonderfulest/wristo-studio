@@ -120,7 +120,7 @@ const confirmOpenDesignsList = async () => {
   if (await saveDesign()) {
     designsListDialogVisible.value = false
     if (isGuidedDesign(String(baseStore.id))) savedOnboardingDesign(String(baseStore.id))
-    else router.push('/designs')
+    await router.push('/designs')
   }
 }
 const saveDesign = async () => {

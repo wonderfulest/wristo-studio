@@ -40,7 +40,7 @@
       </div>
     </template>
     <div class="design-info">
-      <component :is="summaryOnly ? RouterLink : 'div'" v-if="!management" class="design-background" :to="summaryOnly ? detailsUrl : undefined">
+      <component :is="summaryOnly ? RouterLink : 'div'" v-if="!management" :data-onboarding="summaryOnly && isGuidedDesign(design.designUid) ? 'detail' : undefined" class="design-background" :to="summaryOnly ? detailsUrl : undefined">
         <el-popover
           v-if="viewMode === 'list' && designImageUrl"
           trigger="hover"
@@ -403,6 +403,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends DesignListItem">
+import { isGuidedDesign } from '@/features/onboarding/progress'
 import { trackConversion } from '@/utils/studioConversion'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { loadAppBuildVersion } from '@/api/wristo/platformVersions'
