@@ -203,6 +203,51 @@
           <Icon icon="material-symbols:edit-outline" aria-hidden="true" />
           {{ t('card.edit') }}
         </el-button>
+        <section v-if="management" class="action-group action-group-build permanent-build-actions">
+          <div class="action-group-title">{{ t('card.buildActions') }}</div>
+          <div class="action-group-actions">
+            <el-tooltip
+              :content="buildPrgDisabledTooltip"
+              placement="top"
+              :disabled="!buildPrgDisabledTooltip"
+            >
+              <span class="build-prg-tooltip-trigger">
+                <el-button
+                  size="small"
+                  :disabled="prgCardAction !== 'build'"
+                  @click="closeActions(); emit('build-prg', design)"
+                  :loading="loadingStates.prgBuild.has(design.id)"
+                >
+                  <el-icon><Box /></el-icon>
+                  {{ t('card.buildPrg') }}
+                </el-button>
+              </span>
+            </el-tooltip>
+            <el-button :disabled="!showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
+              <el-icon><Box /></el-icon>
+              {{ t('card.buildIq') }}
+            </el-button>
+          </div>
+          <div v-if="packageRows.length" class="build-task-status" role="status" aria-live="polite">
+            <div v-for="row in packageRows" :key="row.key" class="build-task-row" :class="`package-${row.tone}`">
+              <strong>{{ row.label }}</strong>
+              <span class="package-rank">{{ row.value }}</span>
+              <el-tooltip
+                v-if="row.key === 'prg' && prgCardAction === 'cancel'"
+                :content="t('card.cancelPrgBuild')"
+                placement="top"
+                :show-after="400"
+              >
+                <button
+                  class="build-task-cancel"
+                  type="button"
+                  :aria-label="t('card.cancelPrgBuild')"
+                  @click.stop="closeActions(); emit('cancel-prg', design)"
+                ><Icon icon="material-symbols:close-rounded" aria-hidden="true" /></button>
+              </el-tooltip>
+            </div>
+          </div>
+        </section>
         <component :is="management ? InlineActions : ElPopover"
           v-model:visible="actionsExpanded"
           @mouseenter="management && prepareActions()"
@@ -242,7 +287,7 @@
               </div>
             </section>
 
-            <section class="action-group action-group-build">
+            <section v-if="!management" class="action-group action-group-build">
               <div class="action-group-title">{{ t('card.buildActions') }}</div>
               <div class="action-group-actions">
                 <el-tooltip
@@ -298,14 +343,9 @@
               <div class="action-group-title">{{ t('card.manageActions') }}</div>
               <div class="action-group-actions">
                 <el-button v-if="management && appId" size="small" @click="goToOperations">{{ t('card.openOperations') }}</el-button>
-                <el-button v-if="management && canEditCurrentDesign" size="small" @click="renameFromDetails">Rename</el-button>
                 <el-button size="small" @click="closeActions(); emit('copy', design)" :loading="loadingStates.copy.has(design.id)">
                   <el-icon><DocumentCopy /></el-icon>
                   {{ t('card.duplicate') }}
-                </el-button>
-                <el-button v-if="canManageAppDetails || (currentUserId != null && design.user?.id === currentUserId)" class="studio-edit-button" size="small" @click="closeActions(); emit('edit', design)">
-                  <Icon icon="material-symbols:edit-outline" aria-hidden="true" />
-                  {{ t('editDesign.title') }}
                 </el-button>
                 <el-button v-if="isAdminUser && appId" size="small" @click="closeActions(); emit('transfer-owner', design)">
                   <el-icon><Switch /></el-icon>
@@ -400,7 +440,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', design: T): void
   (e: 'delete', design: T): void
   (e: 'open', design: T): void
   (e: 'copy', design: T): void
@@ -500,14 +539,6 @@ const startRename = async () => {
   renameInput.value?.select()
 }
 
-const renameFromDetails = async () => {
-  if (!canEditCurrentDesign.value || renameSaving.value) return
-  try {
-    const { value } = await ElMessageBox.prompt('Design name', 'Rename design', { inputValue: design.value.name, inputValidator: value => !!value?.trim() })
-    const resolution = resolveDesignRename(value, design.value.name)
-    if (resolution.action === 'submit') emit('rename', design.value, resolution.name)
-  } catch { /* Cancel leaves the name unchanged. */ }
-}
 const cancelRename = () => {
   renameDraft.value = design.value.name
   renaming.value = false
@@ -645,13 +676,14 @@ const lastUpdatedText = computed(() => {
 
 const packageStatusText = (log?: DesignListTask) => {
   if (!log) return ''
-  const rank = log.rank
-  if (rank !== null && rank !== undefined) {
-    return rank > 0 ? t('card.position', { rank }) : t('card.packaging')
-  }
   const status = String(log.packagingStatus || '').toLowerCase()
-  if (status === 'completed') return t('card.packageCompleted')
+  if (status === 'completed' || status === 'complete') return t('card.packageCompleted')
   if (status === 'failed') return t('card.packageFailed')
+  if (status === 'cancelled' || status === 'canceled') return t('card.packageCancelled')
+  if (status === 'cancel_requested') return t('card.cancellingPrgBuild')
+  const rank = log.rank
+  if (status === 'processing' || (log.processingStartedAt && !log.processingFinishedAt) || rank === 0) return t('card.packaging')
+  if (rank != null && rank > 0) return t('card.position', { rank })
   if (status === 'pending' || status === 'init') return t('card.packagePending')
   return log.packagingStatus || t('common.unknown')
 }
@@ -659,8 +691,10 @@ const packageStatusText = (log?: DesignListTask) => {
 const packageTone = (log?: DesignListTask, hasRelease = false) => {
   const status = String(log?.packagingStatus || '').toLowerCase()
   if (status === 'failed') return 'failed'
-  if (log?.rank !== null && log?.rank !== undefined) return 'pending'
-  if (status === 'complete' || status === 'completed' || hasRelease) return 'ready'
+  if (status === 'complete' || status === 'completed') return 'ready'
+  if (status === 'cancelled' || status === 'canceled') return 'neutral'
+  if (log?.rank != null || ['init', 'pending', 'processing', 'cancel_requested'].includes(status)) return 'pending'
+  if (hasRelease) return 'ready'
   return 'neutral'
 }
 
@@ -739,6 +773,13 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 </script>
 
 <style scoped>
+.build-task-status { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--studio-border); }
+.build-task-row { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; }
+.build-task-row .package-rank { margin-left: auto; text-align: right; }
+.build-task-cancel { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 24px; width: 24px; height: 24px; margin: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--studio-text-muted, #858b96); font-size: 14px; cursor: pointer; }
+.build-task-cancel:hover { background: var(--studio-surface-raised); color: var(--studio-text); }
+.build-task-cancel:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
+
 .summary-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--studio-text-muted); padding-top: 10px; }
 .title { text-decoration: none; color: inherit; }
 .design-card--management { height: auto; }

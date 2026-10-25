@@ -5,12 +5,6 @@
       <span>{{ t('studioMenu.file') }}</span>
     </template>
     <slot />
-    <!-- View Json Config -->
-    <el-menu-item index="actions/viewJsonConfig">
-      <el-icon><View /></el-icon>
-      <span>{{ t('editor.view') }}</span>
-      <span class="shortcut-hint">⌘ + .</span>
-    </el-menu-item>
     <el-menu-item index="actions/screenshot" @click="onScreenshot">
       <el-icon><Picture /></el-icon>
       <span>{{ t('editor.screenshot') }}</span>
@@ -43,7 +37,7 @@
 </template>
 
 <script setup>
-import { Operation, View, Upload, Picture, VideoCamera, Download, Setting, CircleCheck } from '@element-plus/icons-vue'
+import { Operation, Upload, Picture, VideoCamera, Download, Setting, CircleCheck } from '@element-plus/icons-vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()

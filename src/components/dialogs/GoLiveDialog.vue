@@ -122,25 +122,29 @@
         </div>
       </el-form-item>
       <el-form-item class="media-primary-card media-banner-card" :label="t('goLive.homepageBanner')">
+        <template #label>
+          <div class="media-section-heading">
+            <span>{{ t('goLive.homepageBanner') }}</span>
+            <div class="banner-heading-actions">
+              <el-tooltip :content="t('goLive.bannerTip')" placement="top">
+                <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
+              </el-tooltip>
+              <el-button
+                v-if="aiCapabilities.BANNER"
+                class="banner-refresh"
+                circle
+                size="small"
+                :icon="Refresh"
+                :loading="generatingBanner || loadingBannerPrice"
+                :disabled="loading || !aiCapabilities.BANNER"
+                :title="t('goLive.generateBanner')"
+                :aria-label="t('goLive.generateBanner')"
+                @click.stop="refreshBanner"
+              />
+            </div>
+          </div>
+        </template>
         <div class="image-upload-container banner-container" :aria-busy="generatingBanner">
-          <el-button
-            v-if="aiCapabilities.BANNER"
-            class="banner-refresh"
-            circle
-            size="small"
-            :icon="Refresh"
-            :loading="generatingBanner || loadingBannerPrice"
-            :disabled="loading || !aiCapabilities.BANNER"
-            :title="t('goLive.generateBanner')"
-            :aria-label="t('goLive.generateBanner')"
-            @click.stop="refreshBanner"
-          />
-          <el-tooltip
-            :content="t('goLive.bannerTip')"
-            placement="top"
-          >
-            <el-icon class="tip-icon"><QuestionFilled /></el-icon>
-          </el-tooltip>
           <el-upload 
             class="image-uploader" 
             action="#" 
@@ -151,19 +155,25 @@
             :on-change="handleBannerChange"
             :disabled="generatingBanner"
           >
-            <div class="upload-area banner-area">
+            <div class="upload-area banner-area image-remove-host">
               <img v-if="form.bannerImageUrl" :src="form.bannerImageUrl" class="uploaded-image" />
               <div v-else class="upload-placeholder">
                 <el-icon class="upload-icon"><Plus /></el-icon>
                 <span>{{ t('goLive.clickUploadBanner') }}</span>
               </div>
+              <el-button
+                v-if="form.bannerImageUrl"
+                class="image-remove-button banner-remove"
+                type="danger"
+                circle
+                size="small"
+                :disabled="generatingBanner"
+                :title="t('goLive.removeImage')"
+                :aria-label="t('goLive.removeImage')"
+                @click.stop="removeBannerImage"
+              >×</el-button>
             </div>
           </el-upload>
-          <div class="upload-actions" v-if="form.bannerImageUrl">
-            <el-button size="small" type="danger" :disabled="generatingBanner" @click="removeBannerImage">
-              {{ t('goLive.removeImage') }}
-            </el-button>
-          </div>
           <div v-if="generatingBanner" class="form-tip" role="status">{{ t('goLive.generatingBanner') }}</div>
         </div>
       </el-form-item>
@@ -296,18 +306,17 @@
         </el-input>
       </el-form-item>
       <el-form-item :label="t('goLive.appUuid')">
-        <el-input class="app-uuid-input" v-model="form.garminAppUuid" :readonly="!userStore.isAdminUser" :disabled="loading || savingAppUuid || lifecycleBusy" maxlength="36">
+        <el-input class="app-uuid-input" v-model="form.garminAppUuid" :readonly="!userStore.isAdminUser" :disabled="loading || lifecycleBusy" maxlength="36">
           <template #append>
             <el-button @click="copyAppUuid" :icon="CopyDocument" :disabled="!form.garminAppUuid">{{ t('common.copy') }}</el-button>
-            <el-button v-if="userStore.isAdminUser" @click="saveAppUuid" :loading="savingAppUuid" :disabled="loading || lifecycleBusy || form.garminAppUuid === currentDesign?.product.garminAppUuid">{{ t('common.save') }}</el-button>
           </template>
         </el-input>
       </el-form-item>
       <el-form-item v-if="userStore.isAdminUser" :label="t('goLive.lifecycle')">
-        <el-button v-if="currentDesign?.product.status !== 0" data-testid="unpublish-app" type="danger" plain :disabled="loading || savingAppUuid || lifecycleBusy" @click="changeLifecycle('unpublish')">{{ t('goLive.unpublish') }}</el-button>
+        <el-button v-if="currentDesign?.product.status !== 0" data-testid="unpublish-app" type="danger" plain :disabled="loading || lifecycleBusy" @click="changeLifecycle('unpublish')">{{ t('goLive.unpublish') }}</el-button>
         <template v-else>
           <el-tag type="info">{{ t('goLive.unpublished') }}</el-tag>
-          <el-button data-testid="regenerate-uuid" :disabled="loading || savingAppUuid || lifecycleBusy" @click="changeLifecycle('regenerate')">{{ t('goLive.regenerateUuid') }}</el-button>
+          <el-button data-testid="regenerate-uuid" :disabled="loading || lifecycleBusy" @click="changeLifecycle('regenerate')">{{ t('goLive.regenerateUuid') }}</el-button>
           <div class="form-tip">{{ t('goLive.repackageHint') }}</div>
         </template>
       </el-form-item>
@@ -353,7 +362,7 @@ import CompanionAppLinks from '@/components/common/CompanionAppLinks.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import CopyGarminDescriptionButton from '@/components/common/CopyGarminDescriptionButton.vue'
-import { computed, ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
+import { computed, h, ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import type { Bundle } from '@/types/api/bundle'
 import type { ProductTag, ProductTagGeneration } from '@/types/api/productTag'
 import { getProductTagsPage, getProductTagGeneration, generateProductTags } from '@/api/wristo/productTags'
@@ -868,8 +877,25 @@ const handleConfirm = async () => {
     messageStore.warning(t('submitDesign.paidMerchantOnly'))
     return
   }
+  const uuid = form.garminAppUuid.trim()
+  const shouldSaveUuid = userStore.isAdminUser && uuid !== (currentDesign.value.product.garminAppUuid || '')
+  if (shouldSaveUuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+    if (props.inline) emit('section-change', 'distribution')
+    messageStore.error(t('goLive.invalidAppUuid'))
+    return
+  }
   try {
     loading.value = true
+    if (shouldSaveUuid) {
+      try {
+        await productsApi.updateAppUuid(currentDesign.value.designUid, uuid)
+      } catch (error) {
+        showErrorOnce(error, t('common.saveFailed'))
+        return
+      }
+      currentDesign.value.product.garminAppUuid = uuid
+      form.garminAppUuid = uuid
+    }
     const data: any = {
       name: form.name.trim(),
       names: Object.fromEntries(Object.entries(form.names).map(([language, text]) => [language, text.trim()])),
@@ -910,15 +936,40 @@ const handleCancel = () => {
 
 const lifecycleBusy = ref(false)
 const changeLifecycle = async (action: 'unpublish' | 'regenerate'): Promise<void> => {
-  if (!userStore.isAdminUser || !currentDesign.value || lifecycleBusy.value || loading.value || savingAppUuid.value) return
+  if (!userStore.isAdminUser || !currentDesign.value || lifecycleBusy.value || loading.value) return
   const product = currentDesign.value.product
   lifecycleBusy.value = true
   try {
-    await ElMessageBox.confirm(t(action === 'unpublish' ? 'goLive.unpublishConfirm' : 'goLive.regenerateConfirm'), t('goLive.lifecycle'), { type: 'warning' })
     if (action === 'unpublish') {
+      const oldStoreUrl = product.garminStoreUrl?.trim() || ''
+      let canOpenStoreUrl = false
+      try {
+        canOpenStoreUrl = ['https:', 'http:'].includes(new URL(oldStoreUrl).protocol)
+      } catch { /* Missing or invalid links are displayed without navigation. */ }
+      await ElMessageBox.confirm(h('div', [
+        h('p', t('goLive.unpublishConfirm')),
+        h('p', t('goLive.oldGarminListing')),
+        canOpenStoreUrl
+          ? h('a', { href: oldStoreUrl, target: '_blank', rel: 'noopener noreferrer', style: { overflowWrap: 'anywhere', color: 'var(--el-color-primary)' } }, oldStoreUrl)
+          : h('p', { style: { overflowWrap: 'anywhere' } }, oldStoreUrl || t('goLive.noGarminStoreUrl'))
+      ]), t('goLive.lifecycle'), {
+        type: 'warning',
+        confirmButtonText: t('goLive.continueUnpublish'),
+        cancelButtonText: t('common.cancel'),
+        closeOnClickModal: false
+      })
+      await ElMessageBox.confirm(t('goLive.unpublishFinalConfirm', { appId: product.appId }), t('goLive.unpublishFinalTitle'), {
+        type: 'warning',
+        confirmButtonText: t('goLive.unpublish'),
+        cancelButtonText: t('common.cancel'),
+        confirmButtonClass: 'el-button--danger',
+        closeOnClickModal: false,
+        autofocus: false
+      })
       await productsApi.unpublish(product.appId)
       product.status = 0
     } else {
+      await ElMessageBox.confirm(t('goLive.regenerateConfirm'), t('goLive.lifecycle'), { type: 'warning' })
       const response = await productsApi.regenerateAppUuid(product.appId)
       if (!response.data) throw new Error(t('common.saveFailed'))
       product.garminAppUuid = response.data
@@ -931,28 +982,6 @@ const changeLifecycle = async (action: 'unpublish' | 'regenerate'): Promise<void
     if (error !== 'cancel' && error !== 'close') showErrorOnce(error, t('common.saveFailed'))
   } finally {
     lifecycleBusy.value = false
-  }
-}
-
-const savingAppUuid = ref(false)
-
-const saveAppUuid = async (): Promise<void> => {
-  if (!userStore.isAdminUser || !currentDesign.value || savingAppUuid.value || lifecycleBusy.value) return
-  const uuid = form.garminAppUuid.trim()
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-    messageStore.error(t('goLive.invalidAppUuid'))
-    return
-  }
-  savingAppUuid.value = true
-  try {
-    await productsApi.updateAppUuid(currentDesign.value.designUid, uuid)
-    currentDesign.value.product.garminAppUuid = uuid
-    form.garminAppUuid = uuid
-    messageStore.success(t('common.savedSuccessfully'))
-  } catch (error) {
-    showErrorOnce(error, t('common.saveFailed'))
-  } finally {
-    savingAppUuid.value = false
   }
 }
 
@@ -1252,6 +1281,8 @@ defineExpose({
 })
 </script>
 
+<style scoped src="@/assets/styles/image-remove.css"></style>
+
 <style scoped>
 .media-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 .media-section-heading .product-image-download-row { margin: 0; }
@@ -1266,8 +1297,9 @@ defineExpose({
 .publish-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-right: 24px; }
 
 .banner-container { position: relative; width: 240px; max-width: 100%; }
-.banner-refresh { position: absolute; right: 8px; top: 8px; z-index: 2; }
-.banner-container > .tip-icon { right: 44px; }
+.banner-heading-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.banner-heading-actions .el-button { margin-left: 0; width: 22px; height: 22px; min-height: 22px; padding: 0; }
+.media-banner-card :deep(> .el-form-item__label) { width: 100%; }
 .source-design-links {
   display: flex;
   align-items: center;
@@ -1377,6 +1409,7 @@ defineExpose({
 }
 
 .banner-area {
+  position: relative;
   width: 240px;
   height: auto;
   aspect-ratio: 2 / 1;

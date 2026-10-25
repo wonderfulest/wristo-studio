@@ -165,6 +165,7 @@ export interface ProductPaymentUpdateParams {
 }
 
 export interface DesignPageParams {
+  summaryOnly?: boolean
   pageNum: number
   pageSize: number
   orderBy?: string
@@ -202,7 +203,7 @@ export interface DesignListItem {
   product?: {
     id: number
     appId: number
-    name: string
+    name?: string
     download?: number
     purchase?: number
     score?: number
@@ -225,6 +226,8 @@ export interface DesignListItem {
 }
 
 export interface DesignListTask {
+  processingStartedAt?: string | number | null
+  processingFinishedAt?: string | number | null
   id: number
   packagingStatus: string
   deviceId?: string

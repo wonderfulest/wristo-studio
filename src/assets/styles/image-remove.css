@@ -1,0 +1,43 @@
+.image-remove-button.el-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--el-color-danger);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.image-remove-host:hover .image-remove-button,
+.image-remove-host:focus-within .image-remove-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.image-remove-button.el-button:hover,
+.image-remove-button.el-button:focus-visible {
+  background: var(--el-color-danger-dark-2);
+}
+
+.image-remove-button.el-button:focus-visible {
+  outline: 2px solid var(--el-color-danger);
+  outline-offset: 2px;
+}
+
+.image-remove-button.el-button.is-disabled {
+  background: var(--el-color-danger-light-5);
+}

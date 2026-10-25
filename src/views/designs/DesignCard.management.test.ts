@@ -53,6 +53,68 @@ describe('design card management placement', () => {
     expect(wrapper.get('a.title').attributes('href')).toBe('/designs/one')
     wrapper.unmount()
   })
+  it('keeps build actions outside the collapsed versions area and removes obsolete management entries', async () => {
+    const target = document.createElement('div'); document.body.append(target)
+    const { wrapper } = await setup({ management: true, informationTarget: target })
+    const details = wrapper.get('details')
+    expect(details.attributes('open')).toBeUndefined()
+    const build = wrapper.get('.permanent-build-actions')
+    expect(build.element.closest('details')).toBeNull()
+    expect(details.text()).not.toContain('card.buildPrg')
+    expect(details.text()).not.toContain('card.buildIq')
+    expect(details.text()).toContain('editDesign.downloadPackage')
+    expect(wrapper.text()).not.toContain('Rename')
+    expect(wrapper.text()).not.toContain('editDesign.title')
+    const iq = build.findAll('button').find(button => button.text().includes('card.buildIq'))!
+    await iq.trigger('click')
+    expect(wrapper.emitted('submit')?.[0]).toEqual([design])
+    await wrapper.setProps({ design: { ...design, product: { ...design.product, packagingLog: { rank: 0 } } } as any })
+    expect(iq.attributes('disabled')).toBeDefined()
+    expect(build.text()).toContain('card.buildIq')
+    wrapper.unmount(); target.remove()
+  })
+  it.each([
+    ['pending', 3, 'card.position', 'pending'],
+    ['processing', null, 'card.packaging', 'pending'],
+    ['completed', 0, 'card.packageCompleted', 'ready'],
+    ['failed', null, 'card.packageFailed', 'failed'],
+  ])('shows %s beside build actions even with an older release', async (status, rank, text, tone) => {
+    const target = document.createElement('div'); document.body.append(target)
+    const { wrapper } = await setup({ management: true, informationTarget: target, design: {
+      ...design, product: { ...design.product,
+        prgPackagingLog: { id: 9, deviceId: 'venu3', packagingStatus: status, rank, createdAt: 1 },
+        prgRelease: { id: 3, deviceId: 'venu3', prgUrl: 'https://example.com/old.prg' },
+      },
+    } })
+    const row = wrapper.get('.permanent-build-actions .build-task-row')
+    expect(row.text()).toContain('PRG')
+    expect(row.text()).toContain(text)
+    expect(row.classes()).toContain('package-' + tone)
+    expect(wrapper.find('.permanent-build-actions > .action-group-actions').text()).not.toContain('card.cancelPrgBuild')
+    const cancel = row.find('.build-task-cancel')
+    expect(cancel.exists()).toBe(status === 'pending')
+    if (cancel.exists()) {
+      await cancel.trigger('click')
+      expect(wrapper.emitted('cancel-prg')?.[0]).toEqual([wrapper.props('design')])
+    }
+    wrapper.unmount(); target.remove()
+  })
+  it('shows manual processing ahead of the retained queue position', async () => {
+    const target = document.createElement('div'); document.body.append(target)
+    const { wrapper } = await setup({ management: true, informationTarget: target, design: {
+      ...design, product: { ...design.product,
+        prgPackagingLog: { id: 9, deviceId: 'venu3', packagingStatus: 'init', rank: 8,
+          processingStartedAt: '2026-10-25T03:14:00Z', processingFinishedAt: null },
+      },
+    } })
+    expect(wrapper.get('.build-task-row').text()).toContain('card.packaging')
+    await wrapper.setProps({ design: { ...design, product: { ...design.product,
+      prgPackagingLog: { id: 9, deviceId: 'venu3', packagingStatus: 'complete', rank: 8,
+        processingStartedAt: '2026-10-25T03:14:00Z', processingFinishedAt: '2026-10-25T03:15:00Z' },
+    } } as any })
+    expect(wrapper.get('.build-task-row').text()).toContain('card.packageCompleted')
+    wrapper.unmount(); target.remove()
+  })
   it('puts actions on the left and application metadata in the information target', async () => {
     const target = document.createElement('div'); document.body.append(target)
     const { wrapper } = await setup({ management: true, informationTarget: target })

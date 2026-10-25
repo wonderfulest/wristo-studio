@@ -228,6 +228,42 @@ describe('GoLiveDialog product tag behavior', () => {
     expect(mocks.publish).not.toHaveBeenCalled()
   })
 
+  it('shows the saved Garmin link and waits for a second confirmation', async () => {
+    mocks.isAdmin = true
+    let finishConfirmation!: (value: string) => void
+    mocks.confirmCost.mockResolvedValueOnce('confirm').mockImplementationOnce(() => new Promise(resolve => { finishConfirmation = resolve }))
+    mocks.unpublish.mockResolvedValue({ code: 0, data: true })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('[data-testid="unpublish-app"]').trigger('click')
+    await flushPromises()
+    const content = mount(defineComponent({ render: () => mocks.confirmCost.mock.calls[0][0] }))
+    const link = content.get('a')
+    expect(link.attributes('href')).toBe(design.product.garminStoreUrl)
+    expect(link.text()).toBe(design.product.garminStoreUrl)
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+    expect(mocks.confirmCost).toHaveBeenCalledTimes(2)
+    expect(mocks.unpublish).not.toHaveBeenCalled()
+    finishConfirmation('confirm')
+    await flushPromises()
+    expect(mocks.unpublish).toHaveBeenCalledOnce()
+    content.unmount()
+  })
+
+  it('preserves lifecycle state when the second confirmation is cancelled', async () => {
+    mocks.isAdmin = true
+    mocks.confirmCost.mockResolvedValueOnce('confirm').mockRejectedValueOnce('cancel')
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('[data-testid="unpublish-app"]').trigger('click')
+    await flushPromises()
+    expect(mocks.confirmCost).toHaveBeenCalledTimes(2)
+    expect(mocks.unpublish).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="unpublish-app"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="regenerate-uuid"]').exists()).toBe(false)
+  })
+
   it('does not unpublish when confirmation is cancelled', async () => {
     mocks.isAdmin = true
     mocks.confirmCost.mockRejectedValueOnce('cancel')
@@ -238,17 +274,49 @@ describe('GoLiveDialog product tag behavior', () => {
     expect(mocks.unpublish).not.toHaveBeenCalled()
   })
 
-  it('lets an admin save a valid UUID through the admin endpoint without publishing', async () => {
+  it('saves an admin UUID through the admin endpoint when publishing', async () => {
     mocks.isAdmin = true
     const wrapper = mountDialog()
     await showDialog(wrapper)
     const input = wrapper.get<HTMLInputElement>('.app-uuid-input input')
     expect(input.element.readOnly).toBe(false)
     await input.setValue('ddd3eb21-3a0a-48c4-96fe-3c8daadfe235')
-    await wrapper.get('.app-uuid-input').findAll('button')[1].trigger('click')
-    await flushPromises()
+    expect(wrapper.get('.app-uuid-input').findAll('button')).toHaveLength(1)
+    await confirm(wrapper)
     expect(mocks.updateAppUuid).toHaveBeenCalledWith('test-design', 'ddd3eb21-3a0a-48c4-96fe-3c8daadfe235')
+    expect(mocks.publish).toHaveBeenCalledOnce()
+  })
+
+  it('never saves UUID changes for non-admin users when publishing', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('.app-uuid-input input').setValue('ddd3eb21-3a0a-48c4-96fe-3c8daadfe235')
+    await confirm(wrapper)
+    expect(mocks.updateAppUuid).not.toHaveBeenCalled()
+    expect(mocks.publish).toHaveBeenCalledOnce()
+    expect(mocks.publish.mock.calls[0][0]).not.toHaveProperty('garminAppUuid')
+  })
+
+  it('does not resave an unchanged admin UUID', async () => {
+    mocks.isAdmin = true
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+    expect(mocks.updateAppUuid).not.toHaveBeenCalled()
+    expect(mocks.publish).toHaveBeenCalledOnce()
+  })
+
+  it('stops publishing when the UUID save fails and allows retrying', async () => {
+    mocks.isAdmin = true
+    mocks.updateAppUuid.mockRejectedValueOnce(new Error('Save failed'))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('.app-uuid-input input').setValue('ddd3eb21-3a0a-48c4-96fe-3c8daadfe235')
+    await confirm(wrapper)
     expect(mocks.publish).not.toHaveBeenCalled()
+    await confirm(wrapper)
+    expect(mocks.updateAppUuid).toHaveBeenCalledTimes(2)
+    expect(mocks.publish).toHaveBeenCalledOnce()
   })
 
   it('rejects malformed UUIDs before saving', async () => {
@@ -256,9 +324,10 @@ describe('GoLiveDialog product tag behavior', () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
     await wrapper.get('.app-uuid-input input').setValue('invalid')
-    await wrapper.get('.app-uuid-input').findAll('button')[1].trigger('click')
-    await flushPromises()
+    expect(wrapper.get('.app-uuid-input').findAll('button')).toHaveLength(1)
+    await confirm(wrapper)
     expect(mocks.updateAppUuid).not.toHaveBeenCalled()
+    expect(mocks.publish).not.toHaveBeenCalled()
     expect(mocks.messageError).toHaveBeenCalledWith('goLive.invalidAppUuid')
   })
 

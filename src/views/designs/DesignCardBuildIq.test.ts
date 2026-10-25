@@ -156,7 +156,7 @@ describe('My Designs device-specific PRG refresh', () => {
     expect(listSource).toContain('watch(currentDeviceId, (deviceId, previousDeviceId) =>')
     expect(listSource).toContain('if (deviceId === previousDeviceId) return')
     expect(listSource).toContain('currentPage.value = 1')
-    expect(listSource).toContain('void fetchDesigns()')
+    expect(listSource).toContain('refreshVersion.value++')
   })
 })
 
@@ -182,7 +182,7 @@ describe('DesignCard responsive actions panel', () => {
     expect(source).toContain('flex-wrap: nowrap')
     expect(source).toContain('flex: 1 1 0')
     expect(source).toContain("emit('copy', design)")
-    expect(source).toContain("emit('edit', design)")
+    expect(source).not.toContain("emit('edit', design)")
     expect(source).toContain("emit('transfer-owner', design)")
     expect(source).toContain("emit('delete', design)")
     expect(source).toContain("emit('build-prg', design)")

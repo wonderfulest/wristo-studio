@@ -51,7 +51,6 @@
   <ShortcutsDialog v-model="shortcutsDialogVisible" />
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
-  <EditDesignDialog ref="editDesignDialog" />
   <DesignVerificationDrawer v-model="verificationDrawerVisible" />
   <el-drawer
     v-model="visualThemeDrawerVisible"
@@ -140,7 +139,7 @@
 defineProps<{ disabled?: boolean }>()
 import { showErrorOnce } from '@/utils/errorMessage'
 
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { nanoid } from 'nanoid'
 import { useBaseStore } from '@/stores/baseStore'
@@ -204,7 +203,6 @@ import { openRouteInNewTab } from '@/utils/openRouteInNewTab'
 import ShortcutsDialog from '@/components/dialogs/ShortcutsDialog.vue'
 import FeedbackDialog from '@/components/dialogs/FeedbackDialog.vue'
 import PropertiesPanel from '@/components/properties/PropertiesPanel.vue'
-import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import DesignVerificationDrawer from '@/components/dialogs/DesignVerificationDrawer.vue'
 import AppMenuTimeGroup from '@/components/layout/app-menu/AppMenuTimeGroup.vue'
 import AppMenuImageGroup from '@/components/layout/app-menu/AppMenuImageGroup.vue'
@@ -268,7 +266,6 @@ const openVisualThemeEditor = () => {
 }
 const feedbackDialog = ref<InstanceType<typeof FeedbackDialog> | null>(null)
 const propertiesPanel = ref<InstanceType<typeof PropertiesPanel> | null>(null)
-const editDesignDialog = ref<InstanceType<typeof EditDesignDialog> | null>(null)
 const wrtFileInput = ref<HTMLInputElement | null>(null)
 
 type FrameMode = 'withFrame' | 'faceOnly'
@@ -307,27 +304,6 @@ const downloadDataURL = (dataURL: string, filename: string) => {
   link.click()
   document.body.removeChild(link)
 }
-
-const handleMenuKeydown = (e: KeyboardEvent) => {
-  // Cmd/Ctrl + . 打开设计详情
-  if ((e.metaKey || e.ctrlKey) && e.key === '.') {
-    e.preventDefault()
-    console.log('[AppMenu] Cmd/Ctrl+. pressed, open design details')
-    try {
-      handleEditDesign()
-    } catch (err) {
-      console.warn('[AppMenu] handleEditDesign failed', err)
-    }
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleMenuKeydown)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleMenuKeydown)
-})
 
 const ensureNextChartProperty = (metricSymbol?: string) => {
   const allProps = propertiesStore.allProperties
@@ -1015,35 +991,12 @@ const handleAddGoalArcField = async () => {
   }
 }
 
-// 打开设计详情，供菜单项和快捷键复用
-const handleEditDesign = () => {
-  const designId = route.query.id
-  console.log('[AppMenu] handleEditDesign called, designId =', designId)
-  const id = Array.isArray(designId) ? designId[0] : designId
-  if (typeof id === 'string' && id) {
-    if (!editDesignDialog.value) {
-      console.warn('[AppMenu] editDesignDialog ref is not ready', editDesignDialog)
-      return
-    }
-    if (typeof editDesignDialog.value.show !== 'function') {
-      console.warn('[AppMenu] editDesignDialog.show is not a function', editDesignDialog.value)
-      return
-    }
-    editDesignDialog.value.show(id)
-  } else {
-    messageStore.warning(t('editor.saveDesignFirst'))
-  }
-}
-
 // Handle menu selection
 const handleSelect = (key: string) => {
   if (key === 'help/shortcuts') {
     shortcutsDialogVisible.value = true
   } else if (key === 'actions/properties') {
     propertiesPanel.value?.show()
-  } else if (key === 'actions/viewJsonConfig') {
-    // 复用设计详情打开逻辑
-    handleEditDesign()
   }
 }
 

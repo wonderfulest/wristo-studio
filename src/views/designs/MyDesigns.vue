@@ -98,8 +98,8 @@
       </div>
     </div>
 
-    <div class="design-table-scroll" :class="{ 'is-list': viewMode === 'list' }">
-    <div class="design-collection" :class="`design-collection--${viewMode}`">
+    <div :ref="el => container = el as HTMLElement | null" class="design-table-scroll" :class="{ 'is-list': viewMode === 'list' }">
+    <div class="design-collection" :class="`design-collection--${viewMode}`" :style="{ '--design-grid-columns': columns }">
       <div class="design-item" v-for="design in designs" :key="design.id">
         <DesignCard
           :design="design"
@@ -130,11 +130,9 @@
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
-        :page-sizes="[12, 24, 48, 72, 96]"
+        :page-sizes="pageSizes"
         :total="total"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
       />
     </div>
 
@@ -166,6 +164,7 @@ import DesignerSelect from '@/components/users/DesignerSelect.vue'
 import type { DesignListItem, DesignStatus, LaunchStatus, DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
+import { useDesignPagination } from './useDesignPagination'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
 import { normalizeDesignSort, toDesignOrderBy, type DesignSortField, type DesignSortOrder } from '@/views/designs/designSort'
 const router = useRouter()
@@ -192,8 +191,8 @@ watch(viewMode, (mode) => {
   }
 })
 const designs = ref<DesignListItem[]>([])
-const currentPage = ref(1)
-const pageSize = ref(12)
+const { container, columns, currentPage, pageSize, pageSizes, ready } = useDesignPagination(viewMode)
+const refreshVersion = ref(0)
 const total = ref(0)
 const noDesignDialogVisible = ref(false)
 const emptyLoadingStates = { submit: new Set<number>(), copy: new Set<number>(), delete: new Set<number>(), favorite: new Set<number>(), prgBuild: new Set<number>(), previewPrg: new Set<number>() }
@@ -345,7 +344,7 @@ const designScopeOptions = computed(() => [
 // 处理搜索
 const handleSearch = () => {
   currentPage.value = 1
-  fetchDesigns()
+  refreshVersion.value++
 }
 
 // 处理排序变化
@@ -354,18 +353,18 @@ const handleSortChange = () => {
   sortField.value = normalized.field
   sortOrder.value = normalized.order
   currentPage.value = 1
-  fetchDesigns()
+  refreshVersion.value++
 }
 
 const handleStatusChange = () => {
   currentPage.value = 1
-  fetchDesigns()
+  refreshVersion.value++
 }
 
 const handleCreatorChange = (creatorUserId?: number) => {
   selectedCreatorUserId.value = normalizeCreatorUserId(creatorUserId)
   currentPage.value = 1
-  fetchDesigns()
+  refreshVersion.value++
 }
 
 const handleDesignScopeChange = () => {
@@ -374,7 +373,7 @@ const handleDesignScopeChange = () => {
   if (designScope.value === 'all') {
     showCreator.value = true
   }
-  fetchDesigns()
+  refreshVersion.value++
 }
 
 watch(isAdminUser, (isAdmin) => {
@@ -392,7 +391,7 @@ watch(isAdminUser, (isAdmin) => {
   if (isAdmin) {
     showCreator.value = true
   }
-  fetchDesigns()
+  refreshVersion.value++
 })
 
 watch(
@@ -449,29 +448,34 @@ const getDesignImageUrl = (design: DesignListItem) => {
   return design.cover?.url || ''
 }
 
-// 获取设计列表
-const fetchDesigns = async () => {
+// Capture filters when Search/sort/filter controls explicitly apply them.
+const appliedFilters = ref<Partial<DesignPageParams>>({})
+watch(refreshVersion, () => {
+  appliedFilters.value = {
+    designStatus: selectedStatus.value || undefined,
+    launchStatus: selectedLaunchStatus.value || undefined,
+    paymentMethod: selectedPaymentMethod.value || undefined,
+    name: searchName.value,
+    appId: normalizePositiveAppId(searchAppId.value),
+    creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
+    orderBy: toDesignOrderBy(sortField.value, sortOrder.value, isAdminUser.value),
+    scope: isAdminUser.value ? designScope.value : 'mine',
+  }
+}, { immediate: true, flush: 'sync' })
+const requestParams = computed<DesignPageParams>(() => ({
+  ...appliedFilters.value,
+  pageNum: currentPage.value,
+  pageSize: pageSize.value,
+  device: currentDeviceId.value || undefined,
+  summaryOnly: true,
+}))
+let requestVersion = 0
+const fetchDesigns = async (params: DesignPageParams) => {
+  const version = ++requestVersion
   try {
-    const params: DesignPageParams = {
-      pageNum: currentPage.value,
-      pageSize: pageSize.value,
-      designStatus: selectedStatus.value || undefined,
-      launchStatus: selectedLaunchStatus.value || undefined,
-      paymentMethod: selectedPaymentMethod.value || undefined,
-      name: searchName.value,
-      appId: normalizePositiveAppId(searchAppId.value),
-      creatorUserId: isAdminUser.value ? selectedCreatorUserId.value : undefined,
-      orderBy: toDesignOrderBy(sortField.value, sortOrder.value, isAdminUser.value),
-      scope: isAdminUser.value ? designScope.value : 'mine'
-    }
-
-    const deviceId = (userStore.userInfo as any)?.device?.deviceId
-    if (deviceId) {
-      params.device = deviceId
-    }
-
     const response: ApiResponse<PageResponse<DesignListItem>> = await designApi.getDesignCards(params)
-    
+    if (version !== requestVersion) return
+
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
       total.value = response.data.total
@@ -486,16 +490,21 @@ const fetchDesigns = async () => {
       messageStore.error(response.msg || t('project.getListFailed'))
     }
   } catch (error: any) {
+    if (version !== requestVersion) return
     console.error('[MyDesigns] fetchDesigns error:', error)
     console.error('错误详情:', error.response?.data)
     showErrorOnce(error, t('project.getListFailed'))
   }
 }
 
+watch([ready, requestParams, refreshVersion], () => {
+  if (ready.value) void fetchDesigns(requestParams.value)
+}, { flush: 'post' })
+
 watch(currentDeviceId, (deviceId, previousDeviceId) => {
   if (deviceId === previousDeviceId) return
   currentPage.value = 1
-  void fetchDesigns()
+  refreshVersion.value++
 })
 
 // 引导用户前往 New Project 创建第一个应用
@@ -504,35 +513,23 @@ const confirmGoToNewProject = () => {
   router.push('/design')
 }
 
-// 处理页码变化
-const handleCurrentChange = (val: number) => {
-  currentPage.value = val
-  fetchDesigns()
-}
-
-// 处理每页数量变化
-const handleSizeChange = (val: number) => {
-  pageSize.value = val
-  currentPage.value = 1
-  fetchDesigns()
-}
-
 // 打开画布编辑器
 // 处理刷新事件
 const handleRefresh = (event: any ) => {
   if (event.detail.route === 'my-designs') {
     currentPage.value = 1
-    fetchDesigns()
+    refreshVersion.value++
   }
 }
 
 // 首次挂载时加载数据
 onMounted(() => {
   void userStore.refreshUserInfo().catch(() => {})
-  fetchDesigns()
+  refreshVersion.value++
 })
 
 onUnmounted(() => {
+  requestVersion++
   // 清理事件监听
   window.removeEventListener('refresh-list', handleRefresh)
 })
@@ -574,7 +571,7 @@ onUnmounted(() => {
 }
 .view-switch button.active { background: var(--studio-primary-soft); color: var(--studio-primary); }
 .view-switch button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
-.design-collection--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
+.design-collection--grid { display: grid; grid-template-columns: repeat(var(--design-grid-columns, 1), minmax(0, 1fr)); gap: 20px; }
 .design-item { min-width: 0; }
 .design-table-scroll.is-list { overflow-x: auto; }
 .design-table-scroll.is-list > * { min-width: 420px; }
@@ -687,7 +684,6 @@ onUnmounted(() => {
 
 /* 响应式布局调整 */
 @media screen and (max-width: 768px) {
-  .design-collection--grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 
   .pagination-container :deep(.el-pagination) {
     flex-wrap: wrap;

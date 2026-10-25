@@ -18,7 +18,6 @@ vi.mock('@/utils/packageDownload', () => ({ downloadPackageFile: mocks.download 
 vi.mock('@/api/wristo/prg-installer', () => ({ createPrgInstallerTicketCache: () => ({ prepare: vi.fn(), take: vi.fn() }), buildPrgInstallerDeepLink: vi.fn() }))
 vi.mock('@/components/dialogs/GoLiveDialog.vue', () => ({ default: { props: ['inline'], setup: (_: unknown, { expose }: any) => { expose({ show: mocks.publishShow }) }, template: '<div class="publish-test" />' } }))
 vi.mock('@/components/dialogs/SubmitDesignDialog.vue', () => ({ default: { setup: (_: unknown, { expose }: any) => { expose({ show: mocks.submitShow }) }, template: '<div />' } }))
-vi.mock('@/components/dialogs/EditDesignDialog.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/common/DeviceDisplay.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/users/DesignerSelect.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('./DesignCard.vue', () => ({ default: { name: 'DesignCard', props: ['design'], template: '<div class="card-test" />' } }))
@@ -26,7 +25,7 @@ const fixture = () => ({ id: 1, designUid: 'one', name: 'Face', user: { id: 7 },
 let wrapper: ReturnType<typeof mount> | undefined
 let target: HTMLElement
 beforeEach(() => { vi.clearAllMocks(); mocks.user.isAdminUser = false; mocks.get.mockResolvedValue({ code: 0, data: fixture() }); mocks.canExport.mockReturnValue(true); mocks.canPublish.mockReturnValue(true); target = document.createElement('div'); document.body.append(target) })
-afterEach(() => { wrapper?.unmount(); wrapper = undefined; target.remove() })
+afterEach(() => { wrapper?.unmount(); wrapper = undefined; target.remove(); vi.useRealTimers() })
 async function setup() {
   wrapper = mount(DesignManagement, { props: { designUid: 'one', informationTarget: target }, global: { stubs: { ElDialog: true, ElRadioGroup: true, ElRadioButton: true, ElButton: true } } })
   await flushPromises()
@@ -40,6 +39,30 @@ describe('application management', () => {
     expect(mocks.publishShow).toHaveBeenCalledTimes(1)
     await (wrapper!.vm as any).fetchDesigns()
     expect(mocks.publishShow).toHaveBeenCalledTimes(1)
+  })
+  it('keeps polling when a submitted task is not visible in the first response', async () => {
+    vi.useFakeTimers()
+    await setup()
+    const vm = wrapper!.vm as any
+    vm.handleSubmitSuccess({ mode: 'submit' })
+    await flushPromises()
+    const calls = mocks.get.mock.calls.length
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(mocks.get).toHaveBeenCalledTimes(calls + 1)
+    mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), product: {
+      ...fixture().product, packagingLog: { id: 3, packagingStatus: 'processing' },
+    } } })
+    await vi.advanceTimersByTimeAsync(60000)
+    const processingCalls = mocks.get.mock.calls.length
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(mocks.get).toHaveBeenCalledTimes(processingCalls + 1)
+    mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), product: {
+      ...fixture().product, packagingLog: { id: 3, packagingStatus: 'completed', rank: 0 },
+    } } })
+    await vi.advanceTimersByTimeAsync(5000)
+    const completedCalls = mocks.get.mock.calls.length
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(mocks.get).toHaveBeenCalledTimes(completedCalls)
   })
   it('does not expose management or publish information to a non-owner', async () => {
     mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), user: { id: 8 } } })

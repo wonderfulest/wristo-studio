@@ -248,6 +248,49 @@ button,
   font-weight: 600;
 }
 
+.el-button:not(.is-circle) { padding-inline: 12px; }
+
+/* Shared buttons for native actions and navigation links. */
+.studio-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-raised);
+  color: var(--studio-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.studio-button:hover:not(:disabled) {
+  border-color: var(--studio-primary);
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+}
+.studio-button:active:not(:disabled) { border-color: var(--studio-primary-active); color: var(--studio-primary-active); }
+.studio-button--primary { background: var(--studio-primary); border-color: var(--studio-primary); color: #fff; }
+.studio-button--primary:hover:not(:disabled) { background: var(--studio-primary-hover); border-color: var(--studio-primary-hover); color: #fff; }
+.studio-button--primary:active:not(:disabled) { background: var(--studio-primary-active); border-color: var(--studio-primary-active); color: #fff; }
+:root[data-studio-theme='dark'] .studio-button--primary { color: #042f2e; }
+.studio-button--quiet { background: transparent; border-color: transparent; color: var(--studio-primary); }
+.studio-button--icon { flex: 0 0 36px; width: 36px; height: 36px; padding: 0; font-size: 24px; font-weight: 400; color: var(--studio-text-muted); background: transparent; border-color: transparent; }
+.studio-button:disabled { opacity: .5; cursor: not-allowed; }
+.studio-button[aria-busy='true'] { cursor: progress; }
+.studio-button--thumbnail { padding: 3px; }
+.studio-button--thumbnail[aria-pressed='true'] { border-color: var(--studio-primary); background: var(--studio-primary-soft); box-shadow: 0 0 0 1px var(--studio-primary); }
+.studio-button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .studio-button { transition: none; } }
+
 .el-button > span:has(> .el-icon),
 .el-button > span:has(> .iconify),
 .el-button > span:has(> .iconfont) {

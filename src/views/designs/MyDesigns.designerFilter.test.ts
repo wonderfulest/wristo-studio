@@ -17,7 +17,7 @@ describe('My Designs administrator designer filter', () => {
   it('resets pagination and reloads when the selected designer changes', () => {
     expect(pageSource).toContain('const handleCreatorChange = (creatorUserId?: number) => {')
     expect(pageSource).toContain('currentPage.value = 1')
-    expect(pageSource).toContain('fetchDesigns()')
+    expect(pageSource).toContain('refreshVersion.value++')
   })
 
   it('sends an exact creator user ID only for administrators', () => {

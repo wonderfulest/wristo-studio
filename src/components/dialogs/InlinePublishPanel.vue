@@ -69,10 +69,8 @@ footer { position: sticky; bottom: 0; z-index: 2; margin: 24px -24px -24px; padd
 }
 .inline-publish-panel :deep(.media-banner-card .banner-container) {
   width: 100%;
-  padding-top: 28px;
+
 }
-.inline-publish-panel :deep(.media-banner-card .banner-refresh) { top: -4px; right: 0; }
-.inline-publish-panel :deep(.media-banner-card .tip-icon) { top: 1px; right: 34px; }
 .inline-publish-panel :deep(.media-banner-card .image-uploader .el-upload) { display: flex; width: 100%; }
 .inline-publish-panel :deep(.media-banner-card .banner-area) {
   box-sizing: border-box;

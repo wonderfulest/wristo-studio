@@ -6,10 +6,12 @@
         :key="img.id ?? index"
         class="product-image-item"
       >
-        <div class="image-wrapper">
+        <div class="image-wrapper image-remove-host">
           <img :src="img.imageUrl" class="product-image-thumb" />
           <el-button
-            class="delete-button"
+            class="delete-button image-remove-button"
+            :aria-label="t('common.delete')"
+            :title="t('common.delete')"
             type="danger"
             circle
             size="small"
@@ -225,6 +227,8 @@ const handleRemove = (index: number) => {
 }
 </script>
 
+<style scoped src="@/assets/styles/image-remove.css"></style>
+
 <style scoped>
 .product-images-editor {
   width: 100%;
@@ -258,20 +262,6 @@ const handleRemove = (index: number) => {
   display: block;
 }
 
-.delete-button {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  opacity: 0;
-  transition: opacity 0.15s ease-in-out;
-}
-
-.image-wrapper:hover .delete-button {
-  opacity: 1;
-}
 
 .image-uploader {
   flex: 0 0 auto;

@@ -211,12 +211,21 @@ describe('SubmitDesignDialog style tag behavior', () => {
     await showDialog(wrapper, options)
     expect(wrapper.findComponent(StyleTagSelectorStub).exists()).toBe(false)
     expect(mocks.getDsnProductTagsPage).not.toHaveBeenCalled()
+    if (options) {
+      expect(wrapper.find('.prg-summary').text()).toContain('fenix8')
+      expect(wrapper.find('.submit-form').exists()).toBe(false)
+    }
     await confirm(wrapper)
-    const request = options ? mocks.updateDesign : mocks.submitDesign
+    if (options) {
+      expect(mocks.updateDesign).not.toHaveBeenCalled()
+      expect(mocks.submitDesign).not.toHaveBeenCalled()
+      expect(mocks.submitPrgPackageTask).toHaveBeenCalledWith('design-uid', 'fenix8')
+      return
+    }
+    const request = mocks.submitDesign
     expect(request).toHaveBeenCalledOnce()
     expect(request.mock.calls[0][0]).not.toHaveProperty('tagIds')
     expect(request.mock.calls[0][0]).not.toHaveProperty('description')
-    if (options) expect(mocks.submitPrgPackageTask).toHaveBeenCalledWith('design-uid', 'fenix8')
   })
 
   it.each([

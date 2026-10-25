@@ -25,7 +25,6 @@
           :rename-saving="renameSavingDesignIds.has(design.id)"
           :allow-rename="true"
           :now-ms="nowMs"
-          @edit="editDesign"
           @delete="confirmDelete"
           @open="openCanvas"
           @build-prg="buildPrg"
@@ -64,6 +63,7 @@
       v-model="transferDialogVisible"
       :title="t('card.transferOwner.title')"
       width="480px"
+      append-to-body
       @closed="resetTransferOwnerDialog"
     >
       <div v-if="transferDesign" class="transfer-owner-summary">
@@ -92,7 +92,7 @@
     </el-dialog>
 
     <!-- 删除确认对话框 -->
-    <el-dialog v-model="deleteDialogVisible" :title="t('project.confirmDelete')" width="30%">
+    <el-dialog v-model="deleteDialogVisible" :title="t('project.confirmDelete')" width="30%" append-to-body>
       <span>{{ t('project.deleteBody') }}</span>
       <template #footer>
         <span class="dialog-footer">
@@ -109,7 +109,6 @@
     </el-dialog>
 
     <!-- 设计详情对话框 -->
-    <EditDesignDialog ref="editDesignDialog" @success="handleGoLiveSuccess" />
     
     <!-- 提交设计对话框 -->
     <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
@@ -140,7 +139,6 @@ import { ApiResponse } from '@/types/api/api'
 import { CreateCopyDesignParams } from '@/types/api/design'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import DesignerSelect from '@/components/users/DesignerSelect.vue'
-import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
 import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { Design, type DesignListItem, DesignStatus } from '@/types/api/design'
@@ -161,7 +159,6 @@ import {
 import type { AppLanguage } from '@/types/localization'
 import { createPrgInstallerPromptState } from '@/features/prg-installer/promptState'
 import { ElButton, ElMessageBox, ElNotification } from 'element-plus'
-const editDesignDialog = ref<any>(null)
 const submitDesignDialog = ref<any>(null)
 type GoLiveDialogRef = { show: (design: Design) => void }
 const goLiveDialog = ref<GoLiveDialogRef | null>(null)
@@ -289,13 +286,6 @@ const openCanvas = async (design: DesignListItem) => {
     if (isStaleDynamicImportError(error)) return
     console.error('加载设计失败:', error)
     showErrorOnce(error, t('project.loadDesignFailed'))
-  }
-}
-
-// 查看设计详情
-const editDesign = (design: DesignListItem) => {
-  if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
-    editDesignDialog.value.show(design.designUid)
   }
 }
 
@@ -675,7 +665,8 @@ const hasNewRelease = (design: DesignListItem): boolean => {
 
 // 处理提交成功
 const handleSubmitSuccess = (payload: { mode: 'submit' | 'prg-build' }) => {
-  fetchDesigns() // 刷新设计列表
+  submittedTaskPollUntil = Date.now() + 60_000
+  void fetchDesigns()
   if (payload.mode !== 'prg-build' || !prgInstallerPromptState.takeBuildHint()) return
   showPrgInstallerGuideNotification(t('project.prgInstallerBuildHint'))
 }
@@ -696,6 +687,7 @@ const design = ref<DesignListItem | null>(null)
 const loadError = ref('')
 let active = true
 let loadVersion = 0
+let submittedTaskPollUntil = 0
 let publishInitialized = false
 async function fetchDesigns() {
   const version = ++loadVersion
@@ -735,7 +727,7 @@ onMounted(() => {
   prgClockTimer = setInterval(() => {
     nowMs.value = Date.now()
     const product = design.value?.product
-    if ([product?.packagingLog, product?.prgPackagingLog].some(log => log && (log.rank != null || ['pending', 'processing', 'cancel_requested'].includes(log.packagingStatus)))) void fetchDesigns()
+    if (Date.now() < submittedTaskPollUntil || [product?.packagingLog, product?.prgPackagingLog].some(log => log && !['complete', 'completed', 'failed', 'cancelled', 'canceled'].includes(log.packagingStatus) && (log.rank != null || ['init', 'pending', 'processing', 'cancel_requested'].includes(log.packagingStatus)))) void fetchDesigns()
   }, 5000)
 })
 onUnmounted(() => {

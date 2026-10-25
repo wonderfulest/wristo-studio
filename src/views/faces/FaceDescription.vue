@@ -68,7 +68,7 @@ button:disabled { opacity: .6; cursor: wait; }
 button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 3px; }
 .edit-actions { margin-top: 12px; }
 .edit-actions span { font-size: 13px; color: var(--studio-text-muted); }
-.description { background: transparent; color: var(--studio-text-muted); overflow-wrap: anywhere; }
+.description { isolation: isolate; background: transparent; color: var(--studio-text-muted); overflow-wrap: anywhere; }
 .description :deep(.md-editor-preview-wrapper) { padding: 0; }
 .description :deep(.md-editor-preview) { font-family: inherit; font-size: 16px; }
 .description :deep(.md-editor-preview > :first-child) { margin-top: 0; }

@@ -9,7 +9,7 @@
       :disabled="uploading"
     >
       <div
-        class="box"
+        class="box image-remove-host"
         :class="{ 'is-drag-over': dragOver }"
         @dragenter.prevent="onDragEnter"
         @dragover.prevent="onDragOver"
@@ -26,7 +26,9 @@
         <div v-if="uploading" class="mask">{{ t('image.uploading') }}</div>
         <el-button
           v-if="displayPreviewUrl"
-          class="clear"
+          class="clear image-remove-button"
+          :aria-label="t('common.delete')"
+          :title="t('common.delete')"
           type="danger"
           circle
           size="small"
@@ -308,6 +310,8 @@ const clear = () => {
 }
 </script>
 
+<style scoped src="@/assets/styles/image-remove.css"></style>
+
 <style scoped>
 .image-upload { display: inline-flex; }
 .upload { display: inline-flex; }
@@ -359,27 +363,5 @@ const clear = () => {
   line-height: 16px;
   z-index: 2;
   pointer-events: none;
-}
-.clear {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 0;
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  text-align: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease-in-out;
-}
-
-.box:hover .clear {
-  opacity: 1;
 }
 </style>

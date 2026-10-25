@@ -54,7 +54,6 @@ declare module 'vue' {
     DeviceSelector: typeof import('./src/components/common/DeviceSelector.vue')['default']
     DialPicker: typeof import('./src/components/dial-picker/index.vue')['default']
     DialPropertyDialog: typeof import('./src/components/properties/dialogs/DialPropertyDialog.vue')['default']
-    EditDesignDialog: typeof import('./src/components/dialogs/EditDesignDialog.vue')['default']
     EditorSettingsDialog: typeof import('./src/components/dialogs/EditorSettingsDialog.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElButton: typeof import('element-plus/es')['ElButton']

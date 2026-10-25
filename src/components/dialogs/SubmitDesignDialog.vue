@@ -2,11 +2,20 @@
   <el-dialog 
     v-model="dialogVisible" 
     :title="dialogTitle" 
-    width="50%" 
-    :top="'10vh'"
+    :width="dialogMode === 'prg-build' ? '480px' : '50%'"
+    align-center
+    append-to-body
+    modal-class="submit-design-overlay"
     class="submit-design-dialog"
   >
-    <el-form 
+    <dl v-if="dialogMode === 'prg-build'" class="prg-summary">
+      <dt>{{ t('submitDesign.designName') }}</dt>
+      <dd>{{ form.name }}</dd>
+      <dt>{{ t('submitDesign.devices') }}</dt>
+      <dd>{{ prgDeviceId }}</dd>
+    </dl>
+    <el-form
+      v-else
       :model="form" 
       :rules="rules" 
       ref="formRef" 
@@ -125,7 +134,7 @@ import { showErrorOnce } from '@/utils/errorMessage'
 import { ref, reactive, computed } from 'vue'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
-import type { Design, DesignSubmitDTO, UpdateDesignParamsV2 } from '@/types/api/design'
+import type { Design, DesignSubmitDTO } from '@/types/api/design'
 import type { ApiResponse } from '@/types/api/api'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
@@ -151,7 +160,7 @@ const { t } = useI18n()
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const canSelectDesignSource = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
-const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('submitDesign.title') : t('submitDesign.title'))
+const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('submitDesign.title'))
 const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
 
 const getCurrentDeviceParams = () => {
@@ -326,6 +335,28 @@ const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submi
 
 // Confirm submit
 const handleConfirm = async () => {
+  if (dialogMode.value === 'prg-build') {
+    if (!prgDeviceId.value) {
+      messageStore.error(t('project.selectDeviceFirst'))
+      return
+    }
+    loading.value = true
+    try {
+      const response = await designApi.submitPrgPackageTask(form.designUid, prgDeviceId.value)
+      if (response.code === 0) {
+        messageStore.success(t('project.prgBuildSubmitted'))
+        emit('success', { mode: 'prg-build' })
+        dialogVisible.value = false
+      } else {
+        messageStore.error(response.msg || t('project.prgBuildFailed'))
+      }
+    } catch (error) {
+      showErrorOnce(error, t('project.prgBuildFailed'))
+    } finally {
+      loading.value = false
+    }
+    return
+  }
   if (!formRef.value) return
   try {
     await formRef.value.validate()
@@ -383,12 +414,10 @@ const handleConfirm = async () => {
     }
     // Free mode does not require extra parameters
     const completedMode = dialogMode.value
-    const response = completedMode === 'prg-build'
-      ? await handlePrgBuildConfirm(submitData)
-      : await designApi.submitDesign(submitData)
+    const response = await designApi.submitDesign(submitData)
     
     if (response.code === 0) {
-      messageStore.success(completedMode === 'prg-build' ? t('project.prgBuildSubmitted') : t('submitDesign.submittedSuccessfully'))
+      messageStore.success(t('submitDesign.submittedSuccessfully'))
       emit('success', { mode: completedMode })
       dialogVisible.value = false
     } else {
@@ -396,34 +425,10 @@ const handleConfirm = async () => {
     }
   } catch (error) {
     console.error('Submit failed:', error)
-    showErrorOnce(error, dialogMode.value === 'prg-build' ? t('project.prgBuildFailed') : t('submitDesign.submitFailed'))
+    showErrorOnce(error, t('submitDesign.submitFailed'))
   } finally {
     loading.value = false
   }
-}
-
-const handlePrgBuildConfirm = async (submitData: DesignSubmitDTO): Promise<ApiResponse<boolean>> => {
-  if (!prgDeviceId.value) {
-    return { code: -1, msg: t('project.selectDeviceFirst'), data: false } as ApiResponse<boolean>
-  }
-
-  const updateData: UpdateDesignParamsV2 = {
-    uid: submitData.designUid,
-    name: submitData.name,
-  }
-  if (canPublishPaid.value) {
-    updateData.payment = {
-      paymentMethod: submitData.paymentMethod,
-      price: submitData.paymentMethod === 'free' ? 0 : Number(submitData.price || 0),
-      trialLasts: normalizeTrialLasts(submitData.paymentMethod, submitData.trialLasts),
-    }
-  }
-
-  const updateResponse = await designApi.updateDesign(updateData)
-  if (updateResponse.code !== 0) {
-    return { code: updateResponse.code, msg: updateResponse.msg || t('common.saveFailed'), data: false } as ApiResponse<boolean>
-  }
-  return designApi.submitPrgPackageTask(submitData.designUid, prgDeviceId.value)
 }
 
 // Cancel
@@ -440,6 +445,10 @@ defineExpose({
 </script>
 
 <style scoped>
+.prg-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; margin: 8px 0; }
+.prg-summary dt { color: var(--el-text-color-secondary); }
+.prg-summary dd { margin: 0; overflow-wrap: anywhere; }
+
 .packaging-devices { width: 100%; }
 .device-select-all, .device-option { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .device-select-all { padding: 8px 0; }
@@ -491,3 +500,11 @@ defineExpose({
   }
 }
 </style> 
+
+<style>
+.submit-design-overlay {
+  background-color: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+</style>
