@@ -690,6 +690,60 @@ describe('multilingual descriptions', () => {
     mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Generated French' })
   })
 
+  it('generates all configured languages without selecting them and saves each result', async () => {
+    mocks.generateDescription.mockImplementation(async ({ language }) => ({ code: 0, data: `Generated ${language}` }))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    mocks.getAiPrices.mockClear()
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
+    await flushPromises()
+    expect(mocks.generateDescription.mock.calls.map(([payload]) => payload.language)).toEqual(['en', 'fr'])
+    expect(mocks.getAiPrices).not.toHaveBeenCalled()
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('Generated en'), descriptions: { fr: 'Generated fr' } }))
+  })
+
+  it('continues after a failed language and retains successful results', async () => {
+    mocks.generateDescription.mockRejectedValueOnce(new Error('failed')).mockResolvedValueOnce({ code: 0, data: 'French result' })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
+    await flushPromises()
+    expect(mocks.generateDescription).toHaveBeenCalledTimes(2)
+    expect(mocks.messageWarning).toHaveBeenCalledWith('goLive.descriptionsPartial')
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ descriptions: { fr: 'French result' } }))
+  })
+
+  it('confirms the combined AI cost once before generating all templates', async () => {
+    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
+      descriptionTemplate: '[[${app_ai_description}]]',
+      descriptionTemplates: { fr: { wpay: '[[${app_ai_description}]]' } },
+    } })
+    mocks.confirmCost.mockResolvedValue('confirm')
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    mocks.getAiPrices.mockClear()
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
+    await flushPromises()
+    expect(mocks.getAiPrices).toHaveBeenCalledTimes(1)
+    expect(mocks.confirmCost).toHaveBeenCalledTimes(1)
+    expect(mocks.generateDescription).toHaveBeenCalledTimes(2)
+  })
+
+  it('preserves manual edits made while bulk generation is in flight', async () => {
+    let resolve!: (value: unknown) => void
+    mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
+    await wrapper.get('.product-description-input input').setValue('Manual English')
+    resolve({ code: 0, data: 'Stale English' })
+    await flushPromises()
+    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('Manual English')
+    expect(mocks.generateDescription).toHaveBeenCalledTimes(2)
+  })
+
   it('defaults to English even on a Chinese watchface and restores independent drafts', async () => {
     const wrapper = mountDialog()
     ;(wrapper.vm as any).show({ ...design, configJson: { localization: { appLanguage: 'zhs' } }, product: { ...design.product, descriptions: { fr: 'Bonjour' } } })

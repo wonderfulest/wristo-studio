@@ -63,6 +63,7 @@
         <div class="description-actions">
           <CopyGarminDescriptionButton :text="activeDescription" />
           <el-button v-if="canGenerateDescription" size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
+          <el-button v-if="availableDescriptionLanguages.length" size="small" type="primary" :loading="generatingDescription" :disabled="loading" @click="generateAllDescriptions">{{ t('goLive.generateAllDescriptions') }}</el-button>
         </div>
         <div v-if="descriptionConfigLoaded && !hasDescriptionTemplate" class="form-tip" role="status">{{ t('descriptionLanguages.missingTemplate') }}</div>
         <div class="form-tip">
@@ -624,6 +625,11 @@ const selectLanguage = (language: string) => {
 const hasDescriptionTemplate = computed(() => !!getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value).trim())
 const selectedTemplateUsesAi = computed(() => descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value as DescriptionTemplateLanguage))
 const canGenerateDescription = computed(() => descriptionConfigLoaded.value && hasDescriptionTemplate.value && (!selectedTemplateUsesAi.value || aiCapabilities.value.DESCRIPTION))
+const availableDescriptionLanguages = computed(() => descriptionConfigLoaded.value ? DESCRIPTION_LANGUAGES.filter(({ code }) =>
+  getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, code).trim() &&
+  (!descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, code) || aiCapabilities.value.DESCRIPTION)
+) : [])
+
 
 const productImageItems = computed({
   get: () => groupProductImages(form.productImages).product,
@@ -713,11 +719,11 @@ const loadTagGeneration = async (appId: number, version: number, preserveDraft =
   }
 }
 
-const confirmTextGenerationCost = async (scene: 'TAGS' | 'DESCRIPTION', isCurrent: () => boolean) => {
+const confirmTextGenerationCost = async (scene: 'TAGS' | 'DESCRIPTION', isCurrent: () => boolean, count = 1) => {
   const response = await getAiPrices()
   if (!isCurrent()) return false
   if (response.code !== 0 || !response.data) throw new Error(t('goLive.aiStatusFailed'))
-  const cost = response.data[scene]
+  const cost = response.data[scene] * count
   if (!Number.isInteger(cost) || cost < 1) throw new Error(t('goLive.aiStatusFailed'))
   aiPrices.value = response.data
   if (cost < 5) return true
@@ -1253,6 +1259,55 @@ const refreshDescription = async () => {
     }
   } catch (e) {
     if (version === descriptionGenerationVersion) showErrorOnce(e, t('goLive.generateDescriptionFailed'))
+  } finally {
+    if (version === descriptionGenerationVersion) generatingDescription.value = false
+  }
+}
+
+const generateAllDescriptions = async () => {
+  if (!currentDesign.value || generatingDescription.value || loading.value || !availableDescriptionLanguages.value.length) return
+  const uid = userStore.userInfo?.id
+  if (!uid) { ElMessage.error(t('auth.userNotLoggedIn')); return }
+  const pid = currentDesign.value.product.id
+  const paymentMethod = form.paymentMethod
+  const version = ++descriptionGenerationVersion
+  const jobs = availableDescriptionLanguages.value.map(({ code }) => ({
+    language: code,
+    template: getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, code),
+    original: readDescription(code),
+    revision: descriptionRevisions[code] || 0,
+    usesAi: descriptionTemplateUsesAi(descriptionConfig.value || {}, paymentMethod, code),
+  }))
+  const isCurrent = () => version === descriptionGenerationVersion && dialogVisible.value &&
+    currentDesign.value?.product.id === pid && form.paymentMethod === paymentMethod
+  const isUnchanged = (job: typeof jobs[number]) => isCurrent() &&
+    (descriptionRevisions[job.language] || 0) === job.revision && readDescription(job.language) === job.original &&
+    getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, job.language) === job.template
+  generatingDescription.value = true
+  const failed: string[] = []
+  let completed = 0
+  try {
+    const aiCount = jobs.filter(job => job.usesAi).length
+    if (aiCount && !await confirmTextGenerationCost('DESCRIPTION', isCurrent, aiCount)) return
+    for (const job of jobs) {
+      if (!isCurrent()) return
+      if (!isUnchanged(job)) continue
+      try {
+        const response = await productsApi.generateDescription({ ...buildGenerateDescriptionPayload(uid, pid, job.language), paymentMethod })
+        if (!isUnchanged(job)) continue
+        if (response.code !== 0 || typeof response.data !== 'string') throw new Error('Invalid description response')
+        writeDescription(job.language, response.data)
+        if (job.language === 'en') updateProductTags(form.tagIds)
+        completed += 1
+      } catch {
+        if (!isCurrent()) return
+        failed.push(descriptionLanguageLabel(job.language))
+      }
+    }
+    if (failed.length) messageStore.warning(t('goLive.descriptionsPartial', { count: completed, languages: failed.join(', ') }))
+    else if (completed) ElMessage.success(t('goLive.descriptionsGenerated', { count: completed }))
+  } catch (error) {
+    if (isCurrent()) showErrorOnce(error, t('goLive.generateDescriptionFailed'))
   } finally {
     if (version === descriptionGenerationVersion) generatingDescription.value = false
   }
