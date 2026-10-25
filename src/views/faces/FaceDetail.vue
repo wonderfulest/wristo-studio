@@ -77,10 +77,12 @@
         </section>
       </article>
     </main>
+    <AppBuildVersion />
     <SocialShareDialog v-if="sharePlatform && face" :key="`${face.appId}-${sharePlatform}`" :face="face" :platform="sharePlatform" :referral-code="shareProfile?.code" @close="sharePlatform = null" />
   </div>
 </template>
 <script setup lang="ts">
+import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { useI18n } from '@/i18n'
 const { t, locale } = useI18n()
 import { defineAsyncComponent, computed, onBeforeUnmount, ref, watch } from 'vue'
@@ -115,12 +117,15 @@ const detailSections = computed(() => [
   { id: 'distribution', label: t('faceDetail.availability'), icon: 'material-symbols:public' },
 ] as const)
 const showAllTags = ref(false)
-function selectSection(section: 'overview' | PublishSection) { activeSection.value = section }
+function selectSection(section: 'overview' | PublishSection) {
+  activeSection.value = section
+  void router.replace({ query: { ...route.query, section: section === 'overview' ? undefined : section } })
+}
 function moveTab(event: KeyboardEvent, index: number) {
   const next = event.key === 'Home' ? 0 : event.key === 'End' ? detailSections.value.length - 1 : event.key === 'ArrowRight' ? (index + 1) % detailSections.value.length : event.key === 'ArrowLeft' ? (index + detailSections.value.length - 1) % detailSections.value.length : -1
   if (next < 0) return
   event.preventDefault()
-  activeSection.value = detailSections.value[next].id
+  selectSection(detailSections.value[next].id)
   document.getElementById(`detail-tab-${activeSection.value}`)?.focus()
 }
 const informationTarget = ref<HTMLElement | null>(null)
@@ -128,6 +133,11 @@ const sharePlatform = ref<SocialPlatform | null>(null)
 const socialPlatforms: SocialPlatform[] = ['X', 'Facebook', 'Reddit']
 const route = useRoute()
 const router = useRouter()
+function sectionFromRoute(): 'overview' | PublishSection {
+  const section = route.query.section
+  return section === 'listing' || section === 'media' || section === 'distribution' ? section : 'overview'
+}
+watch(() => route.query.section, () => { activeSection.value = sectionFromRoute() })
 const userStore = useUserStore()
 const isOwner = computed(() => userStore.userInfo?.id != null && face.value?.ownerId != null && String(userStore.userInfo.id) === String(face.value.ownerId))
 const canEdit = computed(() => isOwner.value || userStore.isAdminUser)
@@ -231,7 +241,7 @@ async function refreshManagedFace() {
 }
 async function load() {
   sharePlatform.value = null
-  activeSection.value = 'overview'
+  activeSection.value = sectionFromRoute()
   showAllTags.value = false
   const current = ++request
   loading.value = true
@@ -255,7 +265,7 @@ async function load() {
     if (current === request) loading.value = false
   }
 }
-watch(() => [route.params.appId, route.params.designUid, userStore.userInfo?.id], load, { immediate: true })
+watch([() => route.params.appId, () => route.params.designUid, () => userStore.userInfo?.id], load, { immediate: true })
 onBeforeUnmount(() => { request += 1; shareRequest += 1 })
 </script>
 

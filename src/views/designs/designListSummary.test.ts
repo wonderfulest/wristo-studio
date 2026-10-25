@@ -20,18 +20,23 @@ describe('lightweight design cards', () => {
     expect(shouldShowPreviewPrgButton(card.product, 'fenix8')).toBe(true)
     expect(shouldShowPreviewPrgButton(card.product, 'other')).toBe(false)
     expect(getPrgCardAction(card.product, card.updatedAt, 'fenix8')).toBe('build')
-    expect(shouldShowBuildLog(card.product?.packagingLog)).toBe(true)
+    expect(shouldShowBuildLog(card.product?.packagingLog)).toBe(false)
   })
 
-  it('hides logs until finished and no longer owned by the queue', () => {
-    const log = card.product!.packagingLog!
+  it.each(['complete', 'completed', 'pending', 'init', 'processing', 'cancelled', 'cancel_requested'])('hides logs for %s tasks', (packagingStatus) => {
+    expect(shouldShowBuildLog({ ...card.product!.packagingLog!, packagingStatus })).toBe(false)
+  })
+
+  it('shows logs only for failed tasks with available logs outside the queue', () => {
+    const log = { ...card.product!.packagingLog!, packagingStatus: 'failed' }
+    expect(shouldShowBuildLog(log)).toBe(true)
     expect(shouldShowBuildLog({ ...log, rank: 0 })).toBe(false)
-    expect(shouldShowBuildLog({ ...log, packagingStatus: 'pending' })).toBe(false)
     expect(shouldShowBuildLog({ ...log, hasBuildLog: false })).toBe(false)
-    expect(shouldShowBuildLog({ ...log, packagingStatus: 'failed' })).toBe(true)
+    expect(shouldShowBuildLog({ ...log, id: undefined })).toBe(false)
   })
 
-  it('still supports full detail cards in Recent Projects', () => {
-    expect(shouldShowBuildLog({ id: 5, packagingStatus: 'complete', lastBuildLogPath: 'build.log' })).toBe(true)
+  it('supports failed full detail cards in Recent Projects', () => {
+    expect(shouldShowBuildLog({ id: 5, packagingStatus: 'failed', lastBuildLogPath: 'build.log' })).toBe(true)
+    expect(shouldShowBuildLog({ id: 5, packagingStatus: 'complete', lastBuildLogPath: 'build.log' })).toBe(false)
   })
 })

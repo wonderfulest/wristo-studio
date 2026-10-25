@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 const readDialog = (name: string) => readFileSync(new URL(`./${name}.vue`, import.meta.url), 'utf8')
 
 describe('Garmin official payment UI contract', () => {
-  it.each(['SubmitDesignDialog', 'GoLiveDialog'])(
+  it.each(['SubmitDesignDialog', 'PublishForm'])(
     '%s exposes Garmin official payment only to admins and locks the method after first go-live',
     (name) => {
       const source = readDialog(name)
@@ -17,14 +17,14 @@ describe('Garmin official payment UI contract', () => {
     },
   )
 
-  it.each(['SubmitDesignDialog', 'GoLiveDialog'])(
+  it.each(['SubmitDesignDialog', 'PublishForm'])(
     '%s normalizes trial time through the shared payment rule',
     (name) => {
       expect(readDialog(name)).toContain('normalizeTrialLasts')
     },
   )
 
-  it.each(['SubmitDesignDialog', 'GoLiveDialog'])(
+  it.each(['SubmitDesignDialog', 'PublishForm'])(
     '%s only shows trial duration for WPay',
     (name) => {
       const source = readDialog(name)

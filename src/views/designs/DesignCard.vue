@@ -63,9 +63,9 @@
           class="background-image"
         />
         <div v-else class="placeholder-circle"></div>
-        <div v-if="!summaryOnly && viewMode !== 'list' && (showCreator || paymentMethodLabel)" class="card-badges">
+        <div v-if="viewMode !== 'list' && (showCreator || (!summaryOnly && paymentMethodLabel))" class="card-badges">
           <span v-if="showCreator" class="creator-badge">{{ creatorName }}</span>
-          <span v-if="paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
+          <span v-if="!summaryOnly && paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
         </div>
       </component>
       <Teleport :to="informationTarget || 'body'" :disabled="!management">
@@ -145,6 +145,7 @@
             :class="`package-${row.tone}`"
           >
             <strong>{{ row.label }}:</strong>
+            <span v-if="row.releaseVersion" class="package-version">{{ row.releaseVersion }}</span>
             <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">
               {{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span>
             </span>
@@ -192,6 +193,7 @@
         <div v-if="packageRows.length" class="package-info">
           <div v-for="row in packageRows" :key="row.key" class="package-info-item" :class="`package-${row.tone}`">
             <strong>{{ row.label }}:</strong>
+            <span v-if="row.releaseVersion" class="package-version">{{ row.releaseVersion }}</span>
             <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">{{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span></span>
             <a v-if="showPackageDownload && row.canDownload" :href="row.downloadUrl" :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`" class="package-icon-btn" target="_blank" rel="noopener noreferrer" download><el-icon><Download /></el-icon></a>
             <button v-if="row.canViewBuildLog" class="package-icon-btn" type="button" :aria-label="`${row.label} · ${t('editDesign.viewBuildLog')}`" @click.stop="openBuildLog(row.logId)"><Icon icon="material-symbols:article-outline-rounded" /></button>
@@ -214,6 +216,7 @@
               <span class="build-prg-tooltip-trigger">
                 <el-button
                   size="small"
+                  data-onboarding="build"
                   :disabled="prgCardAction !== 'build'"
                   @click="closeActions(); emit('build-prg', design)"
                   :loading="loadingStates.prgBuild.has(design.id)"
@@ -223,7 +226,7 @@
                 </el-button>
               </span>
             </el-tooltip>
-            <el-button :disabled="!showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
+            <el-button v-if="canBuildIq" :disabled="!showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
               <el-icon><Box /></el-icon>
               {{ t('card.buildIq') }}
             </el-button>
@@ -231,9 +234,11 @@
           <div v-if="packageRows.length" class="build-task-status" role="status" aria-live="polite">
             <div v-for="row in packageRows" :key="row.key" class="build-task-row" :class="`package-${row.tone}`">
               <strong>{{ row.label }}</strong>
+              <span v-if="row.releaseVersion" class="package-version">{{ row.releaseVersion }}</span>
               <span class="package-rank">{{ row.value }}</span>
               <el-button
                 v-if="showPackageDownload && row.canDownload && row.tone === 'ready'"
+                :data-onboarding="row.key === 'prg' ? 'download' : undefined"
                 class="build-task-download"
                 size="small"
                 :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`"
@@ -308,7 +313,8 @@
                   <span class="build-prg-tooltip-trigger">
                     <el-button
                       size="small"
-                      :disabled="prgCardAction !== 'build'"
+                      data-onboarding="build"
+                  :disabled="prgCardAction !== 'build'"
                       @click="closeActions(); emit('build-prg', design)"
                       :loading="loadingStates.prgBuild.has(design.id)"
                     >
@@ -339,7 +345,7 @@
             <section v-if="hasReleaseActions" class="action-group action-group-release">
               <div class="action-group-title">{{ t('card.releaseActions') }}</div>
               <div class="action-group-actions">
-                <el-button v-if="showPublishButton" size="small" @click="closeActions(); emit('go-live', design)">
+                <el-button v-if="showPublishButton" size="small" @click="closeActions(); router.push({ path: detailsUrl, query: { section: 'distribution' } })">
                   <el-icon><Upload /></el-icon>
                   {{ t('card.publish') }}
                 </el-button>
@@ -468,7 +474,6 @@ const emit = defineEmits<{
   (e: 'run-prg', design: T): void
   (e: 'submit', design: T): void
   (e: 'download-package', design: T): void
-  (e: 'go-live', design: T): void
   (e: 'transfer-owner', design: T): void
   (e: 'update-store-weight', design: T, storeWeight: number): void
   (e: 'rename', design: T, name: string): void
@@ -670,8 +675,13 @@ const buildPrgDisabledTooltip = computed(() => {
   } as const
   return t(keys[reason])
 })
+const canBuildIq = computed(() => isAdminUser.value || (
+  currentUserId.value != null
+  && design.value.user?.id != null
+  && String(design.value.user.id) === String(currentUserId.value)
+))
 const showBuildIqButton = computed(() => {
-  return shouldShowBuildIqButton(design.value.product)
+  return canBuildIq.value && shouldShowBuildIqButton(design.value.product)
 })
 
 const showPreviewPrgButton = computed(() => {
@@ -730,6 +740,7 @@ const packageRows = computed(() => {
     key: 'prg' | 'iq'
     label: string
     value: string
+    releaseVersion?: string
     tone: string
     isPackaging: boolean
     logId?: number
@@ -748,6 +759,7 @@ const packageRows = computed(() => {
     rows.push({
       key: 'prg',
       label: 'PRG',
+      releaseVersion: currentPrgRelease?.releaseVersion,
       value,
       tone: packageTone(currentPrgLog, !!currentPrgRelease?.prgUrl),
       isPackaging: currentPrgLog?.rank === 0,
@@ -765,6 +777,7 @@ const packageRows = computed(() => {
     rows.push({
       key: 'iq',
       label: 'IQ',
+      releaseVersion: product.release?.releaseVersion,
       value,
       tone: packageTone(iqLog, !!product.release?.packageUrl),
       isPackaging: iqLog?.rank === 0,
@@ -799,12 +812,18 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 <style scoped>
 .build-task-status { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--studio-border); }
 .build-task-row { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; }
-.build-task-row .package-rank { margin-left: auto; text-align: right; }
+.build-task-row .package-version {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.package-rank { margin-left: auto; text-align: right; }
 .build-task-cancel { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 24px; width: 24px; height: 24px; margin: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--studio-text-muted, #858b96); font-size: 14px; cursor: pointer; }
 .build-task-cancel:hover { background: var(--studio-surface-raised); color: var(--studio-text); }
 .build-task-cancel:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 
-.summary-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--studio-text-muted); padding-top: 10px; }
+.summary-meta { display: flex; flex-direction: column; align-items: stretch; gap: 8px; font-size: 12px; color: var(--studio-text-muted); padding-top: 10px; }
 .title { text-decoration: none; color: inherit; }
 .design-card--management { height: auto; }
 .design-card--management .design-info, .design-card--management .actions-bar { display: flex; flex-direction: column; gap: 12px; }
@@ -1459,9 +1478,9 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card--summary.design-card--list :deep(.el-card__header) { grid-column: 2; grid-row: 1; }
 .design-card--summary.design-card--list :deep(.el-card__body),
 .design-card--summary.design-card--list .design-info { display: contents; }
-.design-card--summary.design-card--list .summary-meta { grid-column: 3; grid-row: 1; padding: 0; gap: 24px; }
+.design-card--summary.design-card--list .summary-meta { grid-column: 3; grid-row: 1; padding: 0; gap: 8px; }
 .summary-downloads { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.design-card--summary .summary-meta .package-info { margin: 0; }
+.design-card--summary .summary-meta .package-info { display: flex; flex-direction: column; gap: 2px; margin: 0; }
 .design-card--summary .summary-meta .package-icon-btn { text-decoration: none; flex-shrink: 0; }
 .design-card--summary.design-card--list .list-design-uid { display: none; }
 .design-card--summary.design-card--list .status-dot { display: inline-block; }

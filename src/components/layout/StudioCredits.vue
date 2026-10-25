@@ -1,8 +1,10 @@
 <template>
-  <button type="button" class="credits-button" :title="t('credits.title')" @click="open">
-    {{ t('credits.balance', { count: balance ?? '—' }) }}
-  </button>
-  <a class="credits-button credits-buy" href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a>
+  <div class="credits-actions">
+    <button type="button" class="credits-button credits-balance" :title="t('credits.title')" @click="open">
+      {{ t('credits.balance', { count: balance ?? '—' }) }}
+    </button>
+    <a class="credits-button credits-buy" href="/credits" target="_blank" rel="noopener" :title="t('credits.add')" :aria-label="t('credits.add')">+</a>
+  </div>
   <el-dialog v-model="visible" :title="t('credits.title')" width="min(800px, 94vw)" append-to-body>
     <div class="credits-summary">
       <strong>{{ t('credits.balance', { count: balance ?? '—' }) }}</strong>
@@ -11,7 +13,7 @@
         <el-option v-for="value in types" :key="value" :label="t(`credits.${value}`)" :value="value" />
       </el-select>
     </div>
-    <a href="/credits" target="_blank" rel="noopener">Buy Credits ↗</a>
+    <a href="/credits" target="_blank" rel="noopener">{{ t('credits.add') }}</a>
     <p class="credits-hint">{{ t('credits.policy') }}</p>
     <UserCreditTasks :active="visible" />
     <div v-if="rewards" class="credits-hint">
@@ -127,7 +129,9 @@ onUnmounted(() => {
 
 <style scoped>
 .credits-button { background: var(--studio-surface-soft); color: var(--studio-text); border: 1px solid var(--studio-border); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
-.credits-buy { text-decoration: none; margin-left: 6px; white-space: nowrap; }
+.credits-actions { display: flex; align-items: center; gap: 6px; }
+.credits-balance { flex: 1; min-width: 0; }
+.credits-buy { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 32px; box-sizing: border-box; padding: 0; font-size: 20px; line-height: 1; text-decoration: none; }
 .credits-button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 .credits-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .credits-hint { color: var(--studio-text-muted); line-height: 1.6; }

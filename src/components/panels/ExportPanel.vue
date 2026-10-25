@@ -61,6 +61,7 @@
 </template>
 
 <script setup>
+import { savedOnboardingDesign } from '@/features/onboarding/progress'
 import { writeLocalProject } from '@/engine/services/guestProjectDraft'
 import { prepareLocalProjectPromotion } from '@/engine/services/promoteLocalProject'
 import { redirectToSsoLogin } from '@/utils/ssoRedirect'
@@ -481,6 +482,7 @@ const uploadAuthenticatedApp = async () => {
     const res = await designApi.updateDesign(data)
     if (res.code !== 0) throw new Error(res.msg || 'Failed to update design')
     baseStore.id = res.data?.designUid || baseStore.id
+    savedOnboardingDesign(String(baseStore.id))
     emitter.emit('design-saved', { designId: baseStore.id, saveToken })
     if (sessionStorage.getItem('studio-login-draft') === baseStore.id) sessionStorage.removeItem('studio-login-draft')
     historyStore.saveInitial()

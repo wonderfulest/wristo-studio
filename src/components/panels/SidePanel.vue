@@ -1,7 +1,7 @@
 <template>
   <div class="side-panel">
     <div v-if="!isAddElementMode" class="add-element-button">
-      <el-button class="op-btn" round type="primary" @click="switchToAddElement">{{ t('panel.addElement') }}</el-button>
+      <el-button data-onboarding="add-element" class="op-btn" round type="primary" @click="switchToAddElement">{{ t('panel.addElement') }}</el-button>
     </div>
 
     <!-- 面板容器 -->

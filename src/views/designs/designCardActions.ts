@@ -124,7 +124,7 @@ export const shouldShowBuildLog = (log?: {
   lastBuildLogPath?: string | null
 }) => {
   const status = String(log?.packagingStatus || '').toLowerCase()
-  const isFinished = ['complete', 'completed', 'failed'].includes(status)
+  const isFailed = status === 'failed'
   const isQueued = log?.rank !== null && log?.rank !== undefined
-  return !!(log?.id && (log.hasBuildLog ?? !!log.lastBuildLogPath) && isFinished && !isQueued)
+  return !!(log?.id && (log.hasBuildLog ?? !!log.lastBuildLogPath) && isFailed && !isQueued)
 }

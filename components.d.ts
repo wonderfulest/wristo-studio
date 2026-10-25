@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AddElementPanel: typeof import('./src/components/panels/AddElementPanel.vue')['default']
+    AppBuildVersion: typeof import('./src/components/layout/AppBuildVersion.vue')['default']
     AppHeader: typeof import('./src/components/layout/AppHeader.vue')['default']
     AppMenu: typeof import('./src/components/layout/AppMenu.vue')['default']
     AppMenuActions: typeof import('./src/components/layout/app-menu/AppMenuActions.vue')['default']
@@ -120,7 +121,6 @@ declare module 'vue' {
     FontSearch: typeof import('./src/components/font-picker/FontSearch.vue')['default']
     GlobalHeader: typeof import('./src/components/layout/GlobalHeader.vue')['default']
     GoalPropertyDialog: typeof import('./src/components/properties/dialogs/GoalPropertyDialog.vue')['default']
-    GoLiveDialog: typeof import('./src/components/dialogs/GoLiveDialog.vue')['default']
     GroupSettings: typeof import('./src/components/panels/settings/GroupSettings.vue')['default']
     HandPicker: typeof import('./src/components/hand-picker/index.vue')['default']
     HistoryControls: typeof import('./src/components/canvas/HistoryControls.vue')['default']
@@ -140,6 +140,7 @@ declare module 'vue' {
     ProfileDeviceDisplay: typeof import('./src/components/profile/ProfileDeviceDisplay.vue')['default']
     PropertiesPanel: typeof import('./src/components/properties/PropertiesPanel.vue')['default']
     PropertyKeyField: typeof import('./src/components/properties/common/PropertyKeyField.vue')['default']
+    PublishForm: typeof import('./src/components/dialogs/PublishForm.vue')['default']
     RecentFontList: typeof import('./src/components/font-picker/RecentFontList.vue')['default']
     Rgb565ColorSpectrum: typeof import('./src/components/color-picker/Rgb565ColorSpectrum.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

@@ -40,6 +40,25 @@ async function setup(path = '/faces/123') {
   return { wrapper, router }
 }
 describe('watch face details', () => {
+  it('opens the requested publishing section and follows section navigation', async () => {
+    const { wrapper, router } = await setup('/faces/123?section=distribution')
+    expect(wrapper.get('#detail-tab-distribution').attributes('aria-selected')).toBe('true')
+    await wrapper.get('#detail-tab-overview').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.section).toBeUndefined()
+    await router.push('/faces/123?section=distribution')
+    await flushPromises()
+    expect(wrapper.get('#detail-tab-distribution').attributes('aria-selected')).toBe('true')
+    expect(loadFaceDetail).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('#detail-panel-overview').isVisible()).toBe(false)
+    await router.push('/faces/123?section=listing')
+    await flushPromises()
+    expect(wrapper.get('#detail-tab-listing').attributes('aria-selected')).toBe('true')
+    await router.push('/faces/123?section=invalid')
+    await flushPromises()
+    expect(wrapper.get('#detail-tab-overview').attributes('aria-selected')).toBe('true')
+  })
+
   it('renders the saved design cover when the product has no published images', async () => {
     vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, previewImageUrl: null, fallbackImageUrl: '/saved-design-cover.png' })
     const { wrapper } = await setup()

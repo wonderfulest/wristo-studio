@@ -1,3 +1,4 @@
+import { createdOnboardingDesign, onboarding, setOnboardingOwner } from '@/features/onboarding/progress'
 import { onScopeDispose, ref, watch } from 'vue'
 import { customAlphabet } from 'nanoid'
 import type { LocationQuery, RouteLocationRaw } from 'vue-router'
@@ -42,7 +43,8 @@ export function useEditorEntry(options: {
         await options.load(id)
         return
       }
-      const draft = options.findUnsaved?.()
+      const startingGuide = onboarding.progress.status === 'active' && onboarding.progress.step === 'create' && !onboarding.progress.designId
+      const draft = startingGuide ? undefined : options.findUnsaved?.()
       if (draft && options.chooseUnsaved) {
         const choice = await options.chooseUnsaved(draft)
         if (!active || current !== generation || options.route.path !== '/design') return
@@ -65,6 +67,8 @@ export function useEditorEntry(options: {
       const response = await designApi.createDesign({ name, description: '', originalType: 'original' })
       if (response.code === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) throw response
       if (response.code !== 0 || !response.data?.designUid) throw new Error(response.msg || 'Unable to create a project. Please try again.')
+      setOnboardingOwner(String(user.userInfo?.id || ''))
+      createdOnboardingDesign(response.data.designUid)
       options.onCreated?.(response.data.designUid, name)
       if (active && current === generation) {
         await options.replace({ path: '/design', query: { id: response.data.designUid } })
@@ -80,7 +84,7 @@ export function useEditorEntry(options: {
       if (!id) creating.value = false
     }
   }
-  watch(routeId, () => { void open() })
+  watch(() => [routeId(), options.route.query.onboarding], () => { void open() })
   onScopeDispose(() => { active = false; generation += 1 })
   return { creating, error, open }
 }

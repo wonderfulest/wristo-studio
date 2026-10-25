@@ -17,7 +17,7 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
 vi.mock('@/composables/useStudioMembershipGate', () => ({ useStudioMembershipGate: () => ({ requireExport: mocks.canExport, requirePublish: mocks.canPublish }) }))
 vi.mock('@/utils/packageDownload', () => ({ downloadPackageFile: mocks.download }))
 vi.mock('@/api/wristo/prg-installer', () => ({ createPrgInstallerTicketCache: () => ({ prepare: vi.fn(), take: vi.fn() }), buildPrgInstallerDeepLink: vi.fn() }))
-vi.mock('@/components/dialogs/GoLiveDialog.vue', () => ({ default: { props: ['inline'], setup: (_: unknown, { expose }: any) => { expose({ show: mocks.publishShow }) }, template: '<div class="publish-test" />' } }))
+vi.mock('@/components/dialogs/PublishForm.vue', () => ({ default: { props: ['inline'], setup: (_: unknown, { expose }: any) => { expose({ show: mocks.publishShow }) }, template: '<div class="publish-test" />' } }))
 vi.mock('@/components/dialogs/SubmitDesignDialog.vue', () => ({ default: { setup: (_: unknown, { expose }: any) => { expose({ show: mocks.submitShow }) }, template: '<div />' } }))
 vi.mock('@/components/common/DeviceDisplay.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/users/DesignerSelect.vue', () => ({ default: { template: '<div />' } }))
@@ -48,22 +48,61 @@ describe('application management', () => {
     vm.handleSubmitSuccess({ mode: 'submit' })
     await flushPromises()
     const calls = mocks.get.mock.calls.length
-    await vi.advanceTimersByTimeAsync(5000)
+    await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.get).toHaveBeenCalledTimes(calls + 1)
     mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), product: {
       ...fixture().product, packagingLog: { id: 3, packagingStatus: 'processing' },
     } } })
     await vi.advanceTimersByTimeAsync(60000)
     const processingCalls = mocks.get.mock.calls.length
-    await vi.advanceTimersByTimeAsync(5000)
+    await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.get).toHaveBeenCalledTimes(processingCalls + 1)
     mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), product: {
       ...fixture().product, packagingLog: { id: 3, packagingStatus: 'completed', rank: 0 },
     } } })
-    await vi.advanceTimersByTimeAsync(5000)
+    await vi.advanceTimersByTimeAsync(10000)
     const completedCalls = mocks.get.mock.calls.length
     await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.get).toHaveBeenCalledTimes(completedCalls)
+  })
+  it('discovers packaging for a draft without replacing its content', async () => {
+    vi.useFakeTimers()
+    mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), product: undefined } })
+    await setup()
+    mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), name: 'Remote name', product: {
+      ...fixture().product, packagingLog: { id: 3, packagingStatus: 'processing' },
+    } } })
+    ;(wrapper!.vm as any).handleSubmitSuccess({ mode: 'submit' })
+    await flushPromises()
+    const design = wrapper!.findComponent({ name: 'DesignCard' }).props('design')
+    expect(design.name).toBe('Face')
+    expect(design.product.packagingLog.packagingStatus).toBe('processing')
+    expect(wrapper!.emitted('updated')).toBeUndefined()
+  })
+  it('polls every ten seconds without replacing page data or reinitializing publishing', async () => {
+    vi.useFakeTimers()
+    mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), product: {
+      ...fixture().product, packagingLog: { id: 3, packagingStatus: 'processing' },
+    } } })
+    await setup()
+    const original = wrapper!.findComponent({ name: 'DesignCard' }).props('design')
+    mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), name: 'Changed remotely', product: {
+      ...fixture().product, packagingLog: { id: 3, packagingStatus: 'completed' },
+      release: { packageUrl: 'https://example.com/new.iq' },
+    } } })
+    await vi.advanceTimersByTimeAsync(9999)
+    expect(mocks.get).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    await flushPromises()
+    const current = wrapper!.findComponent({ name: 'DesignCard' }).props('design')
+    expect(current).toBe(original)
+    expect(current.name).toBe('Face')
+    expect(current.product.packagingLog.packagingStatus).toBe('completed')
+    expect(current.product.release.packageUrl).toBe('https://example.com/new.iq')
+    expect(mocks.publishShow).toHaveBeenCalledTimes(1)
+    expect(wrapper!.emitted('updated')).toBeUndefined()
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(mocks.get).toHaveBeenCalledTimes(2)
   })
   it('cancels IQ through its own endpoint and polls until cancellation finishes', async () => {
     vi.useFakeTimers()
@@ -82,12 +121,12 @@ describe('application management', () => {
     expect(mocks.cancelIq).toHaveBeenCalledWith('one', 31)
     expect(mocks.cancelPrg).not.toHaveBeenCalled()
     const calls = mocks.get.mock.calls.length
-    await vi.advanceTimersByTimeAsync(4000)
+    await vi.advanceTimersByTimeAsync(20000)
     expect(mocks.get).toHaveBeenCalledTimes(calls + 2)
     mocks.get.mockResolvedValue({ code: 0, data: { ...task, product: { ...task.product,
       packagingLog: { ...task.product.packagingLog, packagingStatus: 'cancelled', rank: null },
     } } })
-    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(10000)
     const finalCalls = mocks.get.mock.calls.length
     await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.get).toHaveBeenCalledTimes(finalCalls)

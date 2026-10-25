@@ -1,5 +1,5 @@
 <template>
-  <div class="device-display-container" :class="{ mobile: isMobile }">
+  <div data-onboarding="device" class="device-display-container" :class="{ mobile: isMobile }">
     <!-- Has Device -->
     <div v-if="currentDevice" class="device-info selected-state" @click="handleSelectDevice">
       <div class="device-avatar">

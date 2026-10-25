@@ -35,7 +35,6 @@
           @run-prg="runPrg"
           @submit="submitDesign"
           @download-package="downloadPackage"
-          @go-live="goLive"
           @copy="copyDesign"
           @update-store-weight="updateStoreWeight"
           @rename="renameDesign"
@@ -116,13 +115,14 @@
     
     <!-- Publish 对话框 -->
     <Teleport :to="informationTarget.querySelector('.management-publishing') || informationTarget">
-      <GoLiveDialog v-if="design?.product?.appId" ref="goLiveDialog" inline :active-section="activeSection === 'overview' ? 'listing' : activeSection" @section-change="emit('select-section', $event)" @success="handleGoLiveSuccess" />
+      <PublishForm v-if="design?.product?.appId" ref="publishForm" :active-section="activeSection === 'overview' ? 'listing' : activeSection" @section-change="emit('select-section', $event)" @success="handleGoLiveSuccess" />
     </Teleport>
 
 
   </section>
 </template>
 <script setup lang="ts">
+import { observeOnboardingDesign, downloadedOnboardingPrg } from '@/features/onboarding/progress'
 import type { PublishSection } from '@/components/dialogs/publishSections'
 import { designUnlocksApi } from '@/api/wristo/designUnlocks'
 import { showErrorOnce } from '@/utils/errorMessage'
@@ -141,7 +141,7 @@ import { CreateCopyDesignParams } from '@/types/api/design'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import DesignerSelect from '@/components/users/DesignerSelect.vue'
 import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
-import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
+import PublishForm from '@/components/dialogs/PublishForm.vue'
 import { Design, type DesignListItem, DesignStatus } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
@@ -161,8 +161,8 @@ import type { AppLanguage } from '@/types/localization'
 import { createPrgInstallerPromptState } from '@/features/prg-installer/promptState'
 import { ElButton, ElMessageBox, ElNotification } from 'element-plus'
 const submitDesignDialog = ref<any>(null)
-type GoLiveDialogRef = { show: (design: Design) => void }
-const goLiveDialog = ref<GoLiveDialogRef | null>(null)
+type PublishFormRef = { show: (design: Design) => void }
+const publishForm = ref<PublishFormRef | null>(null)
 const router = useRouter()
 const messageStore = useMessageStore()
 const baseStore = useBaseStore()
@@ -179,7 +179,6 @@ try {
 const prgInstallerPromptState = createPrgInstallerPromptState(prgInstallerPromptStorage)
 const nowMs = ref(Date.now())
 let prgClockTimer: ReturnType<typeof setInterval> | undefined
-let cancellationPollTimer: ReturnType<typeof setInterval> | undefined
 
 interface LoadingStates {
   submit: Set<number>
@@ -558,10 +557,8 @@ const cancelBuild = async (design: DesignListItem, type: 'prg' | 'iq') => {
       : await designApi.cancelPrgPackageTask(design.designUid, deviceId!, task.id)
     if (response.code !== 0) throw new Error(response.msg || t(`project.cancel${label}BuildFailed`))
     messageStore.success(t(`project.cancel${label}BuildSubmitted`))
-    await fetchDesigns()
-    if (response.data?.status === 'cancel_requested' && !cancellationPollTimer) {
-      cancellationPollTimer = setInterval(() => { void fetchDesigns() }, 2000)
-    }
+    if (response.data?.status === 'cancel_requested') task.packagingStatus = 'cancel_requested'
+    await refreshPackagingStatus()
   } catch (error: any) {
     if (error === 'cancel' || error === 'close') return
     showErrorOnce(error, error?.message || t(`project.cancel${label}BuildFailed`))
@@ -590,6 +587,7 @@ const runPrg = async (design: DesignListItem) => {
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
     await downloadPackageFile(url, design.product?.name || design.name, 'prg')
+    downloadedOnboardingPrg(design.designUid, design.product!.prgRelease!.id)
   } else {
     messageStore.error(t('project.prgUnavailable'))
   }
@@ -672,19 +670,12 @@ const hasNewRelease = (design: DesignListItem): boolean => {
 // 处理提交成功
 const handleSubmitSuccess = (payload: { mode: 'submit' | 'prg-build' }) => {
   submittedTaskPollUntil = Date.now() + 60_000
-  void fetchDesigns()
+  void refreshPackagingStatus()
   if (payload.mode !== 'prg-build' || !prgInstallerPromptState.takeBuildHint()) return
   showPrgInstallerGuideNotification(t('project.prgInstallerBuildHint'))
 }
 
 
-const goLive = async () => {
-  if (!membershipGate.requirePublish()) return
-  emit('select-section', 'distribution')
-  await nextTick()
-  props.informationTarget.querySelector<HTMLElement>('.inline-publish-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  props.informationTarget.querySelector<HTMLElement>('.inline-publish-panel input:not([disabled])')?.focus({ preventScroll: true })
-}
 const handleGoLiveSuccess = async () => { publishInitialized = false; await fetchDesigns(); emit('updated') }
 
 const props = defineProps<{ designUid: string; informationTarget: HTMLElement; activeSection?: 'overview' | PublishSection }>()
@@ -716,31 +707,54 @@ async function fetchDesigns() {
     await nextTick()
     if (!active || version !== loadVersion) return
     if (!publishInitialized && response.data.product?.appId) {
-      goLiveDialog.value?.show(response.data)
+      publishForm.value?.show(response.data)
       publishInitialized = true
-    }
-    if (cancellationPollTimer && ![response.data.product?.prgPackagingLog, response.data.product?.packagingLog].some(log => log?.packagingStatus === 'cancel_requested')) {
-      clearInterval(cancellationPollTimer)
-      cancellationPollTimer = undefined
     }
   } catch (error) {
     if (active && version === loadVersion) loadError.value = error instanceof Error ? error.message : t('project.loadDesignFailed')
   }
 }
+// Polling must preserve the design and publishing form; only packaging fields change.
+let packagingRequestPending = false
+async function refreshPackagingStatus() {
+  if (packagingRequestPending || !design.value) return
+  packagingRequestPending = true
+  const version = loadVersion
+  const deviceId = currentDeviceId.value
+  const product = design.value.product
+  try {
+    const response = await designApi.getDesignByUid(props.designUid, getCurrentDeviceParams())
+    if (!active || version !== loadVersion || deviceId !== currentDeviceId.value || design.value?.product !== product) return
+    if (response.code !== 0 || !response.data?.product) return
+    if (!isAdminUser.value && response.data.user?.id !== userStore.userInfo?.id) return
+    const latest = response.data.product
+    const target = product ?? (design.value!.product = { id: latest.id, appId: latest.appId })
+    target.packagingLog = latest.packagingLog
+    target.prgPackagingLog = latest.prgPackagingLog
+    target.release = latest.release
+    target.prgRelease = latest.prgRelease
+  } catch {
+    // Keep the last known status on transient failures and retry on the next tick.
+  } finally {
+    packagingRequestPending = false
+  }
+}
+watch(() => [design.value, currentDeviceId.value], () => {
+  if (design.value) observeOnboardingDesign(design.value, currentDeviceId.value)
+}, { deep: true })
 watch(currentDeviceId, () => { void fetchDesigns() })
 onMounted(() => {
   void fetchDesigns()
   prgClockTimer = setInterval(() => {
     nowMs.value = Date.now()
     const product = design.value?.product
-    if (Date.now() < submittedTaskPollUntil || [product?.packagingLog, product?.prgPackagingLog].some(log => log && !['complete', 'completed', 'failed', 'cancelled', 'canceled'].includes(log.packagingStatus) && (log.rank != null || ['init', 'pending', 'processing', 'cancel_requested'].includes(log.packagingStatus)))) void fetchDesigns()
-  }, 5000)
+    if (Date.now() < submittedTaskPollUntil || [product?.packagingLog, product?.prgPackagingLog].some(log => log && !['complete', 'completed', 'failed', 'cancelled', 'canceled'].includes(log.packagingStatus) && (log.rank != null || ['init', 'pending', 'processing', 'cancel_requested'].includes(log.packagingStatus)))) void refreshPackagingStatus()
+  }, 10_000)
 })
 onUnmounted(() => {
   active = false
   loadVersion++
   if (prgClockTimer) clearInterval(prgClockTimer)
-  if (cancellationPollTimer) clearInterval(cancellationPollTimer)
 })
 </script>
 <style scoped>

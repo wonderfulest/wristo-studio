@@ -93,7 +93,7 @@
       </el-tab-pane>
     </el-tabs>
 
-    <section class="guide-section">
+    <section data-onboarding="install" class="guide-section">
       <div class="section-heading">
         <span>01</span>
         <h2>{{ t('prgInstallerGuide.getReady') }}</h2>

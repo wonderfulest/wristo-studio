@@ -12,7 +12,7 @@ import type { Product as ProductVo, GenerateDescriptionDto } from '@/types/api/p
 export interface BannerGenerationJob {
   id: string
   productId: number
-  status: 'running' | 'succeeded' | 'failed'
+  status: 'running' | 'succeeded' | 'failed' | 'skipped'
   imageUrl: string | null
 }
 
@@ -31,6 +31,9 @@ export const productsApi = {
   },
   generateBanner(data: { productId: number; deviceId: string; customPrompt?: string; expectedCreditCost: number }): Promise<ApiResponse<BannerGenerationJob>> {
     return instance.post('/dsn/products/generate-banner', data)
+  },
+  getLatestBannerGeneration(productId: number): Promise<ApiResponse<BannerGenerationJob | null>> {
+    return instance.get(`/dsn/products/${productId}/banner-generation`)
   },
   getBannerGeneration(productId: number, jobId: string): Promise<ApiResponse<BannerGenerationJob>> {
     return instance.get(`/dsn/products/${productId}/banner-generation/${encodeURIComponent(jobId)}`)

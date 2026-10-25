@@ -9,6 +9,7 @@
         <div class="element-grid">
           <template v-for="(config, type) in category" :key="type">
             <button
+              :data-onboarding="String(type) === 'time' ? 'time' : undefined"
               :class="{ disabled: config.disabled }"
               :disabled="config.disabled"
               @click="addElementByType(categoryKey, type, config)"

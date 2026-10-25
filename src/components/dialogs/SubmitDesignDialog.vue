@@ -128,6 +128,7 @@
 </template>
 
 <script setup lang="ts">
+import { submittedOnboardingBuild } from '@/features/onboarding/progress'
 import { comparePackagingDevices } from '@/utils/packagingDevices'
 import { showErrorOnce } from '@/utils/errorMessage'
 
@@ -344,6 +345,7 @@ const handleConfirm = async () => {
     try {
       const response = await designApi.submitPrgPackageTask(form.designUid, prgDeviceId.value)
       if (response.code === 0) {
+        submittedOnboardingBuild(form.designUid, prgDeviceId.value)
         messageStore.success(t('project.prgBuildSubmitted'))
         emit('success', { mode: 'prg-build' })
         dialogVisible.value = false

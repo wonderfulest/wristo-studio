@@ -91,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import { onboarding } from '@/features/onboarding/progress'
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
@@ -422,7 +423,7 @@ const {
     if (newAiProjectId === id) {
       newAiProjectId = ''
       void refreshEditorAiCapabilities().then(() => {
-        if (loadedDesignId === id && editorAiCapabilities.value.WATCHFACE) aiWatchfaceVisible.value = true
+        if (loadedDesignId === id && editorAiCapabilities.value.WATCHFACE && !onboarding.offered && onboarding.progress.status !== 'active') aiWatchfaceVisible.value = true
       })
     }
   },
@@ -431,6 +432,10 @@ const {
     draftAutosave.markDirty()
     saveDirtyDraft()
   },
+})
+
+watch(() => onboarding.offered || onboarding.progress.status === 'active', showing => {
+  if (showing) aiWatchfaceVisible.value = false
 })
 
 const { creating: entryCreating, error: entryError, open: openEditorEntry } = useEditorEntry({

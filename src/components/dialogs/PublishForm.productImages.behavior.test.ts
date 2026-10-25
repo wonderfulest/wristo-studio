@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   getBundles: vi.fn(),
   generateBanner: vi.fn(),
   getBannerGeneration: vi.fn(),
+  getLatestBannerGeneration: vi.fn().mockResolvedValue({ code: 0, data: null }),
   publish: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   saveProductImageArchive: vi.fn(),
 }))
 
+vi.mock('@/composables/useStudioMembershipGate', () => ({ useStudioMembershipGate: () => ({ requirePublish: () => true }) }))
 vi.mock('@/api/wristo/designerDefaultConfig', () => ({ designerDefaultConfigApi: { getByUserId: vi.fn().mockResolvedValue({ code: 0, data: {} }) } }))
 vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities, getAiPrices: mocks.getAiPrices }))
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: vi.fn() }))
@@ -30,6 +32,7 @@ vi.mock('@/api/wristo/products', () => ({
     generateDescription: vi.fn(),
     generateBanner: mocks.generateBanner,
     getBannerGeneration: mocks.getBannerGeneration,
+    getLatestBannerGeneration: mocks.getLatestBannerGeneration,
   },
 }))
 vi.mock('@/stores/message', () => ({
@@ -58,11 +61,12 @@ vi.mock('@/components/common/productImageDownload', () => ({
   saveProductImageArchive: mocks.saveProductImageArchive,
 }))
 vi.mock('element-plus', () => ({
+  ElDialog: { name: 'ElDialog', template: '<div><slot/><slot name="footer"/></div>' },
   ElMessage: { error: vi.fn(), success: vi.fn() },
   ElLoading: { service: vi.fn(() => ({ close: vi.fn() })) },
 }))
 
-import GoLiveDialog from './GoLiveDialog.vue'
+import PublishForm from './PublishForm.vue'
 
 const design = {
   product: {
@@ -133,7 +137,7 @@ const stubs = {
     template: '<div v-if="modelValue" class="dialog"><slot/><slot name="footer"/></div>',
   },
   ElForm: ElFormStub,
-  ElFormItem: { template: '<div><slot/></div>' },
+  ElFormItem: { template: '<div><slot name="label"/><slot/></div>' },
   ElInput: { name: 'ElInput', emits: ['update:modelValue'], template: '<div><slot name="append"/></div>' },
   ElInputNumber: true,
   ElRadioGroup: { template: '<div><slot/></div>' },
@@ -158,10 +162,10 @@ const stubs = {
   DesignerDefaultConfigDialog: true,
 }
 
-const mountDialog = () => mount(GoLiveDialog, { global: { stubs } })
+const mountDialog = () => mount(PublishForm, { global: { stubs } })
 
 const showDialog = async (wrapper: ReturnType<typeof mountDialog>, value = design) => {
-  ;(wrapper.vm as unknown as { show: (input: Design) => void }).show(value)
+  ;(wrapper.vm as unknown as { show: (input: Design) => void }).show(structuredClone(value))
   await flushPromises()
   await nextTick()
 }
@@ -171,9 +175,10 @@ const confirmBanner = async (wrapper: ReturnType<typeof mountDialog>) => {
   await wrapper.findAll('button').find(button => button.text().startsWith('goLive.bannerConfirmGenerate'))!.trigger('click')
 }
 
-describe('GoLiveDialog product image behavior', () => {
+describe('PublishForm product image behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getLatestBannerGeneration.mockResolvedValue({ code: 0, data: null })
     mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 7 } })
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
     mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'ready', canGenerate: true, tags: [] } })
@@ -190,7 +195,7 @@ describe('GoLiveDialog product image behavior', () => {
       ...design,
       product: { ...design.product, lastGoLive: '2026-10-19T11:44:14', payment: null },
     } as unknown as Design)
-    await wrapper.findAll('button').find(button => button.text() === 'common.submit')!.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'Save & publish')!.trigger('click')
     await flushPromises()
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
       payment: { paymentMethod: 'free', price: 0, trialLasts: 0 },
@@ -209,7 +214,24 @@ describe('GoLiveDialog product image behavior', () => {
     expect(wrapper.text()).not.toContain('goLive.aiUnavailable')
   })
 
-  it('polls a running task and stops polling when the dialog closes', async () => {
+  it('restores a running task after remount without generating again', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    mocks.getLatestBannerGeneration.mockResolvedValue({ code: 0, data: { id: 'background-job', status: 'running' } })
+    mocks.getBannerGeneration.mockResolvedValue({ code: 0, data: { id: 'background-job', status: 'succeeded', imageUrl: 'https://cdn.wristo.io/restored.jpg' } })
+    const first = mountDialog()
+    await showDialog(first)
+    first.unmount()
+    const reopened = mountDialog()
+    await showDialog(reopened)
+    await vi.advanceTimersByTimeAsync(2500)
+    await flushPromises()
+    expect(mocks.generateBanner).not.toHaveBeenCalled()
+    expect(mocks.getBannerGeneration).toHaveBeenCalledTimes(1)
+    expect(reopened.get('.banner-area img').attributes('src')).toContain('restored.jpg')
+    reopened.unmount()
+  })
+
+  it('polls a running task and stops polling when the page form unmounts', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     mocks.generateBanner.mockResolvedValue({ data: { id: 'job', status: 'running' } })
     mocks.getBannerGeneration.mockResolvedValue({ data: { id: 'job', status: 'succeeded', imageUrl: 'https://cdn.wristo.io/polled.jpg' } })
@@ -226,8 +248,7 @@ describe('GoLiveDialog product image behavior', () => {
     await wrapper.get('.banner-refresh').trigger('click')
     await confirmBanner(wrapper)
     await flushPromises()
-    const cancel = wrapper.findAll('button').find(button => button.text() === 'common.cancel')!
-    await cancel.trigger('click')
+    wrapper.unmount()
     await vi.advanceTimersByTimeAsync(2500)
     expect(mocks.getBannerGeneration).toHaveBeenCalledTimes(1)
   })
@@ -306,7 +327,7 @@ describe('GoLiveDialog product image behavior', () => {
     await showDialog(wrapper)
 
     const submitButton = wrapper.findAll('button')
-      .find((button) => button.text() === 'common.submit')
+      .find((button) => button.text() === 'Save & publish')
     expect(submitButton).toBeDefined()
     await submitButton!.trigger('click')
     await flushPromises()
@@ -331,7 +352,7 @@ describe('GoLiveDialog product image behavior', () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
 
-    await wrapper.get('[data-download-mode="all"]').trigger('click')
+    await wrapper.get('.product-image-download-row [data-download-mode="all"]').trigger('click')
     await flushPromises()
 
     expect(mocks.buildProductImageArchive).toHaveBeenCalledWith(
@@ -358,7 +379,7 @@ describe('GoLiveDialog product image behavior', () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
 
-    await wrapper.get('[data-download-mode="original"]').trigger('click')
+    await wrapper.get('.product-image-download-row [data-download-mode="original"]').trigger('click')
     await flushPromises()
 
     expect(mocks.saveProductImageArchive).not.toHaveBeenCalled()
@@ -373,6 +394,6 @@ describe('GoLiveDialog product image behavior', () => {
     } as unknown as Design
     await showDialog(wrapper, emptyDesign)
 
-    expect(wrapper.getComponent(ElDropdownStub).props('disabled')).toBe(true)
+    expect(wrapper.findAllComponents(ElDropdownStub).find(dropdown => dropdown.element.closest('.product-image-download-row'))!.props('disabled')).toBe(true)
   })
 })

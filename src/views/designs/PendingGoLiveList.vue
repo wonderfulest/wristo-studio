@@ -36,8 +36,9 @@
             <span>{{ row.release?.releaseNote ?? '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('pending.actions')" width="200" fixed="right">
+        <el-table-column :label="t('pending.actions')" width="280" fixed="right">
           <template #default="{ row }">
+            <el-button size="small" @click="router.push({ name: 'FaceDetail', params: { appId: row.appId } })">{{ t('common.detail') }}</el-button>
             <el-button type="primary" size="small" :disabled="!row.release?.packageUrl" @click="download(row)">{{ t('pending.download') }}</el-button>
             <el-button type="success" size="small" @click="goLive(row)">{{ t('pending.goLive') }}</el-button>
           </template>
@@ -45,41 +46,25 @@
       </el-table>
     </el-card>
 
-    <!-- Publish Dialog -->
-    <GoLiveDialog ref="goLiveDialog" @success="handleGoLiveSuccess" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { showErrorOnce } from '@/utils/errorMessage'
-
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import type { Product } from '@/types/api/product'
 import { useMessageStore } from '@/stores/message'
-import { designApi } from '@/api/wristo/design'
-import type { Design } from '@/types/api/design'
-import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
-import type { ApiResponse } from '@/types/api/api'
 import { useI18n } from '@/i18n'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { useUserStore } from '@/stores/user'
 import { downloadPackageFile } from '@/utils/packageDownload'
 
 const messageStore = useMessageStore()
+const router = useRouter()
 const pendingStore = usePendingGoLiveStore()
 const { t } = useI18n()
 const membershipGate = useStudioMembershipGate()
-const userStore = useUserStore()
-type GoLiveDialogRef = { show: (design: Design) => void }
-const goLiveDialog = ref<GoLiveDialogRef | null>(null)
-
-const getCurrentDeviceParams = () => {
-  const deviceId = userStore.userInfo?.device?.deviceId
-  return deviceId ? { device: deviceId } : undefined
-}
-
 const formatDateNullable = (date: number | undefined): string => {
   if (!date) return t('common.never')
   return dayjs(date).format('YYYY-MM-DD HH:mm')
@@ -89,22 +74,8 @@ onMounted(() => {
   pendingStore.fetch()
 })
 
-const goLive = async (row: Product): Promise<void> => {
-  if (!membershipGate.requirePublish()) return
-  try {
-    // 获取完整 design 对象（包含 user, product, payment, release, cover, category, bundle）
-    const res = await designApi.getDesignByUid(row.designId, getCurrentDeviceParams()) as ApiResponse<Design>
-    const design = res.data as Design
-    if (!design) {
-      messageStore.error(t('project.loadDesignFailed'))
-      return
-    }
-    if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
-      goLiveDialog.value.show(design)
-    }
-  } catch (e) {
-    showErrorOnce(e, t('project.loadDesignFailed'))
-  }
+const goLive = (row: Product): void => {
+  void router.push({ name: 'FaceDetail', params: { appId: row.appId }, query: { section: 'distribution' } })
 }
 
 const download = async (row: Product): Promise<void> => {
@@ -115,10 +86,6 @@ const download = async (row: Product): Promise<void> => {
   } else {
     messageStore.error(t('pending.noPackage'))
   }
-}
-
-const handleGoLiveSuccess = (): void => {
-  pendingStore.fetch()
 }
 </script>
 

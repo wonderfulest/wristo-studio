@@ -8,12 +8,14 @@ vi.mock('@/api/wristo/studioAi', () => ({ getAiPrices: vi.fn().mockResolvedValue
 vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 vi.mock('@/utils/paddleCheckout', () => ({ paddleConfigured: () => true, loadPaddle: async () => ({ Checkout: { open: mocks.open, close: vi.fn() } }), onPaddleEvent: (fn: any) => { mocks.callback = fn; return vi.fn() } }))
 import BuyCredits from './BuyCredits.vue'
+import { getAiPrices } from '@/api/wristo/studioAi'
+vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string, values: any) => key === 'credits.watchfaceEstimate' ? `Approximately ${values.count} watch face generations` : `At ${values.cost} credits per generation; excludes AI adjustments and other tools.` }) }))
 let wrapper: ReturnType<typeof mount> | undefined
-const order = { id: 'order-1', packageCode: 'creator', credits: 220, priceCents: 1999, currency: 'USD', transactionId: 'txn_test', status: 'PENDING', refundedCredits: 0, createdAt: '2026-10-05T00:00:00Z' }
+const order = { id: 'order-1', packageCode: 'creator', credits: 700, priceCents: 1999, currency: 'USD', transactionId: 'txn_test', status: 'PENDING', refundedCredits: 0, createdAt: '2026-10-05T00:00:00Z' }
 beforeEach(() => {
   vi.clearAllMocks(); sessionStorage.clear()
   mocks.user = reactive({ isAuthenticated: true, userInfo: { id: 7, email: 'test@example.com' } })
-  mocks.packages.mockResolvedValue({ data: [{ code: 'creator', name: 'Creator', credits: 220, priceCents: 1999, currency: 'USD', recommended: true, available: true }] })
+  mocks.packages.mockResolvedValue({ data: [{ code: 'creator', name: 'Creator', credits: 700, priceCents: 1999, currency: 'USD', recommended: true, available: true }] })
   mocks.balance.mockResolvedValue({ data: { balance: 10 } }); mocks.orders.mockResolvedValue({ data: [] })
   mocks.createOrder.mockResolvedValue({ data: order }); mocks.order.mockResolvedValue({ data: order }); mocks.syncOrder.mockResolvedValue({ data: order })
 })
@@ -30,7 +32,7 @@ it('keeps checkout completion pending until the server confirms credits', async 
   expect(wrapper.text()).toContain('Credits added')
 })
 it('disables purchases when backend packages are not configured', async () => {
-  mocks.packages.mockResolvedValue({ data: [{ code: 'starter', name: 'Starter', credits: 100, priceCents: 999, currency: 'USD', available: false }] })
+  mocks.packages.mockResolvedValue({ data: [{ code: 'starter', name: 'Starter', credits: 300, priceCents: 999, currency: 'USD', available: false }] })
   wrapper = mount(BuyCredits); await flushPromises()
   expect(wrapper.get('[data-buy="starter"]').attributes('disabled')).toBeDefined()
   expect(wrapper.text()).toContain('Purchases are not available yet')
@@ -58,4 +60,21 @@ it('discards an old account checkout response after changing accounts', async ()
   resolve({ data: order }); await flushPromises()
   expect(mocks.open).not.toHaveBeenCalled()
   expect(wrapper.find('[data-check-payment]').exists()).toBe(false)
+})
+
+it('estimates generations using the current API cost and rounds down', async () => {
+  vi.mocked(getAiPrices).mockResolvedValueOnce({ data: { WATCHFACE: 30 } } as any)
+  wrapper = mount(BuyCredits); await flushPromises()
+  expect(wrapper.get('[data-watchface-estimate]').text()).toContain('Approximately 23 watch face generations')
+  expect(wrapper.get('[data-watchface-estimate]').text()).toContain('At 30 credits per generation')
+})
+it.each([0, undefined])('hides generation estimates when the cost is unavailable (%s)', async cost => {
+  vi.mocked(getAiPrices).mockResolvedValueOnce({ data: { WATCHFACE: cost } } as any)
+  wrapper = mount(BuyCredits); await flushPromises()
+  expect(wrapper.find('[data-watchface-estimate]').exists()).toBe(false)
+})
+it('shows the new package generation allowances at the default cost', async () => {
+  mocks.packages.mockResolvedValue({ data: [300, 700, 2000].map((credits, index) => ({ code: `pack-${index}`, name: 'Pack', credits, priceCents: [999,1999,4999][index], currency: 'USD', available: true })) })
+  wrapper = mount(BuyCredits); await flushPromises()
+  expect(wrapper.findAll('[data-watchface-estimate]').map(el => el.text())).toEqual([15,35,100].map(count => expect.stringContaining(`Approximately ${count} watch face generations`)))
 })

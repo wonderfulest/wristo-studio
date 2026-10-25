@@ -13,7 +13,7 @@ const stubs = {
   ElButton: { template: '<button><slot /></button>' },
   ElTooltip: { template: '<span><slot /></span>' },
   ElIcon: { template: '<span><slot /></span>' },
-  ElPopover: true, ElDrawer: true, ElInputNumber: true, Icon: true,
+  ElPopover: { template: '<div><slot name="reference"/><slot/></div>' }, ElDrawer: true, ElInputNumber: true, Icon: true,
 }
 async function setup(extra: Record<string, unknown> = {}) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:pathMatch(.*)*', component: { template: '<div />' } }] })
@@ -22,6 +22,58 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it('navigates Publish to the application detail publishing section', async () => {
+    const { wrapper, router } = await setup()
+    await wrapper.findAll('button').find(button => button.text() === 'card.publish')!.trigger('click')
+    await router.isReady()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(router.currentRoute.value.fullPath).toBe('/faces/211889?section=distribution')
+    expect(wrapper.emitted('go-live')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it.each([
+    ['creator', 7, false, true],
+    ['administrator', 8, true, true],
+    ['other merchant', 8, false, false],
+    ['visitor', null, false, false],
+    ['unprivileged user 1', 1, false, false],
+  ])('shows IQ build only for authorized users: %s', async (_, currentUserId, isAdminUser, visible) => {
+    const { wrapper } = await setup({ management: true, currentUserId, isAdminUser })
+    expect(wrapper.get('.permanent-build-actions').text().includes('card.buildIq')).toBe(visible)
+    expect(wrapper.get('.permanent-build-actions').text()).toContain('card.buildPrg')
+    wrapper.unmount()
+  })
+
+  it('shows the creator on summary grid previews and responds to the toggle', async () => {
+    const { wrapper } = await setup({ summaryOnly: true, viewMode: 'grid' })
+    expect(wrapper.get('.design-background .creator-badge').text()).toBe('Creator')
+    expect(wrapper.find('.payment-badge').exists()).toBe(false)
+    await wrapper.setProps({ showCreator: false })
+    expect(wrapper.find('.card-badges').exists()).toBe(false)
+    await wrapper.setProps({ showCreator: true })
+    expect(wrapper.get('.design-background .creator-badge').text()).toBe('Creator')
+    wrapper.unmount()
+  })
+
+  it('shows the last package versions independently while new tasks are queued', async () => {
+    const { wrapper } = await setup({ summaryOnly: true, design: {
+      ...design, product: { ...design.product,
+        release: { ...design.product.release, releaseVersion: '1.10.0' },
+        prgRelease: { id: 3, deviceId: 'venu3', prgUrl: 'https://example.com/test.prg', releaseVersion: '2.3.0' },
+        prgPackagingLog: { deviceId: 'venu3', packagingStatus: 'pending', rank: 8 },
+        packagingLog: { packagingStatus: 'pending', rank: 5 },
+      },
+    } })
+    const rows = wrapper.findAll('.summary-meta .package-info-item')
+    expect(rows[0].get('.package-version').text()).toBe('2.3.0')
+    expect(rows[1].get('.package-version').text()).toBe('1.10.0')
+    expect(rows.every(row => row.text().includes('card.position'))).toBe(true)
+    await wrapper.setProps({ design })
+    expect(wrapper.find('.package-version').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('downloads completed PRG and IQ packages from the visible build status rows', async () => {
     const { wrapper } = await setup({ management: true, design: {
       ...design, product: { ...design.product,

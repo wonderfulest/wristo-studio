@@ -65,7 +65,7 @@ vi.mock('element-plus', () => ({
 }))
 
 import { ElMessage } from 'element-plus'
-import GoLiveDialog from './GoLiveDialog.vue'
+import PublishForm from './PublishForm.vue'
 
 const tag = (id: number, tagGroup: string, status = 1): ProductTag => ({
   id,
@@ -162,7 +162,7 @@ const stubs = {
   DesignerDefaultConfigDialog: true
 }
 
-const mountDialog = () => mount(GoLiveDialog, { global: { stubs } })
+const mountDialog = () => mount(PublishForm, { global: { stubs } })
 
 const showDialog = async (wrapper: ReturnType<typeof mountDialog>) => {
   ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(structuredClone(design))
@@ -179,7 +179,7 @@ beforeEach(() => {
   mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: { descriptionTemplate: '[[${app_ai_description}]]' } })
 })
 
-describe('GoLiveDialog product tag behavior', () => {
+describe('PublishForm product tag behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.isAdmin = false
@@ -523,7 +523,7 @@ describe('GoLiveDialog product tag behavior', () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
 
-    expect(wrapper.find('.dialog').exists()).toBe(true)
+    expect(wrapper.find('.inline-publish-panel').exists()).toBe(true)
     expect(wrapper.getComponent(ProductTagSelectorStub).props('disabled')).toBe(true)
     expect(ElMessage.error).toHaveBeenCalledWith('productTags.loadFailed')
 
@@ -856,7 +856,7 @@ it('keeps all publishing fields inline and stays open after a successful save', 
   mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
   mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
   mocks.publish.mockResolvedValue({ code: 0, data: true })
-  const wrapper = mount(GoLiveDialog, { props: { inline: true }, global: { stubs } })
+  const wrapper = mount(PublishForm, { global: { stubs } })
   await showDialog(wrapper)
   expect(wrapper.find('.inline-publish-panel').exists()).toBe(true)
   expect(wrapper.find('.inline-publish-panel .product-description-input').exists()).toBe(true)
@@ -873,7 +873,7 @@ it('preserves unsaved listing edits while changing information sections without 
   mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
   mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
   mocks.publish.mockClear()
-  const wrapper = mount(GoLiveDialog, { props: { inline: true, activeSection: 'listing' }, global: { stubs } })
+  const wrapper = mount(PublishForm, { props: { activeSection: 'listing' }, global: { stubs } })
   await showDialog(wrapper)
   await wrapper.get('.product-name-input input').setValue('Unsaved title')
   await wrapper.setProps({ activeSection: 'media' })
@@ -890,7 +890,7 @@ it('points validation errors to the information section containing the invalid f
   mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
   mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
   mocks.publish.mockClear()
-  const wrapper = mount(GoLiveDialog, { props: { inline: true, activeSection: 'media' }, global: { stubs } })
+  const wrapper = mount(PublishForm, { props: { activeSection: 'media' }, global: { stubs } })
   await showDialog(wrapper)
   wrapper.getComponent(ElFormStub).props('model').name = ''
   await confirm(wrapper)

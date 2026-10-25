@@ -212,11 +212,12 @@ export interface DesignListItem {
     storeWeight?: number | null
     lastGoLive?: number | string | null
     payment?: { paymentMethod: string; paymentMethodDesc?: string }
-    release?: { id: number; packageUrl: string; updatedAt: number }
+    release?: { id: number; packageUrl: string; releaseVersion?: string; updatedAt: number }
     prgRelease?: {
       id: number
       deviceId: string
       prgUrl: string
+      releaseVersion?: string
       updatedAt: number
       completedAt?: string | number | null
       canRebuild?: boolean

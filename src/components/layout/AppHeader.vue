@@ -22,14 +22,14 @@
         <button type="button" :disabled="!editorReady || !historyStore.canUndo()" :title="t('canvas.undo')" :aria-label="t('canvas.undo')" @click="historyStore.undo()"><Icon icon="material-symbols:undo-rounded" /></button>
         <button type="button" :disabled="!editorReady || !historyStore.canRedo()" :title="t('canvas.redo')" :aria-label="t('canvas.redo')" @click="historyStore.redo()"><Icon icon="material-symbols:redo-rounded" /></button>
       </div>
-      <label class="document-name">
+      <label data-onboarding="name" class="document-name">
         <input v-model="watchFaceName" :disabled="!editorReady" :aria-label="t('header.watchFaceName')" :placeholder="t('header.watchFaceName')" maxlength="50" />
         <Icon icon="material-symbols:edit-outline" />
       </label>
     </div>
     <div class="studio-tools">
       <DeviceDisplay ref="deviceDisplay" />
-      <button type="button" class="save-button" :disabled="busy || !editorReady" @click="confirmOpenDesignsList">{{ t('common.save') }}</button>
+      <button type="button" data-onboarding="save" class="save-button" :disabled="busy || !editorReady" @click="confirmOpenDesignsList">{{ t('common.save') }}</button>
       <button type="button" class="build-button" :disabled="busy || !editorReady" @click="buildDesign">
         <Icon icon="material-symbols:build-outline" /> {{ t('studioMenu.build') }}
       </button>
@@ -60,6 +60,7 @@
 </template>
 
 <script setup>
+import { isGuidedDesign, savedOnboardingDesign } from '@/features/onboarding/progress'
 import { computed, defineAsyncComponent, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -118,7 +119,8 @@ const discardAndOpenDesignsList = () => {
 const confirmOpenDesignsList = async () => {
   if (await saveDesign()) {
     designsListDialogVisible.value = false
-    router.push('/designs')
+    if (isGuidedDesign(String(baseStore.id))) savedOnboardingDesign(String(baseStore.id))
+    else router.push('/designs')
   }
 }
 const saveDesign = async () => {

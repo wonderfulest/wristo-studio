@@ -3,6 +3,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AppHeader from './AppHeader.vue'
+import { onboarding, startOnboarding } from '@/features/onboarding/progress'
+import { freshProgress } from '@/features/onboarding/model'
 
 const mocks = vi.hoisted(() => ({
   base: { id: 'existing', canvas: {}, designLoading: false, watchFaceName: 'Test', inCanvasWorkarea: true, setWatchFaceName: vi.fn(), deactivateObject: vi.fn(), $reset: vi.fn() },
@@ -24,6 +26,7 @@ vi.mock('./UserMenu.vue', () => ({ default: { template: '<button>Account</button
 vi.mock('@/components/dialogs/SubmitDesignDialog.vue', () => ({ __esModule: true, default: { template: '<div />', methods: { show: mocks.showBuild } } }))
 beforeEach(() => {
   vi.clearAllMocks()
+  onboarding.progress = freshProgress()
   mocks.upload.mockResolvedValue(0)
   mocks.requireExport.mockReturnValue(true)
   mocks.history.hasUnsavedChanges.mockReturnValue(false)
@@ -38,12 +41,27 @@ async function setup() {
   return { wrapper, router }
 }
 describe('Studio toolbar actions', () => {
-  it('saves without navigating away from the canvas', async () => {
+  it('preserves the usual save-and-open-workspace behavior outside the guide', async () => {
     const { wrapper, router } = await setup()
     await wrapper.get('.save-button').trigger('click')
     await flushPromises()
     expect(mocks.upload).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.fullPath).toBe('/designs')
+    wrapper.unmount()
+  })
+  it('keeps a guided save on the canvas until the user opens details', async () => {
+    startOnboarding('existing'); onboarding.progress.step = 'save'
+    const { wrapper, router } = await setup()
+    await wrapper.get('.save-button').trigger('click'); await flushPromises()
+    expect(onboarding.progress.step).toBe('detail')
     expect(router.currentRoute.value.fullPath).toBe('/design?id=existing')
+    wrapper.unmount()
+  })
+  it('does not advance the guide after a failed save', async () => {
+    startOnboarding('existing'); onboarding.progress.step = 'save'; mocks.upload.mockResolvedValue(-1)
+    const { wrapper } = await setup()
+    await wrapper.get('.save-button').trigger('click'); await flushPromises()
+    expect(onboarding.progress.step).toBe('save')
     wrapper.unmount()
   })
   it('saves before opening the existing device build dialog', async () => {

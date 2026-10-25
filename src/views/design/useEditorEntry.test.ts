@@ -1,6 +1,8 @@
 import { effectScope, nextTick, reactive } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEditorEntry } from './useEditorEntry'
+import { onboarding, startOnboarding } from '@/features/onboarding/progress'
+import { freshProgress } from '@/features/onboarding/model'
 
 const mocks = vi.hoisted(() => ({ createDesign: vi.fn(), user: { canCreateDesign: true }, replace: vi.fn() }))
 vi.mock('@/api/wristo/design', () => ({ designApi: { createDesign: mocks.createDesign } }))
@@ -8,6 +10,7 @@ vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 
 beforeEach(() => {
   vi.clearAllMocks()
+  onboarding.progress = freshProgress()
   mocks.user.canCreateDesign = true
   mocks.createDesign.mockResolvedValue({ code: 0, data: { designUid: 'created-design' } })
   mocks.replace.mockResolvedValue(undefined)
@@ -140,5 +143,17 @@ it('allows existing designs to load at the creation limit', async () => {
   await s.open()
   expect(s.load).toHaveBeenCalledWith('existing-id')
   expect(mocks.replace).not.toHaveBeenCalled()
+  s.scope.stop()
+})
+
+it('creates a separate practice design without restoring or overwriting an existing draft', async () => {
+  startOnboarding()
+  const choose = vi.fn()
+  const s = setup('', { findUnsaved: () => ({ designId: 'old-draft' }), chooseUnsaved: choose })
+  await s.open()
+  expect(choose).not.toHaveBeenCalled()
+  expect(s.flush).toHaveBeenCalledOnce()
+  expect(onboarding.progress.designId).toBe('created-design')
+  expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'created-design' } })
   s.scope.stop()
 })

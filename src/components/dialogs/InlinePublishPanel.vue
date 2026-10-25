@@ -20,8 +20,8 @@ footer { position: sticky; bottom: 0; z-index: 2; margin: 24px -24px -24px; padd
 .inline-publish-panel :deep(.el-input-group__append) { gap: 8px; padding: 0 10px; }
 .inline-publish-panel :deep(.el-input-group__append button.el-button) { margin: 0; padding: 0; }
 .inline-publish-panel :deep(.publish-header) { padding-right: 0; }
-.inline-publish-panel :deep(.dialog-footer) { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; }
-.inline-publish-panel :deep(.el-dialog__title) { font-size: 18px; font-weight: 600; color: var(--studio-text); }
+.inline-publish-panel :deep(.publish-footer) { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; }
+.inline-publish-panel :deep(.publish-title) { font-size: 18px; font-weight: 600; color: var(--studio-text); }
 .inline-publish-panel :deep(.go-live-form) { padding: 0; height: auto; overflow: visible; }
 .inline-publish-panel :deep(.el-form-item) { margin-bottom: 24px; }
 .inline-publish-panel :deep(.el-form-item__label) { color: var(--studio-text); font-size: 13px; font-weight: 500; padding-bottom: 8px; }

@@ -1,6 +1,7 @@
 <!-- src/App.vue -->
 <template>
   <router-view></router-view>
+  <FirstDesignGuide />
   <CookieConsent />
   <InsufficientCreditsDialog />
   <DesignLimitDialog />
@@ -8,6 +9,8 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from 'vue'
+const FirstDesignGuide = defineAsyncComponent(() => import('@/features/onboarding/FirstDesignGuide.vue'))
 import WrtImportProgressDialog from '@/components/WrtImportProgressDialog.vue'
 import InsufficientCreditsDialog from '@/components/InsufficientCreditsDialog.vue'
 import DesignLimitDialog from '@/components/DesignLimitDialog.vue'

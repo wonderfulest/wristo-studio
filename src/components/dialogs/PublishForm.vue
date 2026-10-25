@@ -1,15 +1,9 @@
 <template>
-  <component :is="inline ? InlinePublishPanel : ElDialog"
-    v-model="dialogVisible" 
-    :title="t('goLive.title')" 
-    width="min(1200px, 94vw)"
-    :top="'5vh'"
-    class="go-live-dialog"
-  >
+  <InlinePublishPanel :model-value="formReady">
     <template #header>
       <div class="publish-header">
-        <div><span class="el-dialog__title">{{ inline && activeSection ? publishSectionCopy[activeSection].title : t('goLive.title') }}</span><p v-if="inline && activeSection" class="section-intro">{{ publishSectionCopy[activeSection].description }}</p></div>
-        <el-dropdown v-show="!inline || !activeSection || activeSection === 'listing'" trigger="click" :disabled="loading" @command="selectLanguage">
+        <div><span class="publish-title">{{ activeSection ? publishSectionCopy[activeSection].title : t('goLive.title') }}</span><p v-if="activeSection" class="section-intro">{{ publishSectionCopy[activeSection].description }}</p></div>
+        <el-dropdown v-show="!activeSection || activeSection === 'listing'" trigger="click" :disabled="loading" @command="selectLanguage">
           <el-button size="small" :disabled="loading">{{ descriptionLanguageLabel(descriptionLanguage) }} ▾</el-button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -22,9 +16,9 @@
         </el-dropdown>
       </div>
     </template>
-    <p v-show="!inline || activeSection === 'listing'" v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
+    <p v-show="!activeSection || activeSection === 'listing'" v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
-      <section v-show="!inline || !activeSection || activeSection === 'listing'" class="publish-content-group" data-publish-section="listing">
+      <section v-show="!activeSection || activeSection === 'listing'" class="publish-content-group" data-publish-section="listing">
       <el-form-item :label="t('submitDesign.designName')" prop="name">
         <el-input class="product-name-input" :model-value="readName(descriptionLanguage)" @update:model-value="writeName(descriptionLanguage, $event)" :disabled="loading" maxlength="255" :aria-label="descriptionLanguageLabel(descriptionLanguage)" dir="auto">
           <template #append>
@@ -88,7 +82,7 @@
         :disabled="productTagsLoadFailed"
       />
       </section>
-      <section v-show="!inline || !activeSection || activeSection === 'media'" class="publish-content-group media-library" data-publish-section="media">
+      <section v-show="!activeSection || activeSection === 'media'" class="publish-content-group media-library" data-publish-section="media">
       <el-form-item class="media-primary-card" :label="t('goLive.heroImage')">
         <div class="image-pair">
           <div class="image-upload-container">
@@ -241,7 +235,7 @@
         </div>
       </el-form-item>
       </section>
-      <section v-show="!inline || !activeSection || activeSection === 'distribution'" class="publish-content-group" data-publish-section="distribution">
+      <section v-show="!activeSection || activeSection === 'distribution'" class="publish-content-group" data-publish-section="distribution">
       <!-- Garmin Store URL -->
       <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl" required>
         <el-input 
@@ -297,8 +291,8 @@
           {{ t('goLive.priceTip') }}
         </div>
       </el-form-item>
-      <CompanionAppLinks :visible="dialogVisible" />      <details class="application-identity" :open="!inline">
-        <summary v-if="inline">Application identity &amp; lifecycle <span>App ID, UUID and availability</span></summary>
+      <CompanionAppLinks :visible="formReady" />      <details class="application-identity">
+        <summary>Application identity &amp; lifecycle <span>App ID, UUID and availability</span></summary>
       <el-form-item :label="t('card.appId')">
         <el-input v-model="form.appId" disabled>
           <template #append>
@@ -326,19 +320,18 @@
 
     </el-form>
     <template #footer>
-      <span class="dialog-footer"><span v-if="inline" class="publish-save-note">Changes across all sections are published together.</span>
-        <el-button v-if="!inline" @click="handleCancel">{{ t('common.cancel') }}</el-button>
+      <span class="publish-footer"><span class="publish-save-note">Changes across all sections are published together.</span>
         <el-button 
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
           :disabled="generatingBanner"
         >
-          {{ inline ? 'Save & publish' : t('common.submit') }}
+          Save & publish
         </el-button>
       </span>
     </template>
-  </component>
+  </InlinePublishPanel>
   <el-dialog v-model="bannerConfirmVisible" :title="t('goLive.generateBanner')" width="min(520px, 94vw)" append-to-body :close-on-click-modal="false">
     <p v-if="bannerCreditCost !== null">{{ t('goLive.bannerCreditCost', { cost: bannerCreditCost }) }}</p>
     <p class="form-tip">{{ t('goLive.bannerChargeNotice') }}</p>
@@ -374,7 +367,7 @@ import { Design } from '@/types/api/design'
 import { getAiCapabilities, getAiPrices, type AiCapabilities, type AiPrices } from '@/api/wristo/studioAi'
 import { Plus, CopyDocument, Download, QuestionFilled, Refresh } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
-import { ElDialog, ElMessage, ElMessageBox, ElLoading } from 'element-plus'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
@@ -456,9 +449,9 @@ const loadDescriptionConfig = async () => {
   }
 }
 
-const props = defineProps<{ inline?: boolean; activeSection?: PublishSection }>()
+defineProps<{ activeSection?: PublishSection }>()
 const membershipGate = useStudioMembershipGate()
-const dialogVisible = ref(false)
+const formReady = ref(false)
 const loading = ref(false)
 const downloadingImages = ref(false)
 const currentDesign = ref<Design | null>(null)
@@ -670,7 +663,7 @@ const downloadAllProductImages = async (mode: ProductImageDownloadMode) => {
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
-const emit = defineEmits(['success', 'cancel', 'section-change'])
+const emit = defineEmits(['success', 'section-change'])
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
 const availableBundles = computed(() => {
@@ -748,7 +741,7 @@ const generateTags = async () => {
   generatingTags.value = true
   let dispatched = false
   try {
-    if (!await confirmTextGenerationCost('TAGS', () => version === tagGenerationVersion && dialogVisible.value)) return
+    if (!await confirmTextGenerationCost('TAGS', () => version === tagGenerationVersion && formReady.value)) return
     if (form.tagIds.length) return
     canGenerateTags.value = false
     dispatched = true
@@ -843,16 +836,16 @@ const loadDesign = (design: Design) => {
 // 提交表单
 const handleConfirm = async () => {
   if (!currentDesign.value || loading.value || generatingBanner.value || lifecycleBusy.value) return
-  if (props.inline && !membershipGate.requirePublish()) return
+  if (!membershipGate.requirePublish()) return
 
   if (productTagsLoadFailed.value) {
-    if (props.inline) emit('section-change', 'listing')
+    emit('section-change', 'listing')
     messageStore.error(t('productTags.loadFailed'))
     return
   }
 
   const valid = await formRef.value?.validate?.().catch((fields: Record<string, unknown>) => {
-    if (props.inline) emit('section-change', publishSectionForInvalidFields(fields || {}))
+    emit('section-change', publishSectionForInvalidFields(fields || {}))
     return false
   })
   if (valid === false) return
@@ -864,13 +857,13 @@ const handleConfirm = async () => {
   
   // 验证必填字段
   if (!form.garminImageUrl.trim()) {
-    if (props.inline) emit('section-change', 'media')
+    emit('section-change', 'media')
     messageStore.error(t('goLive.enterGarminImageUrl'))
     return
   }
   
   if (!form.garminStoreUrl.trim()) {
-    if (props.inline) emit('section-change', 'distribution')
+    emit('section-change', 'distribution')
     messageStore.error(t('goLive.enterGarminStoreUrlRequired'))
     return
   }
@@ -886,7 +879,7 @@ const handleConfirm = async () => {
   const uuid = form.garminAppUuid.trim()
   const shouldSaveUuid = userStore.isAdminUser && uuid !== (currentDesign.value.product.garminAppUuid || '')
   if (shouldSaveUuid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-    if (props.inline) emit('section-change', 'distribution')
+    emit('section-change', 'distribution')
     messageStore.error(t('goLive.invalidAppUuid'))
     return
   }
@@ -929,15 +922,9 @@ const handleConfirm = async () => {
     await productsApi.publish(data)
     messageStore.success(t('goLive.productUpdated'))
     emit('success')
-    if (!props.inline) dialogVisible.value = false
   } finally {
     loading.value = false
   }
-}
-
-const handleCancel = () => {
-  emit('cancel')
-  dialogVisible.value = false
 }
 
 const lifecycleBusy = ref(false)
@@ -1168,8 +1155,8 @@ const invalidateBannerGeneration = () => {
   bannerGenerationVersion += 1
   generatingBanner.value = false
 }
-watch(dialogVisible, (visible) => { if (!visible) invalidateBannerGeneration() })
-onBeforeUnmount(invalidateBannerGeneration)
+watch(formReady, (visible) => { if (!visible) invalidateBannerGeneration() })
+onBeforeUnmount(() => { formReady.value = false; invalidateBannerGeneration() })
 
 const refreshBanner = async () => {
   if (!currentDesign.value || generatingBanner.value || loadingBannerPrice.value || loading.value || !aiCapabilities.value.BANNER) return
@@ -1179,7 +1166,7 @@ const refreshBanner = async () => {
   bannerCreditCost.value = null
   try {
     const response = await getAiPrices()
-    if (version !== bannerGenerationVersion || !dialogVisible.value) return
+    if (version !== bannerGenerationVersion || !formReady.value) return
     if (response.code !== 0 || !response.data || !Number.isInteger(response.data.BANNER) || response.data.BANNER < 1) throw new Error(t('goLive.aiStatusFailed'))
     aiPrices.value = response.data
     bannerCreditCost.value = response.data.BANNER
@@ -1189,8 +1176,45 @@ const refreshBanner = async () => {
   } finally { loadingBannerPrice.value = false }
 }
 
+// Closing the view stops polling, never the server task.
+const followBannerJob = async (
+  response: Awaited<ReturnType<typeof productsApi.getLatestBannerGeneration>>,
+  productId: number, originalBanner: string, version: number,
+) => {
+  const isCurrent = () => version === bannerGenerationVersion && formReady.value && currentDesign.value?.product.id === productId
+  const deadline = Date.now() + 6 * 60 * 1000
+  while (response.data?.status === 'running') {
+    const jobId = response.data.id
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+    if (!isCurrent()) return
+    if (Date.now() >= deadline) throw new Error(t('goLive.generateBannerFailed'))
+    response = await productsApi.getBannerGeneration(productId, jobId)
+  }
+  if (!isCurrent() || form.bannerImageUrl !== originalBanner || !response.data) return
+  if (response.data.status === 'skipped') return
+  if (response.data.status !== 'succeeded' || !response.data.imageUrl?.startsWith('https://')) throw new Error(t('goLive.generateBannerFailed'))
+  form.bannerImageUrl = response.data.imageUrl
+  currentDesign.value!.product.bannerImageUrl = response.data.imageUrl
+  ElMessage.success(t('goLive.bannerGenerated'))
+}
+
+const restoreBannerGeneration = async (productId: number) => {
+  const version = bannerGenerationVersion
+  const originalBanner = form.bannerImageUrl
+  generatingBanner.value = true
+  try {
+    const response = await productsApi.getLatestBannerGeneration(productId)
+    if (version !== bannerGenerationVersion || !formReady.value) return
+    await followBannerJob(response, productId, originalBanner, version)
+  } catch (error) {
+    if (version === bannerGenerationVersion) showErrorOnce(error, t('goLive.generateBannerFailed'))
+  } finally {
+    if (version === bannerGenerationVersion) generatingBanner.value = false
+  }
+}
+
 const confirmBannerGeneration = async () => {
-  if (!bannerConfirmVisible.value || bannerCreditCost.value === null || !dialogVisible.value) return
+  if (!bannerConfirmVisible.value || bannerCreditCost.value === null || !formReady.value) return
   if (!currentDesign.value || generatingBanner.value || loading.value || !aiCapabilities.value.BANNER) return
   const deviceId = userStore.editorDevice?.deviceId
   if (!deviceId) {
@@ -1205,19 +1229,8 @@ const confirmBannerGeneration = async () => {
     const expectedCreditCost = bannerCreditCost.value
     bannerConfirmVisible.value = false
     let response = await productsApi.generateBanner({ productId, deviceId, customPrompt: bannerCustomPrompt.value.trim() || undefined, expectedCreditCost })
-    const deadline = Date.now() + 6 * 60 * 1000
-    while (response.data?.status === 'running') {
-      const jobId = response.data.id
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-      if (version !== bannerGenerationVersion || !dialogVisible.value) return
-      if (Date.now() >= deadline) throw new Error(t('goLive.generateBannerFailed'))
-      response = await productsApi.getBannerGeneration(productId, jobId)
-    }
-    if (version !== bannerGenerationVersion || !dialogVisible.value || currentDesign.value?.product.id !== productId
-        || form.bannerImageUrl !== originalBanner) return
-    if (response.data?.status !== 'succeeded' || !response.data.imageUrl?.startsWith('https://')) throw new Error(t('goLive.generateBannerFailed'))
-    form.bannerImageUrl = response.data.imageUrl
-    ElMessage.success(t('goLive.bannerGenerated'))
+    await followBannerJob(response, productId, originalBanner, version)
+
   } catch (error) {
     if (version === bannerGenerationVersion) showErrorOnce(error, t('goLive.generateBannerFailed'))
   } finally {
@@ -1242,7 +1255,7 @@ const refreshDescription = async () => {
   const revision = descriptionRevisions[language] || 0
   const paymentMethod = form.paymentMethod
   const template = getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, language)
-  const stillCurrent = () => version === descriptionGenerationVersion && dialogVisible.value &&
+  const stillCurrent = () => version === descriptionGenerationVersion && formReady.value &&
     descriptionLanguages.value.includes(language) && (descriptionRevisions[language] || 0) === revision && readDescription(language) === originalDescription &&
     form.paymentMethod === paymentMethod && getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, language) === template
   generatingDescription.value = true
@@ -1278,7 +1291,7 @@ const generateAllDescriptions = async () => {
     revision: descriptionRevisions[code] || 0,
     usesAi: descriptionTemplateUsesAi(descriptionConfig.value || {}, paymentMethod, code),
   }))
-  const isCurrent = () => version === descriptionGenerationVersion && dialogVisible.value &&
+  const isCurrent = () => version === descriptionGenerationVersion && formReady.value &&
     currentDesign.value?.product.id === pid && form.paymentMethod === paymentMethod
   const isUnchanged = (job: typeof jobs[number]) => isCurrent() &&
     (descriptionRevisions[job.language] || 0) === job.revision && readDescription(job.language) === job.original &&
@@ -1324,7 +1337,8 @@ const show = (design: Design) => {
   loadingTagGeneration.value = true
   tagGenerationStatus.value = 'ready'
   loadDesign(design)
-  dialogVisible.value = true
+  formReady.value = true
+  void restoreBannerGeneration(design.product.id)
   void loadTagGeneration(design.product.appId, tagGenerationVersion)
   void loadAiCapabilities()
   void loadDescriptionConfig()
@@ -1360,21 +1374,6 @@ defineExpose({
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-}
-
-/* 对话框样式 */
-:deep(.go-live-dialog .el-dialog) {
-  margin-top: 5vh !important;
-  margin-bottom: 5vh !important;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.go-live-dialog .el-dialog__body) {
-  flex: 1;
-  overflow: hidden;
-  padding: 0;
 }
 
 /* 表单样式 */
