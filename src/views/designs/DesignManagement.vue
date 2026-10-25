@@ -29,6 +29,7 @@
           @open="openCanvas"
           @build-prg="buildPrg"
           @cancel-prg="cancelPrg"
+          @cancel-iq="cancelIq"
           @prepare-preview-prg="preparePreviewPrg"
           @preview-prg="previewPrg"
           @run-prg="runPrg"
@@ -539,26 +540,31 @@ const buildPrg = async (design: DesignListItem) => {
   }
 }
 
-const cancelPrg = async (design: DesignListItem) => {
+const cancelPrg = (design: DesignListItem) => cancelBuild(design, 'prg')
+const cancelIq = (design: DesignListItem) => cancelBuild(design, 'iq')
+const cancelBuild = async (design: DesignListItem, type: 'prg' | 'iq') => {
   const deviceId = userStore.userInfo?.device?.deviceId
-  const task = design.product?.prgPackagingLog
-  if (!deviceId || !task?.id) return
+  const task = type === 'iq' ? design.product?.packagingLog : design.product?.prgPackagingLog
+  const label = type === 'iq' ? 'Iq' : 'Prg'
+  if (!task?.id || (type === 'prg' && !deviceId)) return
   try {
-    await ElMessageBox.confirm(t('project.cancelPrgBuildConfirm'), t('card.cancelPrgBuild'), {
-      confirmButtonText: t('card.cancelPrgBuild'),
+    await ElMessageBox.confirm(t(`project.cancel${label}BuildConfirm`), t(`card.cancel${label}Build`), {
+      confirmButtonText: t(`card.cancel${label}Build`),
       cancelButtonText: t('common.cancel'),
       type: 'warning',
     })
-    const response = await designApi.cancelPrgPackageTask(design.designUid, deviceId, task.id)
-    if (response.code !== 0) throw new Error(response.msg || t('project.cancelPrgBuildFailed'))
-    messageStore.success(t('project.cancelPrgBuildSubmitted'))
+    const response = type === 'iq'
+      ? await designApi.cancelIqPackageTask(design.designUid, task.id)
+      : await designApi.cancelPrgPackageTask(design.designUid, deviceId!, task.id)
+    if (response.code !== 0) throw new Error(response.msg || t(`project.cancel${label}BuildFailed`))
+    messageStore.success(t(`project.cancel${label}BuildSubmitted`))
     await fetchDesigns()
     if (response.data?.status === 'cancel_requested' && !cancellationPollTimer) {
       cancellationPollTimer = setInterval(() => { void fetchDesigns() }, 2000)
     }
   } catch (error: any) {
     if (error === 'cancel' || error === 'close') return
-    showErrorOnce(error, error?.message || t('project.cancelPrgBuildFailed'))
+    showErrorOnce(error, error?.message || t(`project.cancel${label}BuildFailed`))
   }
 }
 
@@ -713,7 +719,7 @@ async function fetchDesigns() {
       goLiveDialog.value?.show(response.data)
       publishInitialized = true
     }
-    if (cancellationPollTimer && response.data.product?.prgPackagingLog?.packagingStatus !== 'cancel_requested') {
+    if (cancellationPollTimer && ![response.data.product?.prgPackagingLog, response.data.product?.packagingLog].some(log => log?.packagingStatus === 'cancel_requested')) {
       clearInterval(cancellationPollTimer)
       cancellationPollTimer = undefined
     }

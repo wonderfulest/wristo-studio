@@ -233,16 +233,16 @@
               <strong>{{ row.label }}</strong>
               <span class="package-rank">{{ row.value }}</span>
               <el-tooltip
-                v-if="row.key === 'prg' && prgCardAction === 'cancel'"
-                :content="t('card.cancelPrgBuild')"
+                v-if="(row.key === 'prg' ? prgCardAction : iqCancellationAction) === 'cancel'"
+                :content="t(row.key === 'iq' ? 'card.cancelIqBuild' : 'card.cancelPrgBuild')"
                 placement="top"
                 :show-after="400"
               >
                 <button
                   class="build-task-cancel"
                   type="button"
-                  :aria-label="t('card.cancelPrgBuild')"
-                  @click.stop="closeActions(); emit('cancel-prg', design)"
+                  :aria-label="t(row.key === 'iq' ? 'card.cancelIqBuild' : 'card.cancelPrgBuild')"
+                  @click.stop="cancelBuild(row.key)"
                 ><Icon icon="material-symbols:close-rounded" aria-hidden="true" /></button>
               </el-tooltip>
             </div>
@@ -311,6 +311,12 @@
                   {{ t('card.cancelPrgBuild') }}
                 </el-button>
                 <el-button v-else-if="prgCardAction === 'cancelling'" size="small" disabled loading>
+                  {{ t('card.cancellingPrgBuild') }}
+                </el-button>
+                <el-button v-if="iqCancellationAction === 'cancel'" size="small" type="danger" plain @click="cancelBuild('iq')">
+                  {{ t('card.cancelIqBuild') }}
+                </el-button>
+                <el-button v-else-if="iqCancellationAction === 'cancelling'" size="small" disabled loading>
                   {{ t('card.cancellingPrgBuild') }}
                 </el-button>
                 <el-button v-if="showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
@@ -390,6 +396,7 @@ import { useUserStore } from '@/stores/user'
 import {
   getPrgBuildDisabledReason,
   getPrgCardAction,
+  getIqCancellationAction,
   shouldShowBuildIqButton,
   shouldShowBuildLog,
   shouldShowPublishButton,
@@ -445,6 +452,7 @@ const emit = defineEmits<{
   (e: 'copy', design: T): void
   (e: 'build-prg', design: T): void
   (e: 'cancel-prg', design: T): void
+  (e: 'cancel-iq', design: T): void
   (e: 'prepare-preview-prg', design: T): void
   (e: 'preview-prg', design: T): void
   (e: 'run-prg', design: T): void
@@ -630,6 +638,12 @@ const prgCardAction = computed(() => getPrgCardAction(
   currentDeviceId.value,
   props.nowMs ?? Date.now(),
 ))
+const iqCancellationAction = computed(() => getIqCancellationAction(design.value.product, props.nowMs ?? Date.now()))
+const cancelBuild = (type: 'prg' | 'iq') => {
+  closeActions()
+  if (type === 'iq') emit('cancel-iq', design.value)
+  else emit('cancel-prg', design.value)
+}
 const buildPrgDisabledTooltip = computed(() => {
   const reason = getPrgBuildDisabledReason(
     design.value.product,

@@ -2,11 +2,12 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import DesignManagement from './DesignManagement.vue'
+import { ElMessageBox } from 'element-plus'
 const mocks = vi.hoisted(() => ({
-  get: vi.fn(), remove: vi.fn(), transfer: vi.fn(), updateWeight: vi.fn(), update: vi.fn(), push: vi.fn(), publishShow: vi.fn(), submitShow: vi.fn(), error: vi.fn(), refreshUser: vi.fn(), canExport: vi.fn(), canPublish: vi.fn(), download: vi.fn(),
+  cancelIq: vi.fn(), cancelPrg: vi.fn(), get: vi.fn(), remove: vi.fn(), transfer: vi.fn(), updateWeight: vi.fn(), update: vi.fn(), push: vi.fn(), publishShow: vi.fn(), submitShow: vi.fn(), error: vi.fn(), refreshUser: vi.fn(), canExport: vi.fn(), canPublish: vi.fn(), download: vi.fn(),
   user: { userInfo: { id: 7, roles: [], device: { deviceId: 'venu3' } }, isAdminUser: false, isStudioConsumer: false, hasFullStudioAccess: true, canCreateDesign: true, studioMembership: { level: 'annual' } },
 }))
-vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.get, deleteDesign: mocks.remove, updateDesign: mocks.update } }))
+vi.mock('@/api/wristo/design', () => ({ designApi: { cancelIqPackageTask: mocks.cancelIq, cancelPrgPackageTask: mocks.cancelPrg, getDesignByUid: mocks.get, deleteDesign: mocks.remove, updateDesign: mocks.update } }))
 vi.mock('@/api/wristo/products', () => ({ productsApi: { transferOwner: mocks.transfer, updateStoreWeight: mocks.updateWeight } }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => ({ ...mocks.user, refreshUserInfo: mocks.refreshUser }) }))
 vi.mock('@/stores/baseStore', () => ({ useBaseStore: () => ({}) }))
@@ -25,7 +26,7 @@ const fixture = () => ({ id: 1, designUid: 'one', name: 'Face', user: { id: 7 },
 let wrapper: ReturnType<typeof mount> | undefined
 let target: HTMLElement
 beforeEach(() => { vi.clearAllMocks(); mocks.user.isAdminUser = false; mocks.get.mockResolvedValue({ code: 0, data: fixture() }); mocks.canExport.mockReturnValue(true); mocks.canPublish.mockReturnValue(true); target = document.createElement('div'); document.body.append(target) })
-afterEach(() => { wrapper?.unmount(); wrapper = undefined; target.remove(); vi.useRealTimers() })
+afterEach(() => { wrapper?.unmount(); wrapper = undefined; target.remove(); vi.useRealTimers(); vi.restoreAllMocks() })
 async function setup() {
   wrapper = mount(DesignManagement, { props: { designUid: 'one', informationTarget: target }, global: { stubs: { ElDialog: true, ElRadioGroup: true, ElRadioButton: true, ElButton: true } } })
   await flushPromises()
@@ -63,6 +64,43 @@ describe('application management', () => {
     const completedCalls = mocks.get.mock.calls.length
     await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.get).toHaveBeenCalledTimes(completedCalls)
+  })
+  it('cancels IQ through its own endpoint and polls until cancellation finishes', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(ElMessageBox, 'confirm').mockResolvedValue('confirm' as Awaited<ReturnType<typeof ElMessageBox.confirm>>)
+    const task = { ...fixture(), product: { ...fixture().product,
+      packagingLog: { id: 31, packagingStatus: 'init', createdAt: 1, rank: 0 },
+    } }
+    mocks.get.mockResolvedValue({ code: 0, data: task })
+    mocks.cancelIq.mockResolvedValue({ code: 0, data: { taskId: 31, status: 'cancel_requested' } })
+    await setup()
+    mocks.get.mockResolvedValue({ code: 0, data: { ...task, product: { ...task.product,
+      packagingLog: { ...task.product.packagingLog, packagingStatus: 'cancel_requested' },
+    } } })
+    wrapper!.findComponent({ name: 'DesignCard' }).vm.$emit('cancel-iq', task)
+    await flushPromises()
+    expect(mocks.cancelIq).toHaveBeenCalledWith('one', 31)
+    expect(mocks.cancelPrg).not.toHaveBeenCalled()
+    const calls = mocks.get.mock.calls.length
+    await vi.advanceTimersByTimeAsync(4000)
+    expect(mocks.get).toHaveBeenCalledTimes(calls + 2)
+    mocks.get.mockResolvedValue({ code: 0, data: { ...task, product: { ...task.product,
+      packagingLog: { ...task.product.packagingLog, packagingStatus: 'cancelled', rank: null },
+    } } })
+    await vi.advanceTimersByTimeAsync(2000)
+    const finalCalls = mocks.get.mock.calls.length
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(mocks.get).toHaveBeenCalledTimes(finalCalls)
+  })
+  it('does not send an IQ cancellation when confirmation is dismissed', async () => {
+    vi.spyOn(ElMessageBox, 'confirm').mockRejectedValue('cancel')
+    await setup()
+    wrapper!.findComponent({ name: 'DesignCard' }).vm.$emit('cancel-iq', {
+      ...fixture(), product: { ...fixture().product, packagingLog: { id: 31 } },
+    })
+    await flushPromises()
+    expect(mocks.cancelIq).not.toHaveBeenCalled()
+    expect(mocks.error).not.toHaveBeenCalled()
   })
   it('does not expose management or publish information to a non-owner', async () => {
     mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), user: { id: 8 } } })

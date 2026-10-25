@@ -1,10 +1,10 @@
 <template>
-  <section class="design-sharing-settings" :aria-busy="loading || saving">
-    <h3>{{ t('designSharing.title') }}</h3>
-    <div v-for="field in fields" :key="field.key" class="sharing-row">
+  <section class="design-sharing-settings" :class="{ compact }" :aria-label="t('designSharing.title')" :aria-busy="loading || saving">
+    <h3 v-if="!compact">{{ t('designSharing.title') }}</h3>
+    <div v-for="field in fields" :key="field.key" class="sharing-row" :title="compact ? t(field.help) : undefined">
       <div>
         <label :for="`${designUid}-${field.key}`">{{ t(field.label) }}</label>
-        <p :id="`${designUid}-${field.key}-help`">{{ t(field.help) }}</p>
+        <p :id="`${designUid}-${field.key}-help`" :class="{ 'visually-hidden': compact }">{{ t(field.help) }}</p>
       </div>
       <button
         :id="`${designUid}-${field.key}`"
@@ -17,10 +17,11 @@
         :disabled="loading || saving || !settings"
         @click="toggle(field.key)"
       ><span class="toggle-thumb" aria-hidden="true"></span></button>
+      <span v-if="compact && settings" class="sharing-value" aria-live="polite">{{ t(`designSharing.${field.key}${settings[field.key] ? 'On' : 'Off'}`) }}</span>
     </div>
     <p v-if="error" class="sharing-error" role="alert">{{ error }}</p>
     <button v-if="error && !settings" type="button" :disabled="loading" @click="load">{{ t('designSharing.retry') }}</button>
-    <p v-else class="sharing-status" role="status">{{ loading ? t('designSharing.loading') : saving ? t('designSharing.saving') : status }}</p>
+    <p v-else-if="loading || saving" class="sharing-status" role="status">{{ loading ? t('designSharing.loading') : t('designSharing.saving') }}</p>
   </section>
 </template>
 
@@ -29,7 +30,7 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from '@/i18n'
 import { getDesignSharing, updateDesignSharing, type DesignSharingSettings } from '@/api/wristo/designSharing'
 
-const props = defineProps<{ designUid: string }>()
+const props = defineProps<{ designUid: string; compact?: boolean }>()
 const emit = defineEmits<{ saved: [settings: DesignSharingSettings] }>()
 const { t } = useI18n()
 const fields = [
@@ -40,7 +41,6 @@ const settings = ref<DesignSharingSettings | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
-const status = ref('')
 let request = 0
 async function load() {
   const current = ++request
@@ -48,7 +48,6 @@ async function load() {
   saving.value = false
   settings.value = null
   error.value = ''
-  status.value = ''
   try {
     const result = await getDesignSharing(props.designUid)
     if (current === request) settings.value = result
@@ -63,12 +62,10 @@ async function toggle(key: keyof DesignSharingSettings) {
   const current = request
   saving.value = true
   error.value = ''
-  status.value = ''
   try {
     const result = await updateDesignSharing(props.designUid, { [key]: !settings.value[key] })
     if (current !== request) return
     settings.value = result
-    status.value = t('designSharing.saved')
     emit('saved', result)
   } catch {
     if (current === request) error.value = t('designSharing.saveFailed')
@@ -93,4 +90,14 @@ onBeforeUnmount(() => { request++ })
 .sharing-toggle:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .sharing-toggle, .toggle-thumb { transition: none; } }
 .sharing-error { color: var(--studio-danger, #c93838); font-size: 13px; }
+.compact { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; }
+.compact .sharing-row { justify-content: flex-start; gap: 8px; margin: 0; min-height: 28px; }
+.compact .sharing-toggle { flex-basis: 36px; width: 36px; height: 20px; min-height: 20px; padding: 2px; }
+.compact .toggle-thumb { width: 16px; height: 16px; }
+.compact .sharing-toggle[aria-checked='true'] .toggle-thumb { transform: translateX(16px); }
+.compact .sharing-value { color: var(--studio-text-muted); font-size: 12px; }
+.compact .sharing-row label { font-size: 14px; }
+.compact .sharing-status, .compact .sharing-error { margin: 0; }
+.compact .sharing-status:empty { display: none; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 </style>

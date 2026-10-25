@@ -2,7 +2,7 @@ type Timestamp = string | number | null | undefined
 
 type PackagingState = {
   release?: { id?: number | null } | null
-  packagingLog?: { rank?: number | null }
+  packagingLog?: { rank?: number | null; packagingStatus?: string | null; createdAt?: Timestamp }
   prgPackagingLog?: {
     deviceId?: string | null
     packagingStatus?: string | null
@@ -37,6 +37,17 @@ export const shouldShowBuildIqButton = (product?: PackagingState | null) => {
   if (!product) return false
   const rank = product.packagingLog?.rank
   return rank === null || rank === undefined
+}
+
+export const getIqCancellationAction = (
+  product: PackagingState | null | undefined,
+  nowMs = Date.now(),
+): 'none' | 'cancel' | 'cancelling' => {
+  const task = product?.packagingLog
+  if (task?.packagingStatus === 'cancel_requested') return 'cancelling'
+  if (!['init', 'pending'].includes(task?.packagingStatus || '')) return 'none'
+  const createdAt = toTimestamp(task?.createdAt)
+  return createdAt !== null && nowMs >= createdAt + PRG_REBUILD_DELAY_MS ? 'cancel' : 'none'
 }
 
 export const shouldShowPublishButton = (

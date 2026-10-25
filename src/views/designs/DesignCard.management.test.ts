@@ -99,6 +99,31 @@ describe('design card management placement', () => {
     }
     wrapper.unmount(); target.remove()
   })
+  it.each([
+    ['pending', 599999, false],
+    ['pending', 600000, true],
+    ['init', 600000, true],
+    ['cancel_requested', 600000, false],
+    ['complete', 600000, false],
+    ['failed', 600000, false],
+    ['cancelled', 600000, false],
+  ])('IQ %s at age %d has cancellation=%s', async (status, age, canCancel) => {
+    const { wrapper } = await setup({ management: true, nowMs: 1000000, design: {
+      ...design, product: { ...design.product,
+        packagingLog: { id: 12, packagingStatus: status, rank: 5, createdAt: 1000000 - age },
+      },
+    } })
+    const row = wrapper.get('.permanent-build-actions .build-task-row')
+    expect(row.text()).toContain('IQ')
+    const cancel = row.find('.build-task-cancel')
+    expect(cancel.exists()).toBe(canCancel)
+    if (canCancel) {
+      await cancel.trigger('click')
+      expect(wrapper.emitted('cancel-iq')?.[0]).toEqual([wrapper.props('design')])
+      expect(wrapper.emitted('cancel-prg')).toBeUndefined()
+    }
+    wrapper.unmount()
+  })
   it('shows manual processing ahead of the retained queue position', async () => {
     const target = document.createElement('div'); document.body.append(target)
     const { wrapper } = await setup({ management: true, informationTarget: target, design: {

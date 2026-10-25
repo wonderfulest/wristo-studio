@@ -221,6 +221,10 @@ export const designApi = {
     })
   },
 
+  cancelIqPackageTask(designUid: string, taskId: number): Promise<ApiResponse<{ taskId: number; status: string }>> {
+    return instance.delete(`/dsn/design/${encodeURIComponent(designUid)}/iq-package-tasks/${taskId}`)
+  },
+
   uploadAssetBundle(designUid: string, file: File, onProgress?: Parameters<typeof uploadDesignAssetBundle>[2], expectedVersion?: number): Promise<ApiResponse<DesignAssetBundleVO>> {
     return uploadDesignAssetBundle(designUid, file, onProgress, expectedVersion)
   },

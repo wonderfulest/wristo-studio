@@ -41,6 +41,7 @@
             <div class="eyebrow">GARMIN WATCH FACE <span v-if="face.appId">#{{ face.appId }}</span></div>
             <div class="app-title-row"><h1>{{ face.name }}</h1><button v-if="canEdit && face.designId" type="button" class="edit-app-information studio-edit-button" @click="selectSection('listing')"><Icon icon="material-symbols:edit-outline" /> Edit app information</button></div>
             <div class="byline"><span v-if="creator" class="creator"><span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>By <strong>{{ creator }}</strong></span><span v-if="formatDate(face.updatedAt || face.createdAt)">Updated {{ formatDate(face.updatedAt || face.createdAt) }}</span></div>
+            <DesignSharingSettings v-if="isOwner && face.designId" :key="`${face.designId}-${userStore.userInfo?.id}`" class="owner-sharing-settings" compact :design-uid="face.designId" @saved="Object.assign(face, $event)" />
             <dl class="face-stats">
               <div><dt>Price</dt><dd>{{ face.price === 0 ? 'Free' : face.price == null ? '—' : `$${face.price.toFixed(2)}` }}</dd></div>
               <div v-if="face.download != null"><dt>Downloads</dt><dd>{{ face.download.toLocaleString() }}</dd></div>
@@ -71,7 +72,6 @@
             <div v-show="activeSection === 'overview'" class="management-summary"></div>
             <section v-show="activeSection !== 'overview'" :id="`detail-panel-${activeSection === 'overview' ? 'listing' : activeSection}`" role="tabpanel" :aria-labelledby="`detail-tab-${activeSection === 'overview' ? 'listing' : activeSection}`">
               <div class="management-publishing"></div>
-              <DesignSharingSettings v-show="activeSection === 'distribution'" :key="`${face.designId}-${userStore.userInfo?.id}`" class="information-section sharing-settings" :design-uid="face.designId" @saved="Object.assign(face, $event)" />
             </section>
           </div>
         </section>
@@ -297,7 +297,7 @@ dt { font-size: 12px; color: var(--studio-text-muted); }dd { margin: 4px 0 0; fo
 .devices, .data-field-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 16px 0 0; list-style: none; margin: 0; }.devices a, .data-field-list li { padding: 4px 7px; font-size: 11px; color: var(--studio-text-muted); background: var(--studio-surface-soft); border-radius: 4px; text-decoration: none; overflow-wrap: anywhere; }.devices a:hover { color: var(--studio-primary); }
 .primary-actions { display: grid; gap: 10px; margin-top: 10px; }.primary-button, .secondary-button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 42px; padding: 9px 12px; border-radius: 8px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }.primary-button { background: var(--studio-primary); color: #fff; border: 1px solid var(--studio-primary); font-weight: 700; }.secondary-button { border: 1px solid var(--studio-border); color: var(--studio-text-muted); background: var(--studio-surface-raised); }.secondary-button svg { margin-left: auto; }.secondary-button:hover { color: var(--studio-primary); border-color: var(--studio-primary); }
 .share-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 0; margin-top: 6px; color: var(--studio-text-subtle); font-size: 11px; }.share-row > span:first-child { letter-spacing: 1.3px; font-size: 9px; }.share-button { font: inherit; min-height: 32px; border: 0; background: none; padding: 0; color: var(--studio-text-muted); cursor: pointer; }.share-button:hover { color: var(--studio-primary); }
-.muted, .source-unavailable { color: var(--studio-text-muted); font-size: 13px; }.sharing-error { color: var(--studio-danger, #c93838); }.sharing-settings { margin-top: 18px; }
+.muted, .source-unavailable { color: var(--studio-text-muted); font-size: 13px; }.sharing-error { color: var(--studio-danger, #c93838); }.owner-sharing-settings { margin-top: 16px; padding: 10px 14px; border-radius: 8px; background: var(--studio-primary-soft); }
 button:disabled { opacity: .6; cursor: wait; }a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 3px; }
 .detail-state { padding: 90px 0; text-align: center; }
 @media (max-width: 1050px) { .detail-grid { grid-template-columns: 270px minmax(0, 1fr); gap: 28px; }.detail-main { padding: 24px; }.detail-tabs { gap: 18px; }.capability-grid { grid-template-columns: 1fr; }.face-stats > div { padding: 0 16px; } }
