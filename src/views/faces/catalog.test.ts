@@ -63,3 +63,15 @@ describe('published face catalog', () => {
     await expect(loadFaceDetail('123')).rejects.toThrow('not found')
   })
 })
+
+describe('face detail errors', () => {
+  it.each([
+    [true, 200, 403, 'You do not have permission to view this watch face.'],
+    [false, 403, 403, 'You do not have permission to view this watch face.'],
+    [true, 200, 404, 'Watch face not found.'],
+    [false, 404, 404, 'Watch face not found.'],
+  ])('reports HTTP %s/%s business %s', async (ok, status, code, message) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok, status, json: async () => ({ code }) }))
+    await expect(loadFaceDetail('123')).rejects.toThrow(message)
+  })
+})

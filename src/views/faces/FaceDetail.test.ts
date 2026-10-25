@@ -38,6 +38,13 @@ async function setup(path = '/faces/123') {
   return { wrapper, router }
 }
 describe('watch face details', () => {
+  it('renders the saved design cover when the product has no published images', async () => {
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, previewImageUrl: null, fallbackImageUrl: '/saved-design-cover.png' })
+    const { wrapper } = await setup()
+    expect(wrapper.get('.preview-stage > img').attributes('src')).toBe('/saved-design-cover.png')
+    expect(wrapper.find('.preview-placeholder').exists()).toBe(false)
+  })
+
   it('opens the Facebook preparation dialog instead of navigating away', async () => {
     HTMLDialogElement.prototype.showModal = vi.fn()
     HTMLDialogElement.prototype.close = vi.fn()

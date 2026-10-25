@@ -22,6 +22,35 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it('downloads completed PRG and IQ packages from the visible build status rows', async () => {
+    const { wrapper } = await setup({ management: true, design: {
+      ...design, product: { ...design.product,
+        prgRelease: { id: 3, deviceId: 'venu3', prgUrl: 'https://example.com/test.prg' },
+        prgPackagingLog: { deviceId: 'venu3', packagingStatus: 'completed' },
+        packagingLog: { packagingStatus: 'completed' },
+      },
+    } })
+    const buttons = wrapper.findAll('.build-task-download')
+    expect(buttons).toHaveLength(2)
+    await buttons[0].trigger('click')
+    await buttons[1].trigger('click')
+    expect(wrapper.emitted('run-prg')?.[0]).toEqual([wrapper.props('design')])
+    expect(wrapper.emitted('download-package')?.[0]).toEqual([wrapper.props('design')])
+    await wrapper.setProps({ showPackageDownload: false })
+    expect(wrapper.find('.build-task-download').exists()).toBe(false)
+    wrapper.unmount()
+  })
+  it('does not offer downloads for completed tasks without files', async () => {
+    const { wrapper } = await setup({ management: true, design: {
+      ...design, product: { ...design.product, release: undefined,
+        prgPackagingLog: { deviceId: 'venu3', packagingStatus: 'completed' },
+        packagingLog: { packagingStatus: 'completed' },
+      },
+    } })
+    expect(wrapper.findAll('.build-task-row')).toHaveLength(2)
+    expect(wrapper.find('.build-task-download').exists()).toBe(false)
+    wrapper.unmount()
+  })
   it('keeps list cards read-only with links to the application details', async () => {
     const { wrapper, router } = await setup({ summaryOnly: true })
     expect(wrapper.find('button').exists()).toBe(false)
@@ -90,6 +119,7 @@ describe('design card management placement', () => {
     expect(row.text()).toContain('PRG')
     expect(row.text()).toContain(text)
     expect(row.classes()).toContain('package-' + tone)
+    expect(row.find('.build-task-download').exists()).toBe(status === 'completed')
     expect(wrapper.find('.permanent-build-actions > .action-group-actions').text()).not.toContain('card.cancelPrgBuild')
     const cancel = row.find('.build-task-cancel')
     expect(cancel.exists()).toBe(status === 'pending')

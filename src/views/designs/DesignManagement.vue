@@ -509,7 +509,7 @@ const confirmDeleteDesign = async () => {
 
 // 提交设计
 const submitDesign = async (design: DesignListItem) => {
-  if (!membershipGate.requirePublish()) return
+  if (design.canInstall !== true && !membershipGate.requireExport()) return
   if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
     submitDesignDialog.value.show(design)
   }
@@ -521,7 +521,7 @@ const buildPrg = async (design: DesignListItem) => {
     await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`)
     return
   }
-  if (!userStore.isStudioConsumer && !membershipGate.requireExport()) return
+  if (design.canInstall !== true && !userStore.isStudioConsumer && !membershipGate.requireExport()) return
   if (loadingStates.value.prgBuild.has(design.id)) return
 
   // 获取当前设备 ID：优先使用用户资料中的设备，其次尝试本地已选设备
@@ -570,7 +570,7 @@ const cancelBuild = async (design: DesignListItem, type: 'prg' | 'iq') => {
 
 // 下载安装包
 const downloadPackage = async (design: DesignListItem) => {
-  if (!membershipGate.requireExport()) return
+  if (design.canInstall !== true && !membershipGate.requireExport()) return
   const url = design.product?.release?.packageUrl
   if (url) {
     await downloadPackageFile(url, design.product?.name || design.name, 'iq')
@@ -586,7 +586,7 @@ const runPrg = async (design: DesignListItem) => {
       const response = await designUnlocksApi.status(design.designUid)
       if (!response.data?.canInstall) { await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`); return }
     } catch (error) { showErrorOnce(error, 'Unable to check design access'); return }
-  } else if (!membershipGate.requireExport()) return
+  } else if (design.canInstall !== true && !membershipGate.requireExport()) return
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
     await downloadPackageFile(url, design.product?.name || design.name, 'prg')

@@ -25,7 +25,7 @@ vi.mock('./DesignCard.vue', () => ({ default: { name: 'DesignCard', props: ['des
 const fixture = () => ({ id: 1, designUid: 'one', name: 'Face', user: { id: 7 }, product: { appId: 211889, id: 10, release: { packageUrl: 'https://example.com/test.iq' } } })
 let wrapper: ReturnType<typeof mount> | undefined
 let target: HTMLElement
-beforeEach(() => { vi.clearAllMocks(); mocks.user.isAdminUser = false; mocks.get.mockResolvedValue({ code: 0, data: fixture() }); mocks.canExport.mockReturnValue(true); mocks.canPublish.mockReturnValue(true); target = document.createElement('div'); document.body.append(target) })
+beforeEach(() => { vi.clearAllMocks(); mocks.user.isAdminUser = false; mocks.user.isStudioConsumer = false; mocks.get.mockResolvedValue({ code: 0, data: fixture() }); mocks.canExport.mockReturnValue(true); mocks.canPublish.mockReturnValue(true); target = document.createElement('div'); document.body.append(target) })
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; target.remove(); vi.useRealTimers(); vi.restoreAllMocks() })
 async function setup() {
   wrapper = mount(DesignManagement, { props: { designUid: 'one', informationTarget: target }, global: { stubs: { ElDialog: true, ElRadioGroup: true, ElRadioButton: true, ElButton: true } } })
@@ -113,6 +113,19 @@ describe('application management', () => {
     mocks.get.mockResolvedValue({ code: 0, data: { ...fixture(), user: { id: 8 } } })
     await setup()
     expect(wrapper!.find('.card-test').exists()).toBe(true)
+  })
+  it.each([true, false])('allows an eligible free app to build and download without membership (consumer=%s)', async (consumer) => {
+    mocks.user.isStudioConsumer = consumer
+    await setup()
+    mocks.canExport.mockReturnValue(false)
+    mocks.canPublish.mockReturnValue(false)
+    const free = { ...fixture(), canInstall: true }
+    await (wrapper!.vm as any).buildPrg(free)
+    await (wrapper!.vm as any).submitDesign(free)
+    await (wrapper!.vm as any).downloadPackage(free)
+    expect(mocks.submitShow).toHaveBeenCalledTimes(2)
+    expect(mocks.download).toHaveBeenCalledTimes(1)
+    expect(mocks.canPublish).not.toHaveBeenCalled()
   })
   it('keeps the export and publish membership gates', async () => {
     await setup()

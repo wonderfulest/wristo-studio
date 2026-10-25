@@ -232,6 +232,16 @@
             <div v-for="row in packageRows" :key="row.key" class="build-task-row" :class="`package-${row.tone}`">
               <strong>{{ row.label }}</strong>
               <span class="package-rank">{{ row.value }}</span>
+              <el-button
+                v-if="showPackageDownload && row.canDownload && row.tone === 'ready'"
+                class="build-task-download"
+                size="small"
+                :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`"
+                @click.stop="downloadPackage(row.key)"
+              >
+                <el-icon><Download /></el-icon>
+                {{ t('editDesign.downloadPackage') }}
+              </el-button>
               <el-tooltip
                 v-if="(row.key === 'prg' ? prgCardAction : iqCancellationAction) === 'cancel'"
                 :content="t(row.key === 'iq' ? 'card.cancelIqBuild' : 'card.cancelPrgBuild')"

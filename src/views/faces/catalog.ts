@@ -53,13 +53,21 @@ export interface FaceQuery {
   page: number
 }
 
+function catalogError(path: string, code?: number): Error {
+  if (/^faces\/\d+$/.test(path)) {
+    if (code === 403) return new Error('You do not have permission to view this watch face.')
+    if (code === 404) return new Error('Watch face not found.')
+  }
+  return new Error('The face catalog is unavailable. Please try again.')
+}
+
 // Public catalog requests must never start Studio's authentication redirect flow.
 async function publicGet<T>(path: string, params: Record<string, string>, token?: string): Promise<T> {
   const response = await fetch(`/wristo-api/public/products/${path}?${new URLSearchParams(params)}`, { credentials: 'omit', ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) })
-  if (!response.ok) throw new Error('The face catalog is unavailable. Please try again.')
+  if (!response.ok) throw catalogError(path, response.status)
   const body = await response.json()
   if ('code' in body) {
-    if (body.code !== 0) throw new Error('The face catalog is unavailable. Please try again.')
+    if (body.code !== 0) throw catalogError(path, body.code)
     return body.data
   }
   return body
