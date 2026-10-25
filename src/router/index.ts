@@ -26,7 +26,11 @@ const ensureDesignDataCatalog = (to: { path: string; fullPath: string }) =>
   shouldLoadDataCatalog(to.path) ? loadDesignDataCatalog(to.fullPath) : true
 
 const routes: RouteRecordRaw[] = [
-  ...searchPages.map(page => ({
+  {
+    path: '/',
+    redirect: (to) => ({ path: '/faces', query: to.query, hash: to.hash }),
+  },
+  ...searchPages.filter(page => page.path !== '/').map(page => ({
     path: page.path,
     component: () => import('@/views/public/SearchPage.vue'),
     meta: { requiresAuth: false },
