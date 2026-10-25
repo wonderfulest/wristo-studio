@@ -1,5 +1,6 @@
 <template>
   <div class="my-designs">
+    <AppBuildVersion />
     <div v-if="userStore.studioMembership" class="design-capacity">
       <span v-if="userStore.isStudioConsumer">{{ t('membership.designCapacity', { used: userStore.studioMembership.designCount, limit: userStore.studioMembership.maxDesigns ?? '∞', unlocked: userStore.studioMembership.unlockedDesignCount ?? 0 }) }}</span>
       <span v-else>{{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns ?? '∞' }} {{ t('membership.appsUsed') }}</span>
@@ -227,6 +228,7 @@
 </template>
 
 <script setup lang="ts">
+import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'

@@ -226,9 +226,11 @@
                 </el-button>
               </span>
             </el-tooltip>
-            <el-button v-if="canBuildIq" :disabled="!showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
-              <el-icon><Box /></el-icon>
-              {{ t('card.buildIq') }}
+            <el-button v-if="canBuildIq" class="iq-build-action" :disabled="!showBuildIqButton" size="small" @click="closeActions(); emit('submit', design)" :loading="loadingStates.submit.has(design.id)">
+              <span class="iq-build-label"><el-icon><Box /></el-icon>{{ t('card.buildIq') }}</span>
+              <span v-if="iqBuildOutdated" class="build-version-hint iq-build-version-hint">
+                {{ t('card.newBuildVersionHint', { version: latestBuildVersion ?? '' }) }}
+              </span>
             </el-button>
           </div>
           <div v-if="packageRows.length" class="build-task-status" role="status" aria-live="polite">
@@ -260,6 +262,9 @@
                   @click.stop="cancelBuild(row.key)"
                 ><Icon icon="material-symbols:close-rounded" aria-hidden="true" /></button>
               </el-tooltip>
+              <span v-if="row.key === 'prg' && row.tone === 'ready' && isOlderBuildVersion(row.releaseVersion, latestBuildVersion)" class="build-version-hint">
+                {{ t('card.newBuildVersionHint', { version: latestBuildVersion ?? '' }) }}
+              </span>
             </div>
           </div>
         </section>
@@ -398,7 +403,9 @@
 </template>
 
 <script setup lang="ts" generic="T extends DesignListItem">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { loadAppBuildVersion } from '@/api/wristo/platformVersions'
+import { isOlderBuildVersion } from '@/utils/buildVersion'
 import { RouterLink, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessageBox, ElPopover } from 'element-plus'
@@ -732,6 +739,11 @@ const packageTone = (log?: DesignListTask, hasRelease = false) => {
   return 'neutral'
 }
 
+const latestBuildVersion = ref<string | null>(null)
+onMounted(async () => {
+  if (props.management) latestBuildVersion.value = await loadAppBuildVersion()
+})
+
 const packageRows = computed(() => {
   const product = design.value.product
   if (!product) return []
@@ -791,6 +803,10 @@ const packageRows = computed(() => {
   return rows
 })
 
+const iqBuildOutdated = computed(() => packageRows.value.some(row =>
+  row.key === 'iq' && row.tone === 'ready' && isOlderBuildVersion(row.releaseVersion, latestBuildVersion.value),
+))
+
 const openBuildLog = (logId?: number) => {
   if (!logId) return
   const target = router.resolve({
@@ -811,7 +827,11 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 
 <style scoped>
 .build-task-status { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--studio-border); }
-.build-task-row { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; }
+.action-group-actions :deep(.iq-build-action > span) { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; width: 100%; }
+.iq-build-label { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.iq-build-action .iq-build-version-hint { flex: 1 1 120px; text-align: right; line-height: 1.5; font-weight: 400; }
+.build-version-hint { flex-basis: 100%; color: var(--studio-text-muted); font-size: 11px; }
+.build-task-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; }
 .build-task-row .package-version {
   flex: 0 0 auto;
   white-space: nowrap;

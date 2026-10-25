@@ -183,6 +183,7 @@ let resumeDraftId = ''
 const chooseUnsavedDesign = async (draft: UnsavedDesign): Promise<'resume' | 'new' | 'dismiss'> => {
   try {
     await ElMessageBox.confirm(t('editor.unsavedEntry.message', { name: draft.name }), t('editor.unsavedEntry.title'), {
+      customClass: 'studio-resume-design-dialog',
       confirmButtonText: t('editor.unsavedEntry.resume'), cancelButtonText: t('editor.unsavedEntry.new'),
       distinguishCancelAndClose: true, closeOnClickModal: false, type: 'warning',
     })
@@ -808,6 +809,82 @@ defineExpose({
 
   .center-area {
     padding: 18px;
+  }
+}
+</style>
+
+<style>
+/* MessageBox is teleported to body, so keep these styles unscoped and namespaced. */
+.el-message-box.studio-resume-design-dialog {
+  --el-messagebox-font-line-height: 1.75;
+  width: 600px;
+  max-width: calc(100vw - 32px);
+  padding: 32px;
+  border-radius: 20px;
+}
+
+.studio-resume-design-dialog .el-message-box__header {
+  padding: 0 36px 20px 0;
+}
+
+.studio-resume-design-dialog .el-message-box__title {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.studio-resume-design-dialog .el-message-box__headerbtn {
+  top: 24px;
+  right: 24px;
+  width: 32px;
+  height: 32px;
+  font-size: 22px;
+}
+
+.studio-resume-design-dialog .el-message-box__content {
+  padding: 0;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.studio-resume-design-dialog .el-message-box__status {
+  font-size: 28px;
+}
+
+.studio-resume-design-dialog .el-message-box__message {
+  overflow-wrap: anywhere;
+}
+
+.studio-resume-design-dialog .el-message-box__btns {
+  gap: 12px;
+  padding: 28px 0 0;
+}
+
+.studio-resume-design-dialog .el-message-box__btns .el-button {
+  min-height: 48px;
+  height: auto;
+  margin: 0;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+@media (max-width: 540px) {
+  .el-message-box.studio-resume-design-dialog {
+    padding: 24px;
+  }
+
+  .studio-resume-design-dialog .el-message-box__headerbtn {
+    top: 16px;
+    right: 16px;
+  }
+
+  .studio-resume-design-dialog .el-message-box__btns {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 }
 </style>

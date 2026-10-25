@@ -9,12 +9,10 @@
         <router-view></router-view>
       </div>
     </main>
-    <AppBuildVersion v-if="isDesignPage" />
   </div>
 </template>
 
 <script setup>
-import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import GlobalHeader from './GlobalHeader.vue'

@@ -1,5 +1,5 @@
 <template>
-  <span v-if="version" class="app-build-version">Connect IQ App Build · v{{ version }}</span>
+  <span v-if="version" class="app-build-version">最新版本 · v{{ version }}</span>
 </template>
 
 <script setup lang="ts">
@@ -12,12 +12,18 @@ onMounted(async () => { version.value = await loadAppBuildVersion() })
 
 <style scoped>
 .app-build-version {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 10;
+  background: var(--studio-bg);
+  white-space: nowrap;
   display: block;
   flex-shrink: 0;
   padding: 6px 16px;
   color: var(--studio-text-muted);
   font-size: 12px;
   line-height: 18px;
-  text-align: center;
+  text-align: left;
 }
 </style>

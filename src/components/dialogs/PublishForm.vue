@@ -7,8 +7,13 @@
           <el-button size="small" :disabled="loading">{{ descriptionLanguageLabel(descriptionLanguage) }} ▾</el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item v-for="language in DESCRIPTION_LANGUAGES" :key="language.code" :command="language.code">
-                {{ language.code === descriptionLanguage ? '✓ ' : '' }}{{ language.label }}
+              <el-dropdown-item v-for="language in sortedDescriptionLanguages" :key="language.code" :command="language.code">
+                <span class="listing-language-option">
+                  <span>{{ language.code === descriptionLanguage ? '✓ ' : '' }}{{ language.label }}</span>
+                  <span class="listing-language-status" :class="{ 'has-description': readDescription(language.code).trim() }" :data-language="language.code">
+                    {{ t(readDescription(language.code).trim() ? 'descriptionLanguages.hasDescription' : 'descriptionLanguages.emptyDescription') }}
+                  </span>
+                </span>
               </el-dropdown-item>
               <el-dropdown-item v-if="descriptionLanguage !== 'en'" divided command="remove">{{ t('common.delete') }} · {{ descriptionLanguageLabel(descriptionLanguage) }}</el-dropdown-item>
             </el-dropdown-menu>
@@ -592,6 +597,9 @@ const writeDescription = (language: string, value: string) => {
   if (language === 'en') form.description = value
   else form.descriptions[language] = value
 }
+const sortedDescriptionLanguages = computed(() => [...DESCRIPTION_LANGUAGES].sort((a, b) =>
+  Number(!!readDescription(b.code).trim()) - Number(!!readDescription(a.code).trim()),
+))
 const activeDescription = computed(() => readDescription(descriptionLanguage.value))
 const addDescriptionLanguage = (language: string) => {
   if (language !== 'en' && !(language in form.descriptions)) form.descriptions[language] = ''
@@ -1310,6 +1318,7 @@ const generateAllDescriptions = async () => {
         if (!isUnchanged(job)) continue
         if (response.code !== 0 || typeof response.data !== 'string') throw new Error('Invalid description response')
         writeDescription(job.language, response.data)
+        if (!readName(job.language).trim()) writeName(job.language, readName('en'))
         if (job.language === 'en') updateProductTags(form.tagIds)
         completed += 1
       } catch {
@@ -1353,6 +1362,10 @@ defineExpose({
 <style scoped src="@/assets/styles/image-remove.css"></style>
 
 <style scoped>
+.listing-language-option { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; }
+.listing-language-status { color: var(--studio-text-muted); font-size: 12px; }
+.listing-language-status.has-description { color: var(--el-color-success); font-weight: 500; }
+
 .media-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 .media-section-heading .product-image-download-row { margin: 0; }
 .download-images-action { color: var(--studio-text-muted); font-size: 12px; font-weight: 400; }

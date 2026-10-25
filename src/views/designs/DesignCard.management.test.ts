@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { describe, expect, it, vi } from 'vitest'
 import DesignCard from './DesignCard.vue'
+vi.mock('@/api/wristo/platformVersions', () => ({ loadAppBuildVersion: vi.fn().mockResolvedValue('2.10.0') }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => ({ userInfo: { device: { deviceId: 'venu3' } }, studioMembership: null }) }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/views/meter/AppDetail.vue', () => ({ default: { template: '<div />' } }))
@@ -22,6 +23,14 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it.each([['2.9.4', true], ['2.10.0', false], ['3.0.0', false], [undefined, false]])('shows a gentle rebuild hint only for older packages: %s', async (releaseVersion, expected) => {
+    const { wrapper } = await setup({ management: true, design: { ...design, product: { ...design.product, release: { ...design.product.release, releaseVersion } } } })
+    await flushPromises()
+    expect(wrapper.find('.iq-build-action .build-version-hint').exists()).toBe(expected)
+    expect(wrapper.find('.build-task-status .build-version-hint').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('navigates Publish to the application detail publishing section', async () => {
     const { wrapper, router } = await setup()
     await wrapper.findAll('button').find(button => button.text() === 'card.publish')!.trigger('click')

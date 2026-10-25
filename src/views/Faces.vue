@@ -154,13 +154,11 @@
           <a href="https://wristo.io/privacy-policy">Privacy Policy</a>
         </nav>
       </div>
-      <AppBuildVersion />
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import '@fontsource/roboto-condensed/latin-700.css'

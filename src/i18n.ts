@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'card.newBuildVersionHint': 'Latest v{version} · Rebuild recommended',
   "faceDetail.previewNumber": "Preview {count}",
   "faceDetail.moreTags": "+{count} more",
   "faceDetail.shareRewards": "Earn {credits} credits per eligible visit · up to {limit} credits/day.",
@@ -112,6 +113,8 @@ const en = {
 
   'descriptionLanguages.add': 'Add',
   'descriptionLanguages.select': 'Select language',
+  'descriptionLanguages.hasDescription': 'Has description',
+  'descriptionLanguages.emptyDescription': 'Not filled',
   'descriptionLanguages.missingTemplate': 'No template for this language and payment method. Add one in Settings to generate a description.',
   'descriptionLanguages.loadFailed': 'Unable to load description templates. Reopen this dialog to retry.',
 
@@ -2789,6 +2792,7 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'card.newBuildVersionHint': '最新 v{version} · 建议重新构建',
   "faceDetail.previewNumber": "预览 {count}",
   "faceDetail.moreTags": "另有 {count} 个",
   "faceDetail.shareRewards": "每次有效访问可获 {credits} 积分，每天最多 {limit} 积分。",
@@ -2899,6 +2903,8 @@ const zh: Messages = {
 
   'descriptionLanguages.add': 'Add',
   'descriptionLanguages.select': '选择语言',
+  'descriptionLanguages.hasDescription': '已有描述',
+  'descriptionLanguages.emptyDescription': '未填写',
   'descriptionLanguages.missingTemplate': '当前语言及付费方式尚未配置模板，请在设置中添加后生成描述。',
   'descriptionLanguages.loadFailed': '描述模板加载失败，请重新打开弹窗重试。',
 

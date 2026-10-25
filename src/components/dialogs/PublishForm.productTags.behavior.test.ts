@@ -700,7 +700,32 @@ describe('multilingual descriptions', () => {
     expect(mocks.generateDescription.mock.calls.map(([payload]) => payload.language)).toEqual(['en', 'fr'])
     expect(mocks.getAiPrices).not.toHaveBeenCalled()
     await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('Generated en'), descriptions: { fr: 'Generated fr' } }))
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { fr: design.product.name }, description: expect.stringContaining('Generated en'), descriptions: { fr: 'Generated fr' } }))
+  })
+
+  it('preserves an existing localized name during bulk generation', async () => {
+    const wrapper = mountDialog()
+    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' } } })
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
+    await flushPromises()
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ names: { fr: 'Nom français' } }))
+  })
+
+  it('marks descriptions by actual content and updates when edited', async () => {
+    const wrapper = mountDialog()
+    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, descriptions: { fr: 'Bonjour', de: '   ' } } })
+    await flushPromises()
+    expect(wrapper.get('[data-language="fr"]').text()).toBe('descriptionLanguages.hasDescription')
+    expect(wrapper.get('[data-language="de"]').text()).toBe('descriptionLanguages.emptyDescription')
+    const languageOrder = wrapper.findAll('.listing-language-status').map(item => item.attributes('data-language'))
+    expect(languageOrder.indexOf('fr')).toBeLessThan(languageOrder.indexOf('zh-TW'))
+    expect(languageOrder.indexOf('fr')).toBeLessThan(languageOrder.indexOf('de'))
+    wrapper.findAllComponents({ name: 'ElDropdown' })[0]!.vm.$emit('command', 'fr')
+    await flushPromises()
+    await wrapper.get('.product-description-input input').setValue('   ')
+    expect(wrapper.get('[data-language="fr"]').text()).toBe('descriptionLanguages.emptyDescription')
   })
 
   it('continues after a failed language and retains successful results', async () => {
