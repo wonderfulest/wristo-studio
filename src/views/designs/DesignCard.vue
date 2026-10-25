@@ -240,7 +240,7 @@
                 @click.stop="downloadPackage(row.key)"
               >
                 <el-icon><Download /></el-icon>
-                {{ t('editDesign.downloadPackage') }}
+                {{ t('common.download') }}
               </el-button>
               <el-tooltip
                 v-if="(row.key === 'prg' ? prgCardAction : iqCancellationAction) === 'cancel'"
@@ -1443,6 +1443,15 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card--list .list-subtitle { flex-wrap: nowrap; margin-top: 4px; }
 .list-design-uid { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .design-card--management :deep(.el-button) { min-height: 36px; font-size: 13px; background: var(--studio-surface-raised); color: var(--studio-text); border-color: var(--studio-border); }
+.design-card--management .build-task-row :deep(.build-task-download) {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 26px;
+  height: 26px;
+  margin-left: 8px;
+  padding: 0 8px;
+  font-size: 12px;
+}
 .design-card--management :deep(.el-button:hover:not(:disabled)) { background: var(--studio-primary-soft); border-color: var(--studio-primary); }
 .design-card--management :deep(.el-button:disabled) { opacity: .5; }
 .design-card--management :deep(.el-button--danger) { color: var(--studio-danger, #c93838); }
