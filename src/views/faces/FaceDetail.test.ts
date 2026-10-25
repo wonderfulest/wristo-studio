@@ -19,7 +19,7 @@ vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
 import { loadFaceDetail, type FaceDetail as FaceDetailData } from './catalog'
 
-vi.mock('@/views/designs/DesignManagement.vue', () => ({ default: { props: ['designUid', 'informationTarget'], template: '<div data-testid="management"><a class="primary-button" :href="`/design?id=${designUid}`" @click.prevent="$router.push(`/design?id=${designUid}`)">Edit in Builder</a></div>' } }))
+vi.mock('@/views/designs/DesignManagement.vue', () => ({ default: { name: 'DesignManagement', props: ['designUid', 'informationTarget'], template: '<div data-testid="management"><a class="primary-button" :href="`/design?id=${designUid}`" @click.prevent="$router.push(`/design?id=${designUid}`)">Edit in Builder</a></div>' } }))
 vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<header>Public navigation</header>' } }))
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
@@ -258,6 +258,26 @@ describe('watch face details', () => {
     expect(wrapper.get('.share-row [role="status"]').text()).toContain('Could not copy')
     Reflect.deleteProperty(navigator, 'clipboard')
   })
+  it('keeps the page and editing controller mounted when a background refresh fails', async () => {
+    const { wrapper } = await setup()
+    await wrapper.get('#detail-tab-media').trigger('click')
+    const article = wrapper.get('article').element
+    const controller = wrapper.get('[data-testid="management"]').element
+    vi.mocked(loadFaceDetail).mockRejectedValueOnce(new Error('Temporary network failure'))
+    wrapper.findComponent({ name: 'DesignManagement' }).vm.$emit('updated')
+    await flushPromises()
+    expect(loadFaceDetail).toHaveBeenCalledTimes(2)
+    expect(wrapper.get('article').element).toBe(article)
+    expect(wrapper.get('[data-testid="management"]').element).toBe(controller)
+    expect(wrapper.get('#detail-tab-media').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('h1').text()).toBe('Test face')
+    vi.mocked(loadFaceDetail).mockResolvedValueOnce({ ...fixture, name: 'Updated face' })
+    wrapper.findComponent({ name: 'DesignManagement' }).vm.$emit('updated')
+    await flushPromises()
+    expect(wrapper.get('h1').text()).toBe('Updated face')
+    expect(wrapper.get('[data-testid="management"]').element).toBe(controller)
+  })
+
   it('shows errors and retries', async () => {
     vi.mocked(loadFaceDetail).mockRejectedValueOnce(new Error('Offline'))
     const { wrapper } = await setup()

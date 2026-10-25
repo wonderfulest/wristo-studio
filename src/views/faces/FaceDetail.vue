@@ -107,6 +107,7 @@ import type { FaceImages } from './content'
 import type { PublishSection } from '@/components/dialogs/publishSections'
 import { designApi } from '@/api/wristo/design'
 import { supportedDataFields } from './dataFields'
+import { formatFaceDate } from './faceDate'
 
 const DesignManagement = defineAsyncComponent(() => import('@/views/designs/DesignManagement.vue').then(module => module.default))
 const activeSection = ref<'overview' | PublishSection>('overview')
@@ -216,11 +217,8 @@ const selectImage = (url: string) => {
   selectedImage.value = url
   imageFailed.value = false
 }
-const formatDate = (value?: string | null) => {
-  if (!value) return ''
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', year: 'numeric' })
-}
+const formatDate = (value?: string | null) => formatFaceDate(value, locale.value)
+
 async function loadCurrentFace(): Promise<FaceDetail> {
   if (!route.params.designUid) return loadFaceDetail(String(route.params.appId || ''), userStore.token)
   const response = await designApi.getDesignByUid(String(route.params.designUid))
@@ -237,7 +235,10 @@ async function refreshManagedFace() {
   try {
     const result = await loadCurrentFace()
     if (current === request) face.value = result
-  } catch { if (current === request) await load() }
+  } catch {
+    // A background failure must not unmount the page and discard active edits.
+    // Keep the last loaded detail; a later update can refresh it in place.
+  }
 }
 async function load() {
   sharePlatform.value = null
@@ -305,7 +306,7 @@ dt { font-size: 12px; color: var(--studio-text-muted); }dd { margin: 4px 0 0; fo
 .information-section { padding: 16px 18px; margin: 0 0 18px; border: 1px solid var(--studio-border); border-radius: 12px; background: var(--studio-surface-raised); }
 .overview-description :deep(.md-editor-preview) { font-size: 14px; line-height: 1.7; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }.tags span, .tags button { border: 1px solid var(--studio-border); background: var(--studio-surface-soft); color: var(--studio-text-muted); border-radius: 5px; padding: 3px 8px; font: inherit; font-size: 11px; }.tags button { color: var(--studio-primary); cursor: pointer; background: transparent; }
-.capability-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }.capability-section { padding: 18px; }.capability-section summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; }.capability-section summary::-webkit-details-marker { display: none; }.capability-section summary > svg { color: var(--studio-primary); width: 22px; height: 22px; flex-shrink: 0; }.capability-section strong { display: block; font-size: 14px; font-weight: 600; }.capability-section small { display: block; font-size: 12px; color: var(--studio-text-muted); margin-top: 3px; }.disclosure { margin-left: auto; color: var(--studio-text-subtle); font-size: 20px; }.capability-section[open] .disclosure { transform: rotate(45deg); }
+.capability-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }.capability-section:only-child { grid-column: 1 / -1; }.capability-section { padding: 18px; }.capability-section summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; }.capability-section summary::-webkit-details-marker { display: none; }.capability-section summary > svg { color: var(--studio-primary); width: 22px; height: 22px; flex-shrink: 0; }.capability-section strong { display: block; font-size: 14px; font-weight: 600; }.capability-section small { display: block; font-size: 12px; color: var(--studio-text-muted); margin-top: 3px; }.disclosure { margin-left: auto; color: var(--studio-text-subtle); font-size: 20px; }.capability-section[open] .disclosure { transform: rotate(45deg); }
 .devices, .data-field-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 16px 0 0; list-style: none; margin: 0; }.devices a, .data-field-list li { padding: 4px 7px; font-size: 11px; color: var(--studio-text-muted); background: var(--studio-surface-soft); border-radius: 4px; text-decoration: none; overflow-wrap: anywhere; }.devices a:hover { color: var(--studio-primary); }
 .primary-actions { display: grid; gap: 10px; margin-top: 10px; }.primary-button, .secondary-button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 42px; padding: 9px 12px; border-radius: 8px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }.primary-button { background: var(--studio-primary); color: #fff; border: 1px solid var(--studio-primary); font-weight: 700; }.secondary-button { border: 1px solid var(--studio-border); color: var(--studio-text-muted); background: var(--studio-surface-raised); }.secondary-button svg { margin-left: auto; }.secondary-button:hover { color: var(--studio-primary); border-color: var(--studio-primary); }
 .share-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 0; margin-top: 6px; color: var(--studio-text-subtle); font-size: 11px; }.share-row > span:first-child { letter-spacing: 1.3px; font-size: 9px; }.share-button { font: inherit; min-height: 32px; border: 0; background: none; padding: 0; color: var(--studio-text-muted); cursor: pointer; }.share-button:hover { color: var(--studio-primary); }
