@@ -1,18 +1,20 @@
 <template>
-  <el-dialog v-model="visible" title="Design allowance reached" width="min(480px, 94vw)" append-to-body>
-    <p v-if="user.isStudioConsumer">Your draft allowance is full. Delete a draft or unlock one for $1.99 to make room. Unlocked designs do not use draft space.</p>
-    <p v-else>Open an existing design, delete one to free a slot, or add more room for your next design.</p>
-    <p v-if="!user.isStudioConsumer">Redeem credits or buy permanent slots. You can also upgrade your Studio membership.</p>
+  <el-dialog v-model="visible" :title="t('membership.limitTitle')" width="min(480px, 94vw)" append-to-body>
+    <p v-if="user.isStudioConsumer">{{ t('membership.limitConsumer') }}</p>
+    <p v-else>{{ t('membership.limitMember') }}</p>
+    <p v-if="!user.isStudioConsumer">{{ t('membership.limitOptions') }}</p>
     <template #footer>
-      <el-button @click="visible = false">Keep Editing</el-button>
-      <a v-if="!user.isStudioConsumer" href="/design-slots" target="_blank" rel="noopener" @click="visible = false">Add slots / upgrade ↗</a>
-      <a v-else href="/designs" @click="visible = false">My designs</a>
+      <el-button @click="visible = false">{{ t('membership.keepEditing') }}</el-button>
+      <a v-if="!user.isStudioConsumer" href="/design-slots" target="_blank" rel="noopener" @click="visible = false">{{ t('membership.addSlotsOrUpgrade') }}</a>
+      <a v-else href="/designs" @click="visible = false">{{ t('membership.myDesigns') }}</a>
     </template>
   </el-dialog>
 </template>
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
+const { t } = useI18n()
 const visible = ref(false), user = useUserStore()
 const show = () => { visible.value = true; void user.refreshUserInfo().catch(() => {}) }
 const refresh = () => { if (user.isAuthenticated) void user.refreshUserInfo().catch(() => {}) }

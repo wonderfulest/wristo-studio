@@ -2,6 +2,15 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  "membership.designCapacity": "Locked designs {used} / {limit} · Unlocked designs {unlocked}",
+  "membership.limitTitle": "Design limit reached",
+  "membership.limitConsumer": "Your limit for locked designs has been reached. Delete a locked design or unlock one for $1.99 to make room. Unlocked designs do not count toward this limit.",
+  "membership.limitMember": "Open an existing design, delete one to free a slot, or add more room for your next design.",
+  "membership.limitOptions": "Redeem credits or buy permanent slots. You can also upgrade your Studio membership.",
+  "membership.keepEditing": "Keep editing",
+  "membership.addSlotsOrUpgrade": "Add slots / upgrade ↗",
+  "membership.myDesigns": "My designs",
+
   'designSharing.title': "Design Sharing",
   'designSharing.public': "Public Design",
   'designSharing.publicHelp': "Let other users see this design. When off, only you and administrators can access it.",
@@ -825,7 +834,7 @@ const en = {
   'membership.faq.checkout.question': 'How does checkout work?',
   'membership.faq.checkout.answer': 'Choose a paid plan and start checkout. Studio uses Paddle and refreshes your membership after payment.',
   'membership.faq.limit.question': 'How many designs can I create?',
-  'membership.faq.limit.answer': 'Free accounts start with 3 designs by default. Your roles determine your allowance; the highest limit applies. Permanent extra slots can be redeemed with credits or purchased.',
+  'membership.faq.limit.answer': 'Free accounts include 1 free design. Unlocked designs do not count toward this limit. Your roles determine your allowance; the highest limit applies. Permanent extra slots can be redeemed with credits or purchased.',
   'membership.faq.ads.question': 'What does ad-free mean?',
   'membership.faq.ads.answer': 'Paid Studio plans are intended to remove Wristo promotional placements from the creator workflow.',
   'editor.actions': 'Actions',
@@ -2688,6 +2697,15 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  "membership.designCapacity": "未解锁设计 {used} / {limit} · 已解锁设计 {unlocked}",
+  "membership.limitTitle": "设计数量已达上限",
+  "membership.limitConsumer": "未解锁设计数量已达上限。删除一个未解锁设计，或花费 $1.99 解锁一个设计，即可腾出名额。已解锁设计不占用此额度。",
+  "membership.limitMember": "可以打开已有设计、删除一个设计以腾出名额，或增加设计名额。",
+  "membership.limitOptions": "可使用积分兑换或购买永久设计名额，也可以升级 Studio 会员。",
+  "membership.keepEditing": "继续编辑",
+  "membership.addSlotsOrUpgrade": "增加名额 / 升级 ↗",
+  "membership.myDesigns": "我的设计",
+
   'designSharing.title': "设计分享设置",
   'designSharing.public': "是否公开",
   'designSharing.publicHelp': "允许其他用户看到此设计。关闭后，仅作者和管理员可访问。",
@@ -3503,7 +3521,7 @@ const zh: Messages = {
   'membership.faq.checkout.question': '结账流程是怎样的？',
   'membership.faq.checkout.answer': '选择付费套餐并开始结账。Studio 使用 Paddle 收款，并会在支付完成后刷新你的会员权益。',
   'membership.faq.limit.question': '可以创建多少个设计？',
-  'membership.faq.limit.answer': '免费账号默认可拥有 3 个设计。多个角色取最高额度，额外栏位可通过积分兑换或直接购买，永久有效。',
+  'membership.faq.limit.answer': '免费账号可免费创建 1 个设计，已解锁设计不占用此额度。多个角色取最高额度，额外栏位可通过积分兑换或直接购买，永久有效。',
   'membership.faq.ads.question': '无广告具体指什么？',
   'membership.faq.ads.answer': '付费 Studio 计划预期会移除创作者工作流中的 Wristo 推广展示。',
   'editor.actions': '操作',

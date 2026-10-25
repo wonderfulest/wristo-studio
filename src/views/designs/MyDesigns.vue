@@ -1,7 +1,7 @@
 <template>
   <div class="my-designs">
     <div v-if="userStore.studioMembership" class="design-capacity">
-      <span v-if="userStore.isStudioConsumer">Drafts {{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns }} · Unlocked {{ userStore.studioMembership.unlockedDesignCount ?? 0 }}</span>
+      <span v-if="userStore.isStudioConsumer">{{ t('membership.designCapacity', { used: userStore.studioMembership.designCount, limit: userStore.studioMembership.maxDesigns ?? '∞', unlocked: userStore.studioMembership.unlockedDesignCount ?? 0 }) }}</span>
       <span v-else>{{ userStore.studioMembership.designCount }} / {{ userStore.studioMembership.maxDesigns ?? '∞' }} {{ t('membership.appsUsed') }}</span>
       <RouterLink v-if="!userStore.isStudioConsumer" to="/design-slots">{{ t('membership.addSlots') }}</RouterLink>
     </div>
