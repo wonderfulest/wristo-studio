@@ -49,6 +49,9 @@ function normalizeWhitespace(str: string | undefined | null): string | undefined
  * 设计相关API接口
  */
 export const designApi = {
+  getAppBuildVersions(): Promise<ApiResponse<Array<{ version: string; releaseNote?: string; recordedAt?: string }>>> {
+    return instance.get('/admin/platform-versions/app-build-versions')
+  },
   /**
    * 分页查询设计列表
    * @param params 查询参数

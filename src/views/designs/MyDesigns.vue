@@ -8,47 +8,138 @@
     <!-- 搜索栏 -->
     <div class="search-bar">
       <div class="filter-fields">
-      <!-- 当前设备展示与选择 -->
-      <DeviceDisplay ref="deviceDisplayRef" />
-      <el-input v-model="searchName" :placeholder="t('project.searchName')" class="name-filter" clearable @keyup.enter="handleSearch" />
-      <el-input
-        v-model="searchAppId"
-        :placeholder="t('project.searchAppId')"
-        class="app-id-filter"
-        clearable
-        inputmode="numeric"
-        @keyup.enter="handleSearch"
+        <!-- 当前设备展示与选择 -->
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.device') }}</span>
+          <DeviceDisplay ref="deviceDisplayRef" />
+        </div>
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.searchName') }}</span>
+          <el-input
+            v-model="searchName"
+            :placeholder="t('project.searchName')"
+            class="name-filter"
+            clearable
+            @keyup.enter="handleSearch"
+          />
+        </div>
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.searchAppId') }}</span>
+          <el-input
+            v-model="searchAppId"
+            :placeholder="t('project.searchAppId')"
+            class="app-id-filter"
+            clearable
+            inputmode="numeric"
+            @keyup.enter="handleSearch"
+          />
+        </div>
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.status') }}</span>
+          <el-select
+            v-model="selectedStatus"
+            :placeholder="t('project.status')"
+            clearable
+            class="status-filter"
+            @change="handleStatusChange"
+          >
+            <el-option :label="t('common.all')" value="" />
+            <el-option :label="t('status.draft')" value="draft" />
+            <el-option :label="t('status.submitted')" value="submitted" />
+            <el-option :label="t('status.approved')" value="approved" />
+            <el-option :label="t('status.rejected')" value="rejected" />
+          </el-select>
+        </div>
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.launchStatus') }}</span>
+          <el-select
+            v-model="selectedLaunchStatus"
+            :placeholder="t('project.launchStatus')"
+            clearable
+            class="status-filter"
+            @change="handleStatusChange"
+          >
+            <el-option :label="t('common.all')" value="" />
+            <el-option :label="t('project.launched')" value="launched" />
+            <el-option :label="t('project.notLaunched')" value="not_launched" />
+            <el-option :label="t('project.updateAvailable')" value="update_available" />
+          </el-select>
+        </div>
+
+        <div class="filter-field">
+          <span class="filter-label">{{ t('submitDesign.paymentMethod') }}</span>
+          <el-select
+            v-model="selectedPaymentMethod"
+            :placeholder="t('submitDesign.paymentMethod')"
+            clearable
+            class="payment-filter"
+            @change="handleStatusChange"
+          >
+            <el-option :label="t('payment.free')" value="free" />
+            <el-option label="WPay" value="wpay" />
+            <el-option :label="t('payment.garminOfficial')" value="garmin" />
+          </el-select>
+        </div>
+        <el-button type="primary" :disabled="versionInvalid" @click="handleSearch">
+          <Icon icon="material-symbols:search" />
+          {{ t('common.search') }}
+        </el-button>
+        <el-button @click="resetSearch">{{ t('common.resetFilters') }}</el-button>
+      </div>
+      <div v-if="isAdminUser" class="admin-filters">
+        <div class="admin-filter-heading">
+          <Icon icon="material-symbols:admin-panel-settings-outline-rounded" />
+          <span>{{ t('project.adminFilters') }}</span>
+        </div>
+        <div class="filter-field version-field">
+          <div class="version-label"><span class="filter-label">Connect IQ App Build</span><a href="https://dashboard.wristo.io/ops/platform-versions" target="_blank" rel="noopener noreferrer">{{ t('project.manageVersions') }}</a></div>
+          <div class="version-inputs">
+            <el-select
+              v-model="packagedVersionOperator"
+              :aria-label="t('project.versionComparison')"
+              class="version-operator"
+              @change="handleSearch"
+            >
+              <el-option
+                v-for="option in versionOperators"
+                :key="option.value"
+                :value="option.value"
+                :label="option.label"
+              />
+            </el-select>
+            <el-select v-model="packagedVersion" :placeholder="t('project.chooseVersion')" :aria-label="t('project.packagedVersion')" filterable clearable :loading="versionsLoading" @visible-change="handleVersionDropdown" @change="handleSearch">
+              <el-option v-for="item in appBuildVersions" :key="item.version" :label="item.version" :value="item.version" />
+            </el-select>
+          </div>
+          <span v-if="versionInvalid" class="filter-error" role="alert">{{ t('project.invalidVersion') }}</span>
+        </div>
+        <div class="filter-field" v-if="isAdminUser">
+          <span class="filter-label">{{ t('project.searchDesigner') }}</span>
+          <div class="designer-filter">
+            <DesignerSelect
+              :model-value="selectedCreatorUserId"
+              :placeholder="t('project.searchDesigner')"
+              @update:model-value="handleCreatorChange"
+            />
+          </div>
+        </div>
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.designScope') }}</span>
+      <el-segmented
+        v-if="isAdminUser"
+        v-model="designScope"
+        :options="designScopeOptions"
+        class="scope-filter"
+        @change="handleDesignScopeChange"
       />
-      <div v-if="isAdminUser" class="designer-filter">
-        <DesignerSelect
-          :model-value="selectedCreatorUserId"
-          :placeholder="t('project.searchDesigner')"
-          @update:model-value="handleCreatorChange"
+        </div>
+      <div class="display-options">
+        <el-switch
+          v-model="showCreator"
+          :active-text="t('project.showCreator')"
+          :aria-label="t('project.showCreator')"
         />
       </div>
-      <el-select v-model="selectedStatus" :placeholder="t('project.status')" clearable class="status-filter" @change="handleStatusChange">
-        <el-option :label="t('common.all')" value="" />
-        <el-option :label="t('status.draft')" value="draft" />
-        <el-option :label="t('status.submitted')" value="submitted" />
-        <el-option :label="t('status.approved')" value="approved" />
-        <el-option :label="t('status.rejected')" value="rejected" />
-      </el-select>
-      <el-select v-model="selectedLaunchStatus" :placeholder="t('project.launchStatus')" clearable class="status-filter" @change="handleStatusChange">
-        <el-option :label="t('common.all')" value="" />
-        <el-option :label="t('project.launched')" value="launched" />
-        <el-option :label="t('project.notLaunched')" value="not_launched" />
-        <el-option :label="t('project.updateAvailable')" value="update_available" />
-      </el-select>
-
-      <el-select v-model="selectedPaymentMethod" :placeholder="t('submitDesign.paymentMethod')" clearable class="payment-filter" @change="handleStatusChange">
-        <el-option :label="t('payment.free')" value="free" />
-        <el-option label="WPay" value="wpay" />
-        <el-option :label="t('payment.garminOfficial')" value="garmin" />
-      </el-select>
-      <el-button type="primary" @click="handleSearch">
-        <Icon icon="material-symbols:search" />
-        {{ t('common.search') }}
-      </el-button>
       </div>
       <div class="filter-preferences">
         <Icon class="sort-icon" icon="material-symbols:sort-rounded" aria-hidden="true" />
@@ -61,20 +152,6 @@
         <el-option :label="t('project.ascending')" value="asc" />
         <el-option :label="t('project.descending')" value="desc" />
       </el-select>
-      <el-segmented
-        v-if="isAdminUser"
-        v-model="designScope"
-        :options="designScopeOptions"
-        class="scope-filter"
-        @change="handleDesignScopeChange"
-      />
-      <div class="display-options">
-        <el-switch
-          v-model="showCreator"
-          :active-text="t('project.showCreator')"
-          :aria-label="t('project.showCreator')"
-        />
-      </div>
       <span class="collection-count">{{ t('project.designCount', { count: total }) }}</span>
       <div class="collection-controls">
         <div class="view-switch" role="group" :aria-label="t('project.viewMode')">
@@ -165,7 +242,7 @@ import type { DesignListItem, DesignStatus, LaunchStatus, DesignPageParams } fro
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
 import { useDesignPagination } from './useDesignPagination'
-import { normalizePositiveAppId } from '@/views/designs/designSearch'
+import { normalizePositiveAppId, isPackagedVersion, versionOperators, type VersionOperator } from '@/views/designs/designSearch'
 import { normalizeDesignSort, toDesignOrderBy, type DesignSortField, type DesignSortOrder } from '@/views/designs/designSort'
 const router = useRouter()
 const messageStore = useMessageStore()
@@ -177,9 +254,9 @@ const viewMode = ref<'list' | 'grid'>(readViewMode())
 
 function readViewMode(): 'list' | 'grid' {
   try {
-    return window.localStorage.getItem('wristo-studio:design-view-mode') === 'grid' ? 'grid' : 'list'
+    return window.localStorage.getItem('wristo-studio:design-view-mode') === 'list' ? 'list' : 'grid'
   } catch {
-    return 'list'
+    return 'grid'
   }
 }
 
@@ -200,6 +277,8 @@ const emptyLoadingStates = { submit: new Set<number>(), copy: new Set<number>(),
 // 搜索相关状态
 interface DesignSearchPreference {
   searchName: string
+  packagedVersion: string
+  packagedVersionOperator: VersionOperator
   searchAppId: string
   selectedCreatorUserId?: number
   selectedStatus: DesignStatus | ''
@@ -235,6 +314,8 @@ const normalizeCreatorUserId = (value: unknown): number | undefined => {
 const defaultDesignSearchPreference = (): DesignSearchPreference => ({
   searchName: '',
   searchAppId: '',
+  packagedVersion: '',
+  packagedVersionOperator: 'lt',
   selectedCreatorUserId: undefined,
   selectedStatus: '',
   selectedLaunchStatus: '',
@@ -253,6 +334,8 @@ const readDesignSearchPreference = (): DesignSearchPreference => {
 
     const parsed = JSON.parse(raw) as Partial<DesignSearchPreference>
     return {
+      packagedVersion: typeof parsed.packagedVersion === 'string' && isPackagedVersion(parsed.packagedVersion) ? parsed.packagedVersion : '',
+      packagedVersionOperator: versionOperators.some(option => option.value === parsed.packagedVersionOperator) ? parsed.packagedVersionOperator! : 'lt',
       searchName: typeof parsed.searchName === 'string' ? parsed.searchName : defaults.searchName,
       searchAppId: typeof parsed.searchAppId === 'string' ? parsed.searchAppId : defaults.searchAppId,
       selectedPaymentMethod: parsed.selectedPaymentMethod === 'free' || parsed.selectedPaymentMethod === 'wpay' || parsed.selectedPaymentMethod === 'garmin' ? parsed.selectedPaymentMethod : '',
@@ -281,6 +364,9 @@ const writeDesignSearchPreference = (preference: DesignSearchPreference) => {
 const savedDesignSearch = readDesignSearchPreference()
 const initialSort = normalizeDesignSort(savedDesignSearch.sortField, savedDesignSearch.sortOrder, userStore.isAdminUser)
 const initialDesignSearch = { ...savedDesignSearch, sortField: initialSort.field, sortOrder: initialSort.order }
+const packagedVersion = ref(initialDesignSearch.packagedVersion)
+const packagedVersionOperator = ref<VersionOperator>(initialDesignSearch.packagedVersionOperator)
+const versionInvalid = computed(() => !!packagedVersion.value.trim() && !isPackagedVersion(packagedVersion.value))
 const searchName = ref(initialDesignSearch.searchName)
 const searchAppId = ref(initialDesignSearch.searchAppId)
 const selectedCreatorUserId = ref<number | undefined>(initialDesignSearch.selectedCreatorUserId)
@@ -297,6 +383,19 @@ const isMerchantUser = computed(() => {
 })
 
 const isAdminUser = computed(() => userStore.isAdminUser)
+const appBuildVersions = ref<Array<{ version: string }>>([])
+const versionsLoading = ref(false)
+const handleVersionDropdown = (visible: boolean) => { if (visible) void loadAppBuildVersions() }
+const loadAppBuildVersions = async () => {
+  if (!isAdminUser.value || versionsLoading.value) return
+  versionsLoading.value = true
+  try {
+    const response = await designApi.getAppBuildVersions()
+    if (response.code !== 0) throw new Error(response.msg || t('project.versionsLoadFailed'))
+    appBuildVersions.value = (response.data || []).filter(item => isPackagedVersion(item.version))
+  } catch (error) { showErrorOnce(error, t('project.versionsLoadFailed')) }
+  finally { versionsLoading.value = false }
+}
 
 type DesignScope = 'mine' | 'all'
 
@@ -343,8 +442,21 @@ const designScopeOptions = computed(() => [
 
 // 处理搜索
 const handleSearch = () => {
+  if (versionInvalid.value) return
   currentPage.value = 1
   refreshVersion.value++
+}
+
+const resetSearch = () => {
+  searchName.value = ''
+  searchAppId.value = ''
+  selectedCreatorUserId.value = undefined
+  selectedStatus.value = ''
+  selectedLaunchStatus.value = ''
+  selectedPaymentMethod.value = ''
+  packagedVersion.value = ''
+  packagedVersionOperator.value = 'lt'
+  handleSearch()
 }
 
 // 处理排序变化
@@ -379,6 +491,7 @@ const handleDesignScopeChange = () => {
 watch(isAdminUser, (isAdmin) => {
   if (!isAdmin) {
     selectedCreatorUserId.value = undefined
+    packagedVersion.value = ''
     const normalized = normalizeDesignSort(sortField.value, sortOrder.value, false)
     sortField.value = normalized.field
     sortOrder.value = normalized.order
@@ -395,9 +508,11 @@ watch(isAdminUser, (isAdmin) => {
 })
 
 watch(
-  [searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, selectedPaymentMethod, sortField, sortOrder],
+  [packagedVersion, packagedVersionOperator, searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, selectedPaymentMethod, sortField, sortOrder],
   () => {
     writeDesignSearchPreference({
+      packagedVersion: packagedVersion.value,
+      packagedVersionOperator: packagedVersionOperator.value,
       searchName: searchName.value,
       searchAppId: searchAppId.value,
       selectedCreatorUserId: selectedCreatorUserId.value,
@@ -451,7 +566,10 @@ const getDesignImageUrl = (design: DesignListItem) => {
 // Capture filters when Search/sort/filter controls explicitly apply them.
 const appliedFilters = ref<Partial<DesignPageParams>>({})
 watch(refreshVersion, () => {
+  if (versionInvalid.value) return
   appliedFilters.value = {
+    packagedVersion: isAdminUser.value ? packagedVersion.value.trim() || undefined : undefined,
+    packagedVersionOperator: isAdminUser.value && packagedVersion.value.trim() ? packagedVersionOperator.value : undefined,
     designStatus: selectedStatus.value || undefined,
     launchStatus: selectedLaunchStatus.value || undefined,
     paymentMethod: selectedPaymentMethod.value || undefined,
@@ -481,10 +599,10 @@ const fetchDesigns = async (params: DesignPageParams) => {
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
-      if (designScope.value === 'mine' && !selectedPaymentMethod.value && currentPage.value === 1 && response.data.list.length === 0) {
+      if (params.scope === 'mine' && !params.paymentMethod && !params.packagedVersion && !params.name && !params.appId && !params.creatorUserId && !params.designStatus && !params.launchStatus && currentPage.value === 1 && response.data.list.length === 0) {
         noDesignDialogVisible.value = true
       }
-      
+
     } else {
       console.error('API返回错误:', response)
       messageStore.error(response.msg || t('project.getListFailed'))
@@ -546,7 +664,7 @@ onUnmounted(() => {
   gap: 12px;
   flex-shrink: 0;
 }
-.collection-count { white-space: nowrap; color: var(--studio-text-muted); font-size: 13px; }
+.collection-count { margin-left: auto; white-space: nowrap; color: var(--studio-text-muted); font-size: 13px; }
 .view-switch {
   display: inline-flex;
   gap: 4px;
@@ -618,10 +736,9 @@ onUnmounted(() => {
 .filter-preferences {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 10px 12px;
-  overflow-x: auto;
 }
 
 .filter-fields > *,
@@ -636,10 +753,35 @@ onUnmounted(() => {
   background: var(--studio-surface-soft);
 }
 
+.admin-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; padding: 12px 16px; border-top: 1px solid var(--studio-border); background: var(--studio-primary-soft); }
+.admin-filter-heading { display: flex; align-items: center; gap: 6px; align-self: center; color: var(--studio-primary); font-size: 12px; font-weight: 600; }
+.admin-filter-heading .iconify { font-size: 18px; }
+.admin-filters .display-options { margin-left: 0; padding-left: 0; }
+.filter-fields { align-items: flex-end; gap: 14px 12px; padding: 16px; }
+.filter-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.filter-label { color: var(--studio-text-muted); font-size: 12px; font-weight: 600; }
+.version-field { width: 290px; position: relative; }
+.version-label { display: flex; justify-content: space-between; gap: 12px; }
+.version-label a { font-size: 12px; color: var(--studio-primary); }
+.version-inputs { display: flex; gap: 6px; }
+.version-inputs :deep(.el-select__input) { border: 0; outline: 0; box-shadow: none; background: transparent; }
+.version-operator { flex: 0 0 82px; }
+.filter-error { color: var(--el-color-danger); font-size: 12px; }
+.filter-fields > .el-button { margin-left: 0; }
+.filter-fields :deep(.el-input),
+.filter-fields :deep(.el-select),
+.filter-fields :deep(.device-info) { height: 40px; box-sizing: border-box; }
+.filter-fields :deep(.el-input__wrapper) { height: 40px; box-sizing: border-box; }
+@media screen and (max-width: 600px) {
+  .filter-fields > .filter-field { flex: 1 1 140px; }
+  .filter-field .name-filter, .filter-field .app-id-filter, .filter-field .designer-filter,
+  .filter-field .status-filter, .filter-field .payment-filter { width: 100%; flex-basis: auto; }
+  .admin-filters > .version-field { flex: 1 1 100%; width: 100%; }
+}
 .sort-icon { flex-shrink: 0; font-size: 18px; color: var(--studio-text-muted); }
 .name-filter { width: 200px; }
 .app-id-filter { width: 144px; }
-.designer-filter { flex: 0 0 180px; width: 180px; }
+.designer-filter { width: 180px; }
 .payment-filter { width: 160px; }
 .status-filter { width: 150px; }
 .sort-field-filter { width: 170px; }
@@ -695,7 +837,7 @@ onUnmounted(() => {
   .filter-fields, .filter-preferences { padding: 8px 10px; gap: 8px; }
   .sort-icon { display: none; }
   .display-options { padding-left: 0; }
-  
+
   .el-col {
     padding: 0 10px;
     margin-bottom: 20px;
@@ -706,7 +848,7 @@ onUnmounted(() => {
   .design-grid {
     margin: 20px -15px 24px;
   }
-  
+
   .el-col {
     padding: 0 15px;
     margin-bottom: 20px;
@@ -717,7 +859,7 @@ onUnmounted(() => {
   .design-grid {
     margin: 20px -20px 24px;
   }
-  
+
   .el-col {
     padding: 0 20px;
     margin-bottom: 20px;

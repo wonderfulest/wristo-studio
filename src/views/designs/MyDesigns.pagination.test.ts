@@ -22,7 +22,7 @@ let resize: ResizeObserverCallback
 let width = 900
 const response = (name: string, count = 8) => ({ code: 0, data: { total: 99, list: Array.from({ length: count }, (_, id) => ({ id, name, designUid: `d${id}`, designStatus: 'draft' })) } })
 beforeEach(() => {
-  vi.clearAllMocks(); width = 900; mocks.user.userInfo.device.deviceId = 'venu3'
+  vi.clearAllMocks(); mocks.user.isAdminUser = true; width = 900; mocks.user.userInfo.device.deviceId = 'venu3'
   localStorage.clear(); localStorage.setItem('wristo-studio:design-view-mode', 'grid')
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ width } as DOMRect))
   vi.stubGlobal('ResizeObserver', class { constructor(cb: ResizeObserverCallback) { resize = cb } observe() {} disconnect() {} })
@@ -37,6 +37,21 @@ async function setup() {
   await flushPromises()
 }
 describe('My Designs request coordination', () => {
+  it('defaults to Grid and groups administrator controls', async () => {
+    localStorage.removeItem('wristo-studio:design-view-mode')
+    await setup()
+    expect(wrapper.find('.design-collection--grid').exists()).toBe(true)
+    expect(wrapper.find('.admin-filters .designer-filter').exists()).toBe(true)
+    expect(wrapper.find('.admin-filters .version-field').exists()).toBe(true)
+    expect(wrapper.find('.filter-fields .designer-filter').exists()).toBe(false)
+  })
+  it('hides admin filters and does not send a saved version for regular users', async () => {
+    mocks.user.isAdminUser = false
+    localStorage.setItem('wristo-studio:my-designs:search', JSON.stringify({ packagedVersion: '2.10.0', packagedVersionOperator: 'lt' }))
+    await setup()
+    expect(wrapper.find('.admin-filters').exists()).toBe(false)
+    expect(mocks.get).toHaveBeenLastCalledWith(expect.objectContaining({ packagedVersion: undefined, packagedVersionOperator: undefined, scope: 'mine' }))
+  })
   it('requests exactly two rows once on mount using summary mode', async () => {
     await setup()
     expect(mocks.get).toHaveBeenCalledTimes(1)

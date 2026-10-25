@@ -165,6 +165,8 @@ export interface ProductPaymentUpdateParams {
 }
 
 export interface DesignPageParams {
+  packagedVersion?: string
+  packagedVersionOperator?: 'lt' | 'lte' | 'eq' | 'gte' | 'gt'
   summaryOnly?: boolean
   pageNum: number
   pageSize: number

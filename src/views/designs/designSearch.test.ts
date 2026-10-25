@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizePositiveAppId } from './designSearch'
+import { normalizePositiveAppId, isPackagedVersion } from './designSearch'
 
 describe('normalizePositiveAppId', () => {
   it('returns an exact positive integer app ID', () => {
@@ -12,4 +12,13 @@ describe('normalizePositiveAppId', () => {
       expect(normalizePositiveAppId(value)).toBeUndefined()
     }
   )
+})
+
+describe('packaged version input', () => {
+  it.each(['1.0.0', ' 1.10.0 ', '999999999.0.1'])('accepts %s', value => {
+    expect(isPackagedVersion(value)).toBe(true)
+  })
+  it.each(['', '1.0', '1.2.3.4', '-1.0.0', '1.0.0-beta', '1000000000.0.0', 'abc'])('rejects %s', value => {
+    expect(isPackagedVersion(value)).toBe(false)
+  })
 })
