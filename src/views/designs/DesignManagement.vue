@@ -1,8 +1,8 @@
 <template>
-  <section class="design-management" aria-label="Application actions">
-    <p v-if="loadError" role="alert">{{ loadError }} <button @click="fetchDesigns">Try again</button></p>
+  <section class="design-management" :aria-label="t('faceDetail.applicationActions')">
+    <p v-if="loadError" role="alert">{{ loadError }} <button @click="fetchDesigns">{{ t('faceDetail.tryAgain') }}</button></p>
     <template v-if="design">
-      <div class="management-heading"><span>DESIGN WORKSPACE</span><DeviceDisplay ref="deviceDisplayRef" /></div>
+      <div class="management-heading"><span>{{ t('faceDetail.designWorkspace') }}</span><DeviceDisplay ref="deviceDisplayRef" /></div>
         <DesignCard
           :design="design"
           :management="true" :information-target="informationTarget.querySelector<HTMLElement>('.management-summary') || informationTarget"
@@ -42,7 +42,7 @@
           @transfer-owner="openTransferOwnerDialog"
         />
     </template>
-    <p v-else-if="!loadError" role="status">Loading application actions…</p>
+    <p v-else-if="!loadError" role="status">{{ t('faceDetail.loadingApplicationActions') }}</p>
     <el-dialog
       v-model="duplicateLanguageDialogVisible"
       :title="t('project.duplicateLanguageTitle')"

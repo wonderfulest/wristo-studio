@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach } from 'vitest'
+beforeEach(() => { setActivePinia(createPinia()) })
 import FaceDescription from './FaceDescription.vue'
 import FaceImageUpload from './FaceImageUpload.vue'
 import { updateFaceDescription, uploadFaceImages } from './content'

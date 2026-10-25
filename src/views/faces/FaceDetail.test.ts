@@ -2,6 +2,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useI18n } from '@/i18n'
+import { nextTick } from 'vue'
 import FaceDetail from './FaceDetail.vue'
 import { designApi } from '@/api/wristo/design'
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: vi.fn() } }))
@@ -10,7 +12,7 @@ vi.mock('@/api/wristo/shareRewards', () => ({ loadShareRewardProfile: vi.fn() })
 import { remixFace, updateFaceSharing } from './permissions'
 import { getDesignSharing, updateDesignSharing } from '@/api/wristo/designSharing'
 vi.mock('@/api/wristo/designSharing', () => ({ getDesignSharing: vi.fn(), updateDesignSharing: vi.fn() }))
-vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('@/i18n', async () => { const actual = await vi.importActual<typeof import('@/i18n')>('@/i18n'); const { ref } = await import('vue'); const locale = ref('en'); return { ...actual, useI18n: () => ({ locale, t: (key: string, params?: Record<string, string | number>) => key.startsWith('faceDetail.') ? actual.translate(key, locale.value as 'en' | 'zh', params) : key }) } })
 const auth = vi.hoisted(() => ({ isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
@@ -22,7 +24,7 @@ vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
-beforeEach(() => { auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
+beforeEach(() => { (useI18n().locale as { value: string }).value = 'en'; auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 async function setup(path = '/faces/123') {
   const router = createRouter({ history: createMemoryHistory(), routes: [
@@ -322,4 +324,16 @@ describe('application information navigation', () => {
     expect(wrapper.find('.edit-app-information').exists()).toBe(false)
     expect(wrapper.find('.description-header button').exists()).toBe(false)
   })
+})
+
+it('updates detail labels immediately when switching language', async () => {
+  const { wrapper } = await setup()
+  expect(wrapper.text()).toContain('Overview')
+  ;(useI18n().locale as { value: string }).value = 'zh'
+  await nextTick()
+  expect(wrapper.text()).toContain('概览')
+  expect(wrapper.text()).toContain('编辑应用信息')
+  expect(wrapper.text()).toContain('设备兼容性')
+  expect(wrapper.text()).toContain('编辑描述')
+  expect(wrapper.text()).not.toContain('Store listing')
 })

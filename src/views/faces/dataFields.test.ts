@@ -23,3 +23,12 @@ describe('published supported data fields', () => {
     }
   })
 })
+
+it('uses Chinese catalog labels and falls back to English when unavailable', () => {
+  const catalog = { dataOptions: {
+    ':FIELD_TYPE_STEPS': { label: { eng: { long: 'Steps' }, zhs: { long: '步数' } } },
+    ':FIELD_TYPE_HEART_RATE': { label: { eng: 'Heart rate' } },
+  } }
+  expect(supportedDataFields(catalog, 'zh').map(field => field.label)).toEqual(['步数', 'Heart rate'])
+  expect(supportedDataFields(catalog, 'en')[0].label).toBe('Steps')
+})

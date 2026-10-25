@@ -171,20 +171,20 @@
       </div>
       </div>
       <section v-if="management" class="management-information">
-        <header class="record-heading"><h2>Version &amp; distribution</h2><span class="review-state" :style="{ color: statusColor }">{{ statusText }}</span></header>
+        <header class="record-heading"><h2>{{ t('faceDetail.versionDistribution') }}</h2><span class="review-state" :style="{ color: statusColor }">{{ statusText }}</span></header>
         <p v-if="design.designStatus === 'rejected' && design.reviewComment" class="review-comment">{{ design.reviewComment }}</p>
         <dl class="record-grid">
           <div><dt>{{ t('card.lastUpdated') }}</dt><dd>{{ lastUpdatedText }}</dd></div>
           <div><dt>{{ t('card.lastGoLive') }}</dt><dd>{{ lastGoLiveText }}</dd></div>
           <div v-if="hasDownloadablePackage"><dt>{{ t('card.lastPackage') }}</dt><dd>{{ lastPackageTimeText }} <span v-if="hasNewRelease" class="new-release-label">{{ t('card.newRelease') }}</span></dd></div>
-          <div v-if="packageRows.length"><dt>Build status</dt><dd class="package-info"><span v-for="row in packageRows" :key="row.key" class="package-state" :class="`package-${row.tone}`">{{ row.label }} · {{ row.value }}</span></dd></div>
+          <div v-if="packageRows.length"><dt>{{ t('faceDetail.buildStatus') }}</dt><dd class="package-info"><span v-for="row in packageRows" :key="row.key" class="package-state" :class="`package-${row.tone}`">{{ row.label }} · {{ row.value }}</span></dd></div>
         </dl>
         <div v-if="design.product" class="record-business">
           <span v-if="canViewBusinessMetrics">{{ t('meter.orders') }} <strong>{{ orderCountText }}</strong></span>
           <span>{{ t('card.score') }} <strong>{{ appScoreTotalText }}</strong></span>
           <div v-if="isAdminUser" class="store-weight-editor"><span>{{ t('card.storeWeight') }}</span><el-input-number v-model="storeWeightDraft" :aria-label="t('card.storeWeight')" :min="MIN_STORE_WEIGHT" :max="MAX_STORE_WEIGHT" :step="1" :precision="0" :disabled="storeWeightSaving" size="small" controls-position="right" @blur="submitStoreWeight" @keyup.enter="submitStoreWeight" /></div>
         </div>
-        <details class="record-identifiers"><summary>Design reference</summary><code>{{ design.designUid }}</code><span v-if="design.product?.appId">App #{{ design.product.appId }}</span></details>
+        <details class="record-identifiers"><summary>{{ t('faceDetail.designReference') }}</summary><code>{{ design.designUid }}</code><span v-if="design.product?.appId">App #{{ design.product.appId }}</span></details>
       </section>
       </Teleport>
       <div v-if="summaryOnly" class="summary-meta">

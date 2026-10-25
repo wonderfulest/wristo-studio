@@ -2,68 +2,68 @@
   <div class="face-detail-page">
     <GlobalHeader />
     <main class="detail-main" :aria-busy="loading">
-      <div class="breadcrumb"><RouterLink :to="canEdit ? '/designs' : '/faces'" class="back-link">← {{ canEdit ? 'My designs' : 'Collection' }}</RouterLink><span v-if="face">/</span><span v-if="face">{{ face.name }}</span></div>
-      <div v-if="loading" class="detail-state" role="status">Loading watch face…</div>
+      <div class="breadcrumb"><RouterLink :to="canEdit ? '/designs' : '/faces'" class="back-link">← {{ canEdit ? t('faceDetail.myDesigns') : t('faceDetail.collection') }}</RouterLink><span v-if="face">/</span><span v-if="face">{{ face.name }}</span></div>
+      <div v-if="loading" class="detail-state" role="status">{{ t('faceDetail.loadingWatchFace') }}</div>
       <div v-else-if="error" class="detail-state" role="alert">
-        <h1>Unable to load this watch face</h1><p>{{ error }}</p><button class="secondary-button" @click="load">Try again</button>
+        <h1>{{ t('faceDetail.unableToLoadThisWatchFace') }}</h1><p>{{ error }}</p><button class="secondary-button" @click="load">{{ t('faceDetail.tryAgain') }}</button>
       </div>
       <article v-else-if="face" class="detail-grid">
-        <aside class="preview-column" aria-label="Watch face preview">
+        <aside class="preview-column" :aria-label="t('faceDetail.watchFacePreview')">
           <div class="preview-stage">
-            <span class="preview-label">WATCH FACE / {{ face.appId || 'DRAFT' }}</span>
+            <span class="preview-label">{{ t('faceDetail.watchFace') }} {{ face.appId || t('faceDetail.draft') }}</span>
             <img v-if="selectedImage && !imageFailed" :key="selectedImage" :src="selectedImage" :alt="face.name" @error="imageFailed = true" />
-            <span v-else class="preview-placeholder">Preview unavailable</span>
+            <span v-else class="preview-placeholder">{{ t('faceDetail.previewUnavailable') }}</span>
             <span class="preview-caption">{{ face.name }}</span>
           </div>
-          <div v-if="images.length > 1" class="thumbnails" aria-label="Choose preview">
-            <button v-for="(item, index) in images" :key="item.url" :aria-label="`Preview ${index + 1}`" :aria-pressed="selectedImage === item.url" @click="selectImage(item.url)"><img :src="item.url" :alt="item.alt" loading="lazy" /></button>
+          <div v-if="images.length > 1" class="thumbnails" :aria-label="t('faceDetail.choosePreview')">
+            <button v-for="(item, index) in images" :key="item.url" :aria-label="t('faceDetail.previewNumber', { count: index + 1 })" :aria-pressed="selectedImage === item.url" @click="selectImage(item.url)"><img :src="item.url" :alt="item.alt" loading="lazy" /></button>
           </div>
           <FaceImageUpload v-if="canEdit && face.appId && !face.designId" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @uploaded="onImagesUploaded" />
           <DesignManagement v-if="canEdit && face.designId && informationTarget" :key="`${face.designId}-${userStore.userInfo?.id}`" :design-uid="face.designId" :information-target="informationTarget" :active-section="activeSection" @select-section="selectSection" @updated="refreshManagedFace" />
           <div class="primary-actions">
-            <RouterLink v-if="canEdit && face.designId && !informationTarget" class="studio-edit-button" :to="{ path: '/design', query: { id: face.designId } }"><Icon icon="material-symbols:edit-outline" /> Edit in Builder</RouterLink>
-            <button v-else-if="!canEdit && face.designId && face.allowRemix" class="primary-button" :disabled="remixing" @click="remix">{{ remixing ? 'Creating your copy…' : 'Remix in Builder' }}</button>
-            <p v-else-if="!canEdit || !face.designId" class="source-unavailable">This watch face is not available in the builder.</p>
-            <a v-if="downloadUrl" class="secondary-button" :href="downloadUrl" target="_blank" rel="noopener noreferrer">View on Connect IQ <Icon icon="material-symbols:arrow-outward-rounded" /></a>
+            <RouterLink v-if="canEdit && face.designId && !informationTarget" class="studio-edit-button" :to="{ path: '/design', query: { id: face.designId } }"><Icon icon="material-symbols:edit-outline" /> {{ t('faceDetail.editInBuilder') }}</RouterLink>
+            <button v-else-if="!canEdit && face.designId && face.allowRemix" class="primary-button" :disabled="remixing" @click="remix">{{ remixing ? t('faceDetail.creatingYourCopy') : t('faceDetail.remixInBuilder') }}</button>
+            <p v-else-if="!canEdit || !face.designId" class="source-unavailable">{{ t('faceDetail.thisWatchFaceIsNotAvailableInTheBuilder') }}</p>
+            <a v-if="downloadUrl" class="secondary-button" :href="downloadUrl" target="_blank" rel="noopener noreferrer">{{ t('faceDetail.viewOnConnectIq') }} <Icon icon="material-symbols:arrow-outward-rounded" /></a>
           </div>
           <p v-if="remixError" class="sharing-error" role="alert">{{ remixError }}</p>
-          <p v-if="!canEdit && face.allowRemix" class="muted">Create your own copy with attribution to the original design.</p>
+          <p v-if="!canEdit && face.allowRemix" class="muted">{{ t('faceDetail.createYourOwnCopyWithAttributionToTheOriginalDesign') }}</p>
           <div v-if="face.appId" class="share-row">
-            <span>SHARE</span>
+            <span>{{ t('faceDetail.share') }}</span>
             <button v-for="platform in socialPlatforms" :key="platform" class="share-button" aria-haspopup="dialog" :disabled="shareLoading" @click="openShare(platform)">{{ platform }}</button>
-            <button class="share-button" :disabled="shareLoading" @click="copyLink">Copy link</button>
+            <button class="share-button" :disabled="shareLoading" @click="copyLink">{{ t('faceDetail.copyLink') }}</button>
             <span role="status">{{ shareStatus }}</span>
-            <span v-if="shareProfile?.enabled">Earn {{ shareProfile.creditsPerVisit }} credits per eligible visit · up to {{ shareProfile.userDailyCredits }} credits/day.</span>
+            <span v-if="shareProfile?.enabled">{{ t('faceDetail.shareRewards', { credits: shareProfile.creditsPerVisit, limit: shareProfile.userDailyCredits }) }}</span>
           </div>
         </aside>
         <section class="detail-copy">
           <header class="app-heading">
-            <div class="eyebrow">GARMIN WATCH FACE <span v-if="face.appId">#{{ face.appId }}</span></div>
-            <div class="app-title-row"><h1>{{ face.name }}</h1><button v-if="canEdit && face.designId" type="button" class="edit-app-information studio-edit-button" @click="selectSection('listing')"><Icon icon="material-symbols:edit-outline" /> Edit app information</button></div>
-            <div class="byline"><span v-if="creator" class="creator"><span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>By <strong>{{ creator }}</strong></span><span v-if="formatDate(face.updatedAt || face.createdAt)">Updated {{ formatDate(face.updatedAt || face.createdAt) }}</span></div>
+            <div class="eyebrow">{{ t('faceDetail.garminWatchFace') }} <span v-if="face.appId">#{{ face.appId }}</span></div>
+            <div class="app-title-row"><h1>{{ face.name }}</h1><button v-if="canEdit && face.designId" type="button" class="edit-app-information studio-edit-button" @click="selectSection('listing')"><Icon icon="material-symbols:edit-outline" /> {{ t('faceDetail.editAppInformation') }}</button></div>
+            <div class="byline"><span v-if="creator" class="creator"><span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>{{ t('faceDetail.by') }} <strong>{{ creator }}</strong></span><span v-if="formatDate(face.updatedAt || face.createdAt)">{{ t('faceDetail.updatedDate', { date: formatDate(face.updatedAt || face.createdAt) }) }}</span></div>
             <DesignSharingSettings v-if="canEdit && (face.designId || face.appId)" :key="`${face.designId || face.appId}-${userStore.userInfo?.id}`" class="owner-sharing-settings" compact :design-uid="face.designId || undefined" :app-id="face.appId || undefined" @saved="Object.assign(face, $event)" />
             <dl class="face-stats">
-              <div><dt>Price</dt><dd>{{ face.price === 0 ? 'Free' : face.price == null ? '—' : `$${face.price.toFixed(2)}` }}</dd></div>
-              <div v-if="face.download != null"><dt>Downloads</dt><dd>{{ face.download.toLocaleString() }}</dd></div>
-              <div v-if="face.devices?.length"><dt>Compatible devices</dt><dd>{{ face.devices.length }}<span> models</span></dd></div>
-              <div v-if="face.ratingCount"><dt>{{ face.ratingCount }} ratings</dt><dd>★ {{ face.averageRating?.toFixed(1) ?? '—' }}</dd></div>
+              <div><dt>{{ t('faceDetail.price') }}</dt><dd>{{ face.price === 0 ? t('faceDetail.free') : face.price == null ? '—' : `$${face.price.toFixed(2)}` }}</dd></div>
+              <div v-if="face.download != null"><dt>{{ t('faceDetail.downloads') }}</dt><dd>{{ face.download.toLocaleString(locale) }}</dd></div>
+              <div v-if="face.devices?.length"><dt>{{ t('faceDetail.compatibleDevices') }}</dt><dd>{{ face.devices.length }}<span>{{ t('faceDetail.models') }}</span></dd></div>
+              <div v-if="face.ratingCount"><dt>{{ t('faceDetail.countRatings', { count: face.ratingCount }) }}</dt><dd>★ {{ face.averageRating?.toFixed(1) ?? '—' }}</dd></div>
             </dl>
           </header>
-          <div v-if="canEdit && face.designId" class="detail-tabs" role="tablist" aria-label="Application information">
+          <div v-if="canEdit && face.designId" class="detail-tabs" role="tablist" :aria-label="t('faceDetail.applicationInformation')">
             <button v-for="(section, index) in detailSections" :id="`detail-tab-${section.id}`" :key="section.id" type="button" role="tab" :aria-selected="activeSection === section.id" :aria-controls="`detail-panel-${section.id}`" :tabindex="activeSection === section.id ? 0 : -1" @click="selectSection(section.id)" @keydown="moveTab($event, index)"><Icon :icon="section.icon" />{{ section.label }}</button>
           </div>
           <section v-show="activeSection === 'overview'" id="detail-panel-overview" class="overview-content" :role="canEdit && face.designId ? 'tabpanel' : undefined" :aria-labelledby="canEdit && face.designId ? 'detail-tab-overview' : undefined">
             <FaceDescription v-if="face.appId" :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section overview-description" :app-id="face.appId" :description="face.description" :is-owner="canEdit" :external-editor="!!face.designId" @edit="selectSection('listing')" @saved="face.description = $event">
-              <div v-if="face.tags?.length" class="tags"><span v-for="tag in (showAllTags ? face.tags : face.tags.slice(0, 6))" :key="tag.id">{{ tag.name }}</span><button v-if="face.tags.length > 6" @click="showAllTags = !showAllTags">{{ showAllTags ? 'Show less' : `+${face.tags.length - 6} more` }}</button></div>
+              <div v-if="face.tags?.length" class="tags"><span v-for="tag in (showAllTags ? face.tags : face.tags.slice(0, 6))" :key="tag.id">{{ tag.name }}</span><button v-if="face.tags.length > 6" @click="showAllTags = !showAllTags">{{ showAllTags ? t('faceDetail.showLess') : t('faceDetail.moreTags', { count: face.tags.length - 6 }) }}</button></div>
             </FaceDescription>
             <div class="capability-grid">
               <details class="information-section capability-section">
-                <summary><Icon icon="material-symbols:watch-outline-rounded" /><span><strong>Device compatibility</strong><small>{{ face.devices?.length || 0 }} supported models</small></span><span class="disclosure">+</span></summary>
+                <summary><Icon icon="material-symbols:watch-outline-rounded" /><span><strong>{{ t('faceDetail.deviceCompatibility') }}</strong><small>{{ t('faceDetail.countSupportedModels', { count: face.devices?.length || 0 }) }}</small></span><span class="disclosure">+</span></summary>
                 <div v-if="face.devices?.length" class="devices"><RouterLink v-for="device in face.devices" :key="device.deviceId" :to="{ path: '/faces', query: { device: String(device.id) } }">{{ device.displayName }}</RouterLink></div>
-                <p v-else class="muted">Device compatibility has not been listed.</p>
+                <p v-else class="muted">{{ t('faceDetail.deviceCompatibilityHasNotBeenListed') }}</p>
               </details>
               <details v-if="dataFields.length" class="information-section capability-section supported-data-fields">
-                <summary><Icon icon="material-symbols:monitoring-rounded" /><span><strong>Data &amp; features</strong><small>{{ dataFields.length }} supported data fields</small></span><span class="disclosure">+</span></summary>
+                <summary><Icon icon="material-symbols:monitoring-rounded" /><span><strong>{{ t('faceDetail.dataFeatures') }}</strong><small>{{ t('faceDetail.countSupportedDataFields', { count: dataFields.length }) }}</small></span><span class="disclosure">+</span></summary>
                 <ul class="data-field-list"><li v-for="field in dataFields" :key="field.symbol">{{ field.label }}</li></ul>
               </details>
             </div>
@@ -81,6 +81,8 @@
   </div>
 </template>
 <script setup lang="ts">
+import { useI18n } from '@/i18n'
+const { t, locale } = useI18n()
 import { defineAsyncComponent, computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -106,19 +108,19 @@ import { supportedDataFields } from './dataFields'
 
 const DesignManagement = defineAsyncComponent(() => import('@/views/designs/DesignManagement.vue').then(module => module.default))
 const activeSection = ref<'overview' | PublishSection>('overview')
-const detailSections = [
-  { id: 'overview', label: 'Overview', icon: 'material-symbols:overview-outline-rounded' },
-  { id: 'listing', label: 'Store listing', icon: 'material-symbols:article-outline-rounded' },
-  { id: 'media', label: 'Media', icon: 'material-symbols:photo-library-outline-rounded' },
-  { id: 'distribution', label: 'Availability', icon: 'material-symbols:public' },
-] as const
+const detailSections = computed(() => [
+  { id: 'overview', label: t('faceDetail.overview'), icon: 'material-symbols:overview-outline-rounded' },
+  { id: 'listing', label: t('faceDetail.storeListing'), icon: 'material-symbols:article-outline-rounded' },
+  { id: 'media', label: t('faceDetail.media'), icon: 'material-symbols:photo-library-outline-rounded' },
+  { id: 'distribution', label: t('faceDetail.availability'), icon: 'material-symbols:public' },
+] as const)
 const showAllTags = ref(false)
 function selectSection(section: 'overview' | PublishSection) { activeSection.value = section }
 function moveTab(event: KeyboardEvent, index: number) {
-  const next = event.key === 'Home' ? 0 : event.key === 'End' ? detailSections.length - 1 : event.key === 'ArrowRight' ? (index + 1) % detailSections.length : event.key === 'ArrowLeft' ? (index + detailSections.length - 1) % detailSections.length : -1
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? detailSections.value.length - 1 : event.key === 'ArrowRight' ? (index + 1) % detailSections.value.length : event.key === 'ArrowLeft' ? (index + detailSections.value.length - 1) % detailSections.value.length : -1
   if (next < 0) return
   event.preventDefault()
-  activeSection.value = detailSections[next].id
+  activeSection.value = detailSections.value[next].id
   document.getElementById(`detail-tab-${activeSection.value}`)?.focus()
 }
 const informationTarget = ref<HTMLElement | null>(null)
@@ -140,11 +142,11 @@ async function remix() {
     const designUid = await remixFace(face.value.designId)
     if (current === request) await router.push({ path: '/design', query: { id: designUid } })
   } catch (cause) {
-    if (current === request) remixError.value = cause instanceof Error ? cause.message : 'Could not create a copy. Please try again.'
+    if (current === request) remixError.value = cause instanceof Error ? cause.message : t('faceDetail.couldNotCreateACopyPleaseTryAgain')
   } finally { if (current === request) remixing.value = false }
 }
 const face = ref<FaceDetail | null>(null)
-const dataFields = computed(() => supportedDataFields(face.value?.dataFieldCatalog ?? face.value?.configJson))
+const dataFields = computed(() => supportedDataFields(face.value?.dataFieldCatalog ?? face.value?.configJson, locale.value))
 const loading = ref(true)
 const error = ref('')
 const selectedImage = ref('')
@@ -168,16 +170,16 @@ async function prepareShare() {
 async function openShare(platform: SocialPlatform) {
   if (shareLoading.value) return
   try { await prepareShare(); sharePlatform.value = platform; shareStatus.value = '' }
-  catch { shareStatus.value = 'Could not prepare your personal sharing link. Please try again.' }
+  catch { shareStatus.value = t('faceDetail.couldNotPrepareYourPersonalSharingLinkPleaseTryAgain') }
 }
 const shareUrl = computed(() => face.value ? faceShareUrl(window.location.origin, face.value.appId, shareProfile.value?.code, 'copy') : '')
 async function copyLink() {
   try {
     await prepareShare()
     await navigator.clipboard.writeText(shareUrl.value)
-    shareStatus.value = 'Link copied'
+    shareStatus.value = t('faceDetail.linkCopied')
   } catch {
-    shareStatus.value = 'Could not copy your personal sharing link. Please try again.'
+    shareStatus.value = t('faceDetail.couldNotCopyYourPersonalSharingLinkPleaseTryAgain')
   }
 }
 let request = 0
@@ -207,14 +209,14 @@ const selectImage = (url: string) => {
 const formatDate = (value?: string | null) => {
   if (!value) return ''
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 async function loadCurrentFace(): Promise<FaceDetail> {
   if (!route.params.designUid) return loadFaceDetail(String(route.params.appId || ''), userStore.token)
   const response = await designApi.getDesignByUid(String(route.params.designUid))
-  if (response.code !== 0 || !response.data) throw new Error(response.msg || 'Design not found.')
+  if (response.code !== 0 || !response.data) throw new Error(response.msg || t('faceDetail.designNotFound'))
   const design = response.data
-  if (!userStore.isAdminUser && design.user?.id !== userStore.userInfo?.id) throw new Error('Design not found.')
+  if (!userStore.isAdminUser && design.user?.id !== userStore.userInfo?.id) throw new Error(t('faceDetail.designNotFound'))
   if (design.product?.appId) {
     return loadFaceDetail(String(design.product.appId), userStore.token)
   }
@@ -248,7 +250,7 @@ async function load() {
     face.value = result
     selectImage(images.value[0]?.url || '')
   } catch (cause) {
-    if (current === request) error.value = cause instanceof Error ? cause.message : 'Please try again.'
+    if (current === request) error.value = cause instanceof Error ? cause.message : t('faceDetail.retryMessage')
   } finally {
     if (current === request) loading.value = false
   }

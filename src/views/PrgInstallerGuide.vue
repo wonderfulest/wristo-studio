@@ -6,7 +6,6 @@
         <p class="eyebrow">Wristo Studio</p>
         <h1>{{ t('prgInstallerGuide.title') }}</h1>
         <p class="subtitle">{{ t('prgInstallerGuide.subtitle') }}</p>
-        <p class="no-terminal">{{ t('prgInstallerGuide.noTerminal') }}</p>
       </div>
     </header>
 
@@ -111,10 +110,25 @@
       <a class="sdk-link" href="https://developer.garmin.com/connect-iq/sdk/" target="_blank" rel="noopener noreferrer">{{ t('prgInstallerGuide.garminSdk') }} ↗</a>
     </section>
 
+    <section class="guide-section manual-install" aria-labelledby="manual-install-title">
+      <div class="section-heading">
+        <span>02</span>
+        <h2 id="manual-install-title">{{ t('prgInstallerGuide.manualTitle') }}</h2>
+      </div>
+      <p>{{ t('prgInstallerGuide.manualIntro') }}</p>
+      <code class="manual-path">{{ t('prgInstallerGuide.manualPath') }}</code>
+      <ol>
+        <li>{{ t('prgInstallerGuide.manualStep1') }}</li>
+        <li>{{ t('prgInstallerGuide.manualStep2') }}</li>
+        <li>{{ t('prgInstallerGuide.manualStep3') }}</li>
+      </ol>
+      <p class="manual-note">{{ t('prgInstallerGuide.manualNote') }}</p>
+    </section>
+
     <div class="info-grid">
       <section class="guide-section compact">
         <div class="section-heading">
-          <span>02</span>
+          <span>03</span>
           <h2>{{ t('prgInstallerGuide.limitationsTitle') }}</h2>
         </div>
         <ul>
@@ -124,7 +138,7 @@
       </section>
       <section class="guide-section compact">
         <div class="section-heading">
-          <span>03</span>
+          <span>04</span>
           <h2>{{ t('prgInstallerGuide.troubleshootingTitle') }}</h2>
         </div>
         <ul>
@@ -150,7 +164,7 @@ import { detectPrgInstallerPlatform, getPrgInstallerReleases, type PrgInstallerP
 import { loadPrgInstallerReleases, type MacPrgInstallerArch, type WindowsInstallerKind } from '@/features/prg-installer/manifest'
 
 const { t } = useI18n()
-const platforms: PrgInstallerPlatform[] = ['mac', 'windows']
+const platforms: PrgInstallerPlatform[] = ['windows', 'mac']
 const releases = ref(getPrgInstallerReleases())
 const macReleases = ref<Partial<Record<MacPrgInstallerArch, PrgInstallerRelease>>>({})
 const macArchitectures = ref<MacPrgInstallerArch[]>([])
@@ -243,16 +257,6 @@ h1 {
   color: #64748b;
   font-size: 19px;
   line-height: 1.6;
-}
-.no-terminal {
-  display: inline-block;
-  margin: 0;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #047857;
-  font-size: 14px;
-  font-weight: 600;
 }
 .platform-tabs {
   margin-bottom: 44px;
@@ -391,6 +395,27 @@ h1 {
   color: #2563eb;
   font-weight: 650;
   text-decoration: none;
+}
+.manual-install p,
+.manual-install li {
+  color: #475569;
+  line-height: 1.65;
+}
+.manual-path {
+  display: block;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  overflow-wrap: anywhere;
+}
+.manual-install ol {
+  display: grid;
+  gap: 12px;
+  padding-left: 24px;
+}
+.manual-note {
+  margin-bottom: 0;
+  font-weight: 600;
 }
 .info-grid {
   display: grid;

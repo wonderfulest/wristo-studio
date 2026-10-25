@@ -7,15 +7,15 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 }
 
-function englishLabel(value: unknown): string {
+function localizedLabel(value: unknown, locale: string): string {
   if (typeof value === 'string') return value.trim()
   const labels = record(value)
-  const candidate = labels.eng ?? labels.en ?? labels.long ?? labels.medium
-  return candidate == null ? '' : englishLabel(candidate)
+  const candidate = (locale === 'zh' ? labels.zhs ?? labels.zh : undefined) ?? labels.eng ?? labels.en ?? labels.long ?? labels.medium
+  return candidate == null ? '' : localizedLabel(candidate, locale)
 }
 
 // dataOptions is the published application's field catalog, not Studio's global catalog.
-export function supportedDataFields(configJson: unknown): SupportedDataField[] {
+export function supportedDataFields(configJson: unknown, locale = 'en'): SupportedDataField[] {
   let parsed = configJson
   if (typeof parsed === 'string') {
     try { parsed = JSON.parse(parsed) } catch { return [] }
@@ -26,8 +26,8 @@ export function supportedDataFields(configJson: unknown): SupportedDataField[] {
     if (typeof symbol !== 'string' || !symbol.startsWith(':FIELD_TYPE_')) return
     const data = record(option)
     if (data.isActive === 0) return
-    const label = englishLabel(data.label) || englishLabel(data.dataLabel)
-      || englishLabel(data.settingsLabel)
+    const label = localizedLabel(data.label, locale) || localizedLabel(data.dataLabel, locale)
+      || localizedLabel(data.settingsLabel, locale)
       || symbol.slice(':FIELD_TYPE_'.length).toLowerCase().replace(/_/g, ' ').replace(/^./, char => char.toUpperCase())
     if (!fields.has(symbol)) fields.set(symbol, { symbol, label })
   }

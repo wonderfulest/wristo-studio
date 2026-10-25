@@ -1,25 +1,27 @@
 <template>
   <section class="face-description" aria-labelledby="description-heading">
     <div class="description-header">
-      <h2 id="description-heading"><Icon icon="material-symbols:description-outline-rounded" aria-hidden="true" />Description</h2>
-      <button v-if="isOwner && !editing" type="button" class="studio-edit-button" @click="startEditing"><Icon icon="material-symbols:edit-outline" aria-hidden="true" />Edit description</button>
+      <h2 id="description-heading"><Icon icon="material-symbols:description-outline-rounded" aria-hidden="true" />{{ t('faceDetail.description') }}</h2>
+      <button v-if="isOwner && !editing" type="button" class="studio-edit-button" @click="startEditing"><Icon icon="material-symbols:edit-outline" aria-hidden="true" />{{ t('faceDetail.editDescription') }}</button>
     </div>
     <template v-if="editing && isOwner">
-      <MdEditor style="height: 360px" v-model="draft" language="en-US" :theme="theme.currentTheme" :toolbars="toolbars" :id="`face-description-${appId}`" :disabled="saving" :no-mermaid="true" :no-katex="true" :no-highlight="true" :auto-focus="true" :preview="false" placeholder="Describe your watch face…" @on-save="save" />
+      <MdEditor style="height: 360px" v-model="draft" :language="locale === 'zh' ? 'zh-CN' : 'en-US'" :theme="theme.currentTheme" :toolbars="toolbars" :id="`face-description-${appId}`" :disabled="saving" :no-mermaid="true" :no-katex="true" :no-highlight="true" :auto-focus="true" :preview="false" :placeholder="t('faceDetail.describeYourWatchFace')" @on-save="save" />
       <div class="edit-actions">
-        <button type="button" class="save-description" :disabled="saving || draft.length > 20000" @click="save">{{ saving ? 'Saving…' : 'Save description' }}</button>
-        <button type="button" :disabled="saving" @click="cancel">Cancel</button>
+        <button type="button" class="save-description" :disabled="saving || draft.length > 20000" @click="save">{{ saving ? t('faceDetail.saving') : t('faceDetail.saveDescription') }}</button>
+        <button type="button" :disabled="saving" @click="cancel">{{ t('faceDetail.cancel') }}</button>
         <span>{{ draft.length.toLocaleString() }} / 20,000</span>
       </div>
     </template>
     <MdPreview v-else-if="description?.trim()" class="description" :model-value="description" :theme="theme.currentTheme" :id="`face-description-${appId}`" :no-mermaid="true" :no-katex="true" :no-highlight="true" />
-    <p v-else class="description">No description provided.</p>
+    <p v-else class="description">{{ t('faceDetail.noDescriptionProvided') }}</p>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="status" role="status">{{ status }}</p>
     <slot />
   </section>
 </template>
 <script setup lang="ts">
+import { useI18n } from '@/i18n'
+const { t, locale } = useI18n()
 import { Icon } from '@iconify/vue'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { MdEditor, MdPreview, config } from 'md-editor-v3'
@@ -52,9 +54,9 @@ async function save() {
     if (current !== generation) return
     emit('saved', description)
     editing.value = false
-    status.value = 'Description saved.'
+    status.value = t('faceDetail.descriptionSaved')
   } catch (cause) {
-    if (current === generation) error.value = contentError(cause, 'Could not save the description. Please try again.')
+    if (current === generation) error.value = contentError(cause, t('faceDetail.couldNotSaveTheDescriptionPleaseTryAgain'))
   } finally { if (current === generation) saving.value = false }
 }
 </script>

@@ -4,7 +4,7 @@
     <div class="wiki-shell">
       <aside class="wiki-sidebar" aria-label="文档目录">
         <div class="sidebar-heading">
-          <span class="book-mark" aria-hidden="true">W.</span>
+          <img class="book-mark" src="https://cdn.wristo.io/brands/wristo-logo/svg/wristo-mark.svg" alt="Wristo" />
           <div>
             <strong>STUDIO MANUAL</strong>
             <small>使用指南与常见问题 · 中文</small>
@@ -307,14 +307,11 @@ onBeforeUnmount(() => {
   margin: 0 0 28px;
 }
 .book-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 36px;
-  height: 42px;
-  background: var(--studio-text);
-  color: var(--studio-bg);
-  font-size: 22px;
-  font-family: Georgia, serif;
+  height: 36px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 .sidebar-heading strong {
   font-size: 12px;

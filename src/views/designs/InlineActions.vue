@@ -1,9 +1,13 @@
 <template>
   <details class="inline-actions">
-    <summary>Design &amp; versions <span>＋</span></summary>
+    <summary>{{ t('faceDetail.designVersions') }} <span>＋</span></summary>
     <div class="secondary-actions"><slot /></div>
   </details>
 </template>
+<script setup lang="ts">
+import { useI18n } from '@/i18n'
+const { t } = useI18n()
+</script>
 <style scoped>
 .inline-actions { width: 100%; border-top: 1px solid var(--studio-border); margin-top: 2px; }
 summary { display: flex; align-items: center; justify-content: space-between; padding: 14px 2px 4px; list-style: none; cursor: pointer; font-size: 12px; font-weight: 500; color: var(--studio-text-muted); }
