@@ -3,16 +3,16 @@
     <h3 v-if="!compact">{{ t('designSharing.title') }}</h3>
     <div v-for="field in fields" :key="field.key" class="sharing-row" :title="compact ? t(field.help) : undefined">
       <div>
-        <label :for="`${designUid}-${field.key}`">{{ t(field.label) }}</label>
-        <p :id="`${designUid}-${field.key}-help`" :class="{ 'visually-hidden': compact }">{{ t(field.help) }}</p>
+        <label :for="`${controlId}-${field.key}`">{{ t(field.label) }}</label>
+        <p :id="`${controlId}-${field.key}-help`" :class="{ 'visually-hidden': compact }">{{ t(field.help) }}</p>
       </div>
       <button
-        :id="`${designUid}-${field.key}`"
+        :id="`${controlId}-${field.key}`"
         type="button"
         class="sharing-toggle"
         role="switch"
         :aria-label="t(field.label)"
-        :aria-describedby="`${designUid}-${field.key}-help`"
+        :aria-describedby="`${controlId}-${field.key}-help`"
         :aria-checked="settings?.[field.key] ?? false"
         :disabled="loading || saving || !settings"
         @click="toggle(field.key)"
@@ -26,11 +26,15 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from '@/i18n'
 import { getDesignSharing, updateDesignSharing, type DesignSharingSettings } from '@/api/wristo/designSharing'
 
-const props = defineProps<{ designUid: string; compact?: boolean }>()
+import { updateFaceSharing } from '@/views/faces/permissions'
+import { loadFaceDetail } from '@/views/faces/catalog'
+
+const props = defineProps<{ designUid?: string; appId?: number; compact?: boolean }>()
+const controlId = computed(() => props.designUid || `app-${props.appId}`)
 const emit = defineEmits<{ saved: [settings: DesignSharingSettings] }>()
 const { t } = useI18n()
 const fields = [
@@ -49,7 +53,15 @@ async function load() {
   settings.value = null
   error.value = ''
   try {
-    const result = await getDesignSharing(props.designUid)
+    let result: DesignSharingSettings
+    if (props.designUid) {
+      result = await getDesignSharing(props.designUid)
+    } else if (props.appId) {
+      const face = await loadFaceDetail(String(props.appId))
+      result = { publiclyVisible: face.publiclyVisible === true, allowRemix: face.allowRemix === true }
+    } else {
+      throw new Error('Missing sharing target')
+    }
     if (current === request) settings.value = result
   } catch {
     if (current === request) error.value = t('designSharing.loadFailed')
@@ -63,7 +75,10 @@ async function toggle(key: keyof DesignSharingSettings) {
   saving.value = true
   error.value = ''
   try {
-    const result = await updateDesignSharing(props.designUid, { [key]: !settings.value[key] })
+    const patch = { [key]: !settings.value[key] }
+    const result = props.designUid
+      ? await updateDesignSharing(props.designUid, patch)
+      : await updateFaceSharing(props.appId!, patch)
     if (current !== request) return
     settings.value = result
     emit('saved', result)
@@ -73,7 +88,7 @@ async function toggle(key: keyof DesignSharingSettings) {
     if (current === request) saving.value = false
   }
 }
-watch(() => props.designUid, load, { immediate: true })
+watch(() => [props.designUid, props.appId], load, { immediate: true })
 onBeforeUnmount(() => { request++ })
 </script>
 

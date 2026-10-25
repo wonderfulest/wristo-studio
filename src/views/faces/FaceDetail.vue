@@ -41,7 +41,7 @@
             <div class="eyebrow">GARMIN WATCH FACE <span v-if="face.appId">#{{ face.appId }}</span></div>
             <div class="app-title-row"><h1>{{ face.name }}</h1><button v-if="canEdit && face.designId" type="button" class="edit-app-information studio-edit-button" @click="selectSection('listing')"><Icon icon="material-symbols:edit-outline" /> Edit app information</button></div>
             <div class="byline"><span v-if="creator" class="creator"><span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>By <strong>{{ creator }}</strong></span><span v-if="formatDate(face.updatedAt || face.createdAt)">Updated {{ formatDate(face.updatedAt || face.createdAt) }}</span></div>
-            <DesignSharingSettings v-if="isOwner && face.designId" :key="`${face.designId}-${userStore.userInfo?.id}`" class="owner-sharing-settings" compact :design-uid="face.designId" @saved="Object.assign(face, $event)" />
+            <DesignSharingSettings v-if="canEdit && (face.designId || face.appId)" :key="`${face.designId || face.appId}-${userStore.userInfo?.id}`" class="owner-sharing-settings" compact :design-uid="face.designId || undefined" :app-id="face.appId || undefined" @saved="Object.assign(face, $event)" />
             <dl class="face-stats">
               <div><dt>Price</dt><dd>{{ face.price === 0 ? 'Free' : face.price == null ? '—' : `$${face.price.toFixed(2)}` }}</dd></div>
               <div v-if="face.download != null"><dt>Downloads</dt><dd>{{ face.download.toLocaleString() }}</dd></div>

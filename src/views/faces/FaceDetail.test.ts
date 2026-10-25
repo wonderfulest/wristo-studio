@@ -7,14 +7,14 @@ import { designApi } from '@/api/wristo/design'
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: vi.fn() } }))
 import { loadShareRewardProfile } from '@/api/wristo/shareRewards'
 vi.mock('@/api/wristo/shareRewards', () => ({ loadShareRewardProfile: vi.fn() }))
-import { remixFace } from './permissions'
+import { remixFace, updateFaceSharing } from './permissions'
 import { getDesignSharing, updateDesignSharing } from '@/api/wristo/designSharing'
 vi.mock('@/api/wristo/designSharing', () => ({ getDesignSharing: vi.fn(), updateDesignSharing: vi.fn() }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 const auth = vi.hoisted(() => ({ isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
-vi.mock('./permissions', () => ({ updateDesignSharing: vi.fn(), remixFace: vi.fn() }))
+vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
 import { loadFaceDetail, type FaceDetail as FaceDetailData } from './catalog'
 
 vi.mock('@/views/designs/DesignManagement.vue', () => ({ default: { props: ['designUid', 'informationTarget'], template: '<div data-testid="management"><a class="primary-button" :href="`/design?id=${designUid}`" @click.prevent="$router.push(`/design?id=${designUid}`)">Edit in Builder</a></div>' } }))
@@ -82,11 +82,41 @@ describe('watch face details', () => {
     expect(wrapper.find('[data-testid="management"]').exists()).toBe(true)
     expect(wrapper.find('input[type=file]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Edit description')
-    expect(wrapper.find('[role="switch"]').exists()).toBe(false)
-    expect(getDesignSharing).not.toHaveBeenCalled()
+    expect(wrapper.findAll('[role="switch"]')).toHaveLength(2)
+    expect(getDesignSharing).toHaveBeenCalledWith('actual-design')
+    vi.mocked(updateDesignSharing).mockResolvedValueOnce({ publiclyVisible: false, allowRemix: true })
+    await wrapper.findAll('[role="switch"]')[1].trigger('click'); await flushPromises()
+    expect(updateDesignSharing).toHaveBeenCalledWith('actual-design', { allowRemix: true })
+    expect(wrapper.findAll('[role="switch"]')[1].attributes('aria-checked')).toBe('true')
     await wrapper.get('a.primary-button').trigger('click'); await flushPromises()
     expect(router.currentRoute.value.fullPath).toBe('/design?id=actual-design')
     expect(remixFace).not.toHaveBeenCalled()
+  })
+  it.each(['owner', 'administrator'])('lets the %s save both switches for an app without a design', async (role) => {
+    auth.userInfo = { id: role === 'owner' ? 7 : 8 }
+    auth.isAdminUser = role === 'administrator'
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, designId: null })
+    const { wrapper } = await setup()
+    const switches = wrapper.findAll('[role="switch"]')
+    expect(switches).toHaveLength(2)
+    expect(getDesignSharing).not.toHaveBeenCalled()
+    vi.mocked(updateFaceSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: false })
+    await switches[0].trigger('click'); await flushPromises()
+    expect(updateFaceSharing).toHaveBeenLastCalledWith(123, { publiclyVisible: true })
+    vi.mocked(updateFaceSharing).mockResolvedValueOnce({ publiclyVisible: true, allowRemix: true })
+    await switches[1].trigger('click'); await flushPromises()
+    expect(updateFaceSharing).toHaveBeenLastCalledWith(123, { allowRemix: true })
+    expect(switches.every(toggle => toggle.attributes('aria-checked') === 'true')).toBe(true)
+    vi.mocked(updateFaceSharing).mockRejectedValueOnce(new Error('Denied'))
+    await switches[0].trigger('click'); await flushPromises()
+    expect(switches[0].attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('.sharing-error').text()).toContain('designSharing.saveFailed')
+  })
+  it.each([null, { id: 8 }])('hides sharing for non-owners of apps without a design: %s', async (user) => {
+    auth.userInfo = user
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, designId: null })
+    const { wrapper } = await setup()
+    expect(wrapper.find('[role="switch"]').exists()).toBe(false)
   })
   it('does not allow a signed-in non-owner to edit', async () => {
     auth.userInfo = { id: 8 }
