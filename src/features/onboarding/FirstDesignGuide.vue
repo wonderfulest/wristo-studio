@@ -1,7 +1,8 @@
 <template>
   <template v-if="owner && supportedRoute">
+    <GuideSpotlight :active="expanded && p.status === 'active' && !waitingForBuild && onExpectedRoute && targetFound" :targets="spotlightTargets" @placement="guidePlacement = $event" />
     <button v-if="!expanded" class="guide-launch" @click="expanded = true">{{ c.help }}<span v-if="p.status === 'paused'"> · {{ c.resume }}</span></button>
-    <section v-else class="first-design-guide" role="region" :aria-label="c.title" data-test="first-design-guide">
+    <section v-else :style="guidePlacement" class="first-design-guide" role="region" :aria-label="c.title" data-test="first-design-guide">
       <header><strong>{{ c.title }}</strong><button :aria-label="c.close" @click="hide">×</button></header>
       <template v-if="p.status === 'completed'">
         <h3>{{ c.success }}</h3><p>{{ c.successBody }}</p><button class="primary" @click="start(false)">{{ c.restart }}</button>
@@ -38,7 +39,8 @@
   </template>
 </template>
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import GuideSpotlight from './GuideSpotlight.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useBaseStore } from '@/stores/baseStore'
@@ -69,6 +71,8 @@ const onExpectedRoute = computed(() => {
   return route.path === detailPath.value
 })
 const needsTarget = computed(() => ['create', 'time', 'save', 'build', 'download'].includes(step.value))
+const spotlightTargets = shallowRef<HTMLElement[]>([])
+const guidePlacement = ref<Record<string, string>>({})
 let highlighted: HTMLElement[] = []
 let timer: ReturnType<typeof setInterval> | undefined
 let disposed = false, checkedOwner = ''
@@ -162,15 +166,17 @@ function updateHighlight() {
   for (const el of highlighted) if (!targets.includes(el)) el.classList.remove('onboarding-target')
   for (const el of targets) el.classList.add('onboarding-target')
   if (targets[0] && !highlighted.includes(targets[0])) targets[0].scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+  spotlightTargets.value = targets
   highlighted = targets
   targetFound.value = targets.length > 0
 }
+watch(() => [expanded.value, p.value.status, step.value, route.fullPath, waitingForBuild.value], updateHighlight, { flush: 'post' })
 onMounted(() => { timer = setInterval(updateHighlight, 350) })
 onBeforeUnmount(() => { disposed = true; if (timer) clearInterval(timer); highlighted.forEach(el => el.classList.remove('onboarding-target')) })
 </script>
 <style>
 .onboarding-target { outline: 3px solid #3985ff !important; outline-offset: 4px; box-shadow: 0 0 0 7px #3985ff25 !important; }
-.first-design-guide, .guide-launch { box-sizing: border-box; position: fixed; right: 20px; bottom: 24px; z-index: 1900; color: var(--studio-text, #172033); background: var(--studio-surface-raised, #fff); border: 1px solid var(--studio-border, #d8dfe9); border-radius: 14px; box-shadow: 0 8px 32px #0002; font: 14px/1.6 sans-serif; }
+.first-design-guide, .guide-launch { box-sizing: border-box; position: fixed; right: 20px; bottom: 24px; z-index: 4001; color: var(--studio-text, #172033); background: var(--studio-surface-raised, #fff); border: 1px solid var(--studio-border, #d8dfe9); border-radius: 14px; box-shadow: 0 8px 32px #0002; font: 14px/1.6 sans-serif; }
 .first-design-guide { width: min(340px, calc(100vw - 32px)); padding: 18px; max-height: calc(100vh - 100px); overflow-y: auto; }
 .first-design-guide header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .first-design-guide button, .guide-launch { cursor: pointer; padding: 8px 12px; }
@@ -187,6 +193,6 @@ onBeforeUnmount(() => { disposed = true; if (timer) clearInterval(timer); highli
 .first-design-guide .guide-build-notice strong { display: block; font-size: 18px; line-height: 1.4; }
 .first-design-guide .guide-build-notice p { margin: 8px 0 0; }
 .first-design-guide .guide-build-notice-next { font-weight: 700; }
-.guide-progress { margin-top: 12px; font-weight: 600; }
+.guide-progress { margin-top: 14px; padding: 10px 12px; border-radius: 8px; background: #2368da; color: #fff; font-size: 17px; font-weight: 700; }
 @media (max-width: 640px) { .first-design-guide, .guide-launch { right: 16px; bottom: 12px; } }
 </style>
