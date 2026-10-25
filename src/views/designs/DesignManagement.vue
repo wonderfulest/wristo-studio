@@ -570,7 +570,7 @@ const downloadPackage = async (design: DesignListItem) => {
   if (design.canInstall !== true && !membershipGate.requireExport()) return
   const url = design.product?.release?.packageUrl
   if (url) {
-    await downloadPackageFile(url, design.product?.name || design.name, 'iq')
+    await downloadPackageFile(url, design.product?.name || design.name, 'iq', design.product?.id)
   } else {
     messageStore.error(t('project.downloadUnavailable'))
   }
@@ -586,7 +586,7 @@ const runPrg = async (design: DesignListItem) => {
   } else if (design.canInstall !== true && !membershipGate.requireExport()) return
   const url = (design.product as any)?.prgRelease?.prgUrl
   if (url) {
-    await downloadPackageFile(url, design.product?.name || design.name, 'prg')
+    await downloadPackageFile(url, design.product?.name || design.name, 'prg', design.product?.id)
     downloadedOnboardingPrg(design.designUid, design.product!.prgRelease!.id)
   } else {
     messageStore.error(t('project.prgUnavailable'))
@@ -642,7 +642,7 @@ const previewPrg = (design: DesignListItem) => {
     return
   }
 
-  void downloadPackageFile(prgUrl, design.product?.name || design.name, 'prg')
+  void downloadPackageFile(prgUrl, design.product?.name || design.name, 'prg', design.product?.id)
   window.location.href = buildPrgInstallerDeepLink(ticket)
   messageStore.info(t('project.prgInstallerOpening'))
   showPrgInstallerGuideNotification(t('project.prgInstallerTroubleshoot'))

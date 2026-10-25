@@ -1,11 +1,12 @@
 import { reactive, watch } from 'vue'
 import { freshProgress, restoreProgress } from './model'
 import type { DesignListItem } from '@/types/api/design'
-export const onboarding = reactive({ owner: '', progress: freshProgress(), createdId: '', offered: false, latest: null as DesignListItem | null })
+export const onboarding = reactive({ owner: '', launchRequested: false, progress: freshProgress(), createdId: '', offered: false, latest: null as DesignListItem | null })
 const key = (owner: string) => `studio-first-design:v1:${owner}`
 export function setOnboardingOwner(owner: string) {
   if (owner === onboarding.owner) return
   onboarding.owner = owner
+  onboarding.launchRequested = false
   onboarding.latest = null
   onboarding.createdId = ''
   onboarding.offered = false

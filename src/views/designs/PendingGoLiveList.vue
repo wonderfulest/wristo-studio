@@ -82,7 +82,7 @@ const download = async (row: Product): Promise<void> => {
   if (!membershipGate.requireExport()) return
   const url = row.release?.packageUrl
   if (url) {
-    await downloadPackageFile(url, row.name, 'iq')
+    await downloadPackageFile(url, row.name, 'iq', row.id)
   } else {
     messageStore.error(t('pending.noPackage'))
   }

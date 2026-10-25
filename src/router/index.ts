@@ -1,3 +1,4 @@
+import { trackConversion } from '@/utils/studioConversion'
 import { wikiRoutes } from './wikiRoutes'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/components/layout/Layout.vue'
@@ -23,6 +24,12 @@ const ensureDesignDataCatalog = (to: { path: string; fullPath: string }) =>
   shouldLoadDataCatalog(to.path) ? loadDesignDataCatalog(to.fullPath) : true
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/create-watch-face',
+    name: 'CreateWatchFaceGuide',
+    component: () => import('@/features/onboarding/GuideEntry.vue'),
+    meta: { requiresAuth: true, allowsAllUsers: true },
+  },
   {
     path: '/designs/:designUid',
     name: 'DesignDetail',
@@ -250,6 +257,7 @@ router.onError((error, to) => {
 // 导航守卫
 router.beforeEach(async (to) => {
   const userStore = useUserStore()
+  if (!to.path.startsWith('/auth/')) trackConversion('studio_enter', userStore.token || '')
   if (userStore.isAuthenticated && userStore.isStudioConsumer && ['/credits', '/design-slots', '/pricing'].includes(to.path)) {
     return '/designs'
   }
@@ -280,6 +288,10 @@ router.beforeEach(async (to) => {
   if ((to.meta as any).requiresMerchant && !userStore.isMerchantUser) {
     return '/design'
   }
+})
+
+router.afterEach((to, _from, failure) => {
+  if (!failure && to.path === '/design') trackConversion('design_start', useUserStore().token || '')
 })
 
 export default router

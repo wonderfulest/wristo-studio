@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'platform.latestBuildVersion': 'Latest version · v{version}',
   'card.newBuildVersionHint': 'Latest v{version} · Rebuild recommended',
   "faceDetail.previewNumber": "Preview {count}",
   "faceDetail.moreTags": "+{count} more",
@@ -2792,6 +2793,7 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'platform.latestBuildVersion': '最新版本 · v{version}',
   'card.newBuildVersionHint': '最新 v{version} · 建议重新构建',
   "faceDetail.previewNumber": "预览 {count}",
   "faceDetail.moreTags": "另有 {count} 个",
@@ -5559,6 +5561,7 @@ const zh: Messages = {
 }
 
 const zhTw = createMessages({
+  'platform.latestBuildVersion': '最新版本 · v{version}',
   'language.selector': '語言選擇',
   'auth.sessionExpired': '登入已過期，請重新登入',
   'auth.forbidden': '沒有權限存取',
@@ -5759,6 +5762,7 @@ const zhTw = createMessages({
 })
 
 const ja = createMessages({
+  'platform.latestBuildVersion': '最新バージョン · v{version}',
   'language.selector': '言語選択',
   'auth.sessionExpired': 'ログインの有効期限が切れました。もう一度ログインしてください。',
   'auth.forbidden': 'アクセス権限がありません。',
@@ -5899,6 +5903,7 @@ const ja = createMessages({
 })
 
 const ko = createMessages({
+  'platform.latestBuildVersion': '최신 버전 · v{version}',
   'language.selector': '언어 선택',
   'auth.sessionExpired': '로그인이 만료되었습니다. 다시 로그인해 주세요.',
   'auth.forbidden': '접근 권한이 없습니다.',
@@ -6039,6 +6044,7 @@ const ko = createMessages({
 })
 
 const de = createMessages({
+  'platform.latestBuildVersion': 'Neueste Version · v{version}',
   'language.selector': 'Sprachauswahl',
   'auth.sessionExpired': 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
   'auth.forbidden': 'Sie haben keine Berechtigung fur diese Ressource.',
@@ -6179,6 +6185,7 @@ const de = createMessages({
 })
 
 const fr = createMessages({
+  'platform.latestBuildVersion': 'Dernière version · v{version}',
   'language.selector': 'Sélecteur de langue',
   'auth.sessionExpired': 'Votre session a expire. Veuillez vous reconnecter.',
   'auth.forbidden': 'Vous n’avez pas l’autorisation d’acceder a cette ressource.',
@@ -6319,6 +6326,7 @@ const fr = createMessages({
 })
 
 const es = createMessages({
+  'platform.latestBuildVersion': 'Última versión · v{version}',
   'language.selector': 'Selector de idioma',
   'auth.sessionExpired': 'Tu sesion ha caducado. Inicia sesion de nuevo.',
   'auth.forbidden': 'No tienes permiso para acceder a este recurso.',
@@ -6459,6 +6467,7 @@ const es = createMessages({
 })
 
 const it = createMessages({
+  'platform.latestBuildVersion': 'Ultima versione · v{version}',
   'language.selector': 'Selettore lingua',
   'auth.sessionExpired': 'La sessione e scaduta. Accedi di nuovo.',
   'auth.forbidden': 'Non hai il permesso di accedere a questa risorsa.',
@@ -6579,6 +6588,7 @@ const it = createMessages({
 })
 
 const pt = createMessages({
+  'platform.latestBuildVersion': 'Versão mais recente · v{version}',
   'language.selector': 'Seletor de idioma',
   'auth.sessionExpired': 'Sua sessao expirou. Entre novamente.',
   'auth.forbidden': 'Voce nao tem permissao para acessar este recurso.',
@@ -6699,6 +6709,7 @@ const pt = createMessages({
 })
 
 const nl = createMessages({
+  'platform.latestBuildVersion': 'Nieuwste versie · v{version}',
   'language.selector': 'Taalkiezer',
   'auth.sessionExpired': 'Uw sessie is verlopen. Meld u opnieuw aan.',
   'auth.forbidden': 'U hebt geen toestemming voor deze bron.',
@@ -6819,6 +6830,7 @@ const nl = createMessages({
 })
 
 const pl = createMessages({
+  'platform.latestBuildVersion': 'Najnowsza wersja · v{version}',
   'language.selector': 'Wybór języka',
   'auth.sessionExpired': 'Sesja wygasla. Zaloguj sie ponownie.',
   'auth.forbidden': 'Nie masz uprawnien do tego zasobu.',

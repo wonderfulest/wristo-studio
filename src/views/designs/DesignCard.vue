@@ -195,7 +195,7 @@
             <strong>{{ row.label }}:</strong>
             <span v-if="row.releaseVersion" class="package-version">{{ row.releaseVersion }}</span>
             <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">{{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span></span>
-            <a v-if="showPackageDownload && row.canDownload" :href="row.downloadUrl" :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`" class="package-icon-btn" target="_blank" rel="noopener noreferrer" download><el-icon><Download /></el-icon></a>
+            <a v-if="showPackageDownload && row.canDownload" :href="row.downloadUrl" @click="trackConversion('download_start', userStore.token || '', design.product?.id)" :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`" class="package-icon-btn" target="_blank" rel="noopener noreferrer" download><el-icon><Download /></el-icon></a>
             <button v-if="row.canViewBuildLog" class="package-icon-btn" type="button" :aria-label="`${row.label} · ${t('editDesign.viewBuildLog')}`" @click.stop="openBuildLog(row.logId)"><Icon icon="material-symbols:article-outline-rounded" /></button>
           </div>
         </div>
@@ -403,6 +403,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends DesignListItem">
+import { trackConversion } from '@/utils/studioConversion'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { loadAppBuildVersion } from '@/api/wristo/platformVersions'
 import { isOlderBuildVersion } from '@/utils/buildVersion'

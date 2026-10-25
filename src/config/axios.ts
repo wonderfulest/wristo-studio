@@ -1,3 +1,4 @@
+import { conversionVisitorId } from '@/utils/studioConversion'
 import axios from 'axios'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { BizErrorCode } from './errorCode'
@@ -73,6 +74,8 @@ const refreshCredits = (config?: { url?: string; method?: string }) => {
 
 // 请求拦截器
 instance.interceptors.request.use(config => {
+  const visitor = conversionVisitorId()
+  if (visitor) config.headers['X-Wristo-Visitor'] = visitor
   if (config.method === 'post' && isAiGeneration(config.url) && !config.headers['X-AI-Request-Id']) {
     config.headers['X-AI-Request-Id'] = crypto.randomUUID()
   }

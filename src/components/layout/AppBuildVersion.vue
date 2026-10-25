@@ -1,11 +1,13 @@
 <template>
-  <span v-if="version" class="app-build-version">最新版本 · v{{ version }}</span>
+  <span v-if="version" class="app-build-version">{{ t('platform.latestBuildVersion', { version }) }}</span>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from '@/i18n'
 import { loadAppBuildVersion } from '@/api/wristo/platformVersions'
 
+const { t } = useI18n()
 const version = ref<string | null>(null)
 onMounted(async () => { version.value = await loadAppBuildVersion() })
 </script>
