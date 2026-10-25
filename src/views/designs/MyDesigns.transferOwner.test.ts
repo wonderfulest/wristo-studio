@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const cardSource = readFileSync(new URL('./DesignCard.vue', import.meta.url), 'utf8')
-const pageSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
+const pageSource = readFileSync(new URL('./DesignManagement.vue', import.meta.url), 'utf8')
 const productsApiSource = readFileSync(new URL('../../api/wristo/products.ts', import.meta.url), 'utf8')
 const adminUsersApiSource = readFileSync(new URL('../../api/wristo/adminUsers.ts', import.meta.url), 'utf8')
 const i18nSource = readFileSync(new URL('../../i18n.ts', import.meta.url), 'utf8')

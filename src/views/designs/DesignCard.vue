@@ -1,7 +1,7 @@
 <template>
   <!-- 设计卡片 -->
-  <el-card class="design-card" :class="{ 'design-card--list': viewMode === 'list' }" shadow="hover">
-    <template #header>
+  <el-card class="design-card" :class="{ 'design-card--list': viewMode === 'list', 'design-card--summary': summaryOnly, 'design-card--management': management }" shadow="hover">
+    <template v-if="!management" #header>
       <div class="card-header">
         <div class="title-row">
           <input
@@ -18,6 +18,7 @@
             @keydown.esc.prevent="cancelRename"
             @blur="submitRename"
           />
+          <RouterLink v-else-if="summaryOnly" class="title" :to="detailsUrl">{{ design.name }}</RouterLink>
           <span v-else class="title" :title="design.name" @dblclick.stop="startRename">{{ design.name }}</span>
           <el-tooltip
             v-if="isMerchantUser || isAdminUser"
@@ -30,7 +31,7 @@
             />
           </el-tooltip>
         </div>
-        <div v-if="viewMode === 'list'" class="list-subtitle">
+        <div v-if="!summaryOnly && viewMode === 'list'" class="list-subtitle">
           <span v-if="showCreator">{{ creatorName }}</span>
           <span v-if="paymentMethodLabel">{{ paymentMethodLabel }}</span>
           <span v-if="canManageAppDetails" class="list-design-uid" :title="design.designUid">{{ design.designUid }}</span>
@@ -39,7 +40,7 @@
       </div>
     </template>
     <div class="design-info">
-      <div class="design-background">
+      <component :is="summaryOnly ? RouterLink : 'div'" v-if="!management" class="design-background" :to="summaryOnly ? detailsUrl : undefined">
         <el-popover
           v-if="viewMode === 'list' && designImageUrl"
           trigger="hover"
@@ -62,12 +63,18 @@
           class="background-image"
         />
         <div v-else class="placeholder-circle"></div>
-        <div v-if="viewMode !== 'list' && (showCreator || paymentMethodLabel)" class="card-badges">
+        <div v-if="!summaryOnly && viewMode !== 'list' && (showCreator || paymentMethodLabel)" class="card-badges">
           <span v-if="showCreator" class="creator-badge">{{ creatorName }}</span>
           <span v-if="paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
         </div>
-      </div>
-      <div class="design-details">
+      </component>
+      <Teleport :to="informationTarget || 'body'" :disabled="!management">
+      <div v-if="!summaryOnly && !management" class="design-details" :class="{ 'management-information': management }">
+        <h2 v-if="management">Application information</h2>
+        <div v-if="management" class="management-status">
+          <span>{{ t('project.status') }}: </span><strong :style="{ color: statusColor }">{{ statusText }}</strong>
+          <p v-if="design.designStatus === 'rejected' && design.reviewComment">{{ design.reviewComment }}</p>
+        </div>
         <div v-if="viewMode === 'list'" class="details-heading">
           <span v-if="isMerchantUser || isAdminUser" class="list-status" :style="{ color: statusColor }" :title="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText">{{ statusText }}</span>
         </div>
@@ -96,7 +103,7 @@
               <span class="score-label">{{ t('card.score') }}</span>
               <span class="score-value">{{ appScoreTotalText }}</span>
             </div>
-            <el-tooltip :content="t('card.openOperations')" placement="top">
+            <el-tooltip v-if="!management" :content="t('card.openOperations')" placement="top">
               <button class="ops-icon-btn" type="button" @click.stop="goToOperations">
                 <Icon icon="material-symbols:trending-up-rounded" />
               </button>
@@ -142,7 +149,7 @@
               {{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span>
             </span>
             <el-tooltip
-              v-if="row.canViewBuildLog"
+              v-if="!management && row.canViewBuildLog"
               :content="t('editDesign.viewBuildLog')"
               placement="top"
             >
@@ -151,7 +158,7 @@
               </button>
             </el-tooltip>
             <el-tooltip
-              v-if="showPackageDownload && row.canDownload"
+              v-if="!management && showPackageDownload && row.canDownload"
               :content="t('editDesign.downloadPackage')"
               placement="top"
             >
@@ -163,13 +170,43 @@
         </div>
       </div>
       </div>
-      <div class="actions-bar">
-        <el-button v-if="canEditCurrentDesign" class="primary-edit-action" type="default" size="small" @click="emit('open', design)">
-          <el-icon><Edit /></el-icon>
+      <section v-if="management" class="management-information">
+        <header class="record-heading"><h2>Version &amp; distribution</h2><span class="review-state" :style="{ color: statusColor }">{{ statusText }}</span></header>
+        <p v-if="design.designStatus === 'rejected' && design.reviewComment" class="review-comment">{{ design.reviewComment }}</p>
+        <dl class="record-grid">
+          <div><dt>{{ t('card.lastUpdated') }}</dt><dd>{{ lastUpdatedText }}</dd></div>
+          <div><dt>{{ t('card.lastGoLive') }}</dt><dd>{{ lastGoLiveText }}</dd></div>
+          <div v-if="hasDownloadablePackage"><dt>{{ t('card.lastPackage') }}</dt><dd>{{ lastPackageTimeText }} <span v-if="hasNewRelease" class="new-release-label">{{ t('card.newRelease') }}</span></dd></div>
+          <div v-if="packageRows.length"><dt>Build status</dt><dd class="package-info"><span v-for="row in packageRows" :key="row.key" class="package-state" :class="`package-${row.tone}`">{{ row.label }} · {{ row.value }}</span></dd></div>
+        </dl>
+        <div v-if="design.product" class="record-business">
+          <span v-if="canViewBusinessMetrics">{{ t('meter.orders') }} <strong>{{ orderCountText }}</strong></span>
+          <span>{{ t('card.score') }} <strong>{{ appScoreTotalText }}</strong></span>
+          <div v-if="isAdminUser" class="store-weight-editor"><span>{{ t('card.storeWeight') }}</span><el-input-number v-model="storeWeightDraft" :aria-label="t('card.storeWeight')" :min="MIN_STORE_WEIGHT" :max="MAX_STORE_WEIGHT" :step="1" :precision="0" :disabled="storeWeightSaving" size="small" controls-position="right" @blur="submitStoreWeight" @keyup.enter="submitStoreWeight" /></div>
+        </div>
+        <details class="record-identifiers"><summary>Design reference</summary><code>{{ design.designUid }}</code><span v-if="design.product?.appId">App #{{ design.product.appId }}</span></details>
+      </section>
+      </Teleport>
+      <div v-if="summaryOnly" class="summary-meta">
+        <span v-if="canViewBusinessMetrics && design.product" class="summary-downloads">{{ t('meter.downloads') }}: {{ downloadCountText }}</span>
+        <div v-if="packageRows.length" class="package-info">
+          <div v-for="row in packageRows" :key="row.key" class="package-info-item" :class="`package-${row.tone}`">
+            <strong>{{ row.label }}:</strong>
+            <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">{{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span></span>
+            <a v-if="showPackageDownload && row.canDownload" :href="row.downloadUrl" :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`" class="package-icon-btn" target="_blank" rel="noopener noreferrer" download><el-icon><Download /></el-icon></a>
+            <button v-if="row.canViewBuildLog" class="package-icon-btn" type="button" :aria-label="`${row.label} · ${t('editDesign.viewBuildLog')}`" @click.stop="openBuildLog(row.logId)"><Icon icon="material-symbols:article-outline-rounded" /></button>
+          </div>
+        </div>
+      </div>
+      <div v-else class="actions-bar">
+        <el-button v-if="canEditCurrentDesign" class="primary-edit-action studio-edit-button" type="default" size="small" @click="emit('open', design)">
+          <Icon icon="material-symbols:edit-outline" aria-hidden="true" />
           {{ t('card.edit') }}
         </el-button>
-        <el-popover
+        <component :is="management ? InlineActions : ElPopover"
           v-model:visible="actionsExpanded"
+          @mouseenter="management && prepareActions()"
+          @focusin="management && prepareActions()"
           placement="bottom-end"
           trigger="click"
           :teleported="true"
@@ -248,15 +285,26 @@
               </div>
             </section>
 
+            <section v-if="management && packageRows.length" class="action-group">
+              <div class="action-group-title">Packages</div>
+              <div class="action-group-actions">
+                <template v-for="row in packageRows" :key="row.key">
+                  <el-button v-if="row.canViewBuildLog" size="small" @click="openBuildLog(row.logId)">{{ row.label }} · {{ t('editDesign.viewBuildLog') }}</el-button>
+                  <el-button v-if="showPackageDownload && row.canDownload" size="small" @click="downloadPackage(row.key)">{{ row.label }} · {{ t('editDesign.downloadPackage') }}</el-button>
+                </template>
+              </div>
+            </section>
             <section class="action-group action-group-manage">
               <div class="action-group-title">{{ t('card.manageActions') }}</div>
               <div class="action-group-actions">
+                <el-button v-if="management && appId" size="small" @click="goToOperations">{{ t('card.openOperations') }}</el-button>
+                <el-button v-if="management && canEditCurrentDesign" size="small" @click="renameFromDetails">Rename</el-button>
                 <el-button size="small" @click="closeActions(); emit('copy', design)" :loading="loadingStates.copy.has(design.id)">
                   <el-icon><DocumentCopy /></el-icon>
                   {{ t('card.duplicate') }}
                 </el-button>
-                <el-button v-if="canManageAppDetails || (currentUserId != null && design.user?.id === currentUserId)" size="small" @click="closeActions(); emit('edit', design)">
-                  <el-icon><EditPen /></el-icon>
+                <el-button v-if="canManageAppDetails || (currentUserId != null && design.user?.id === currentUserId)" class="studio-edit-button" size="small" @click="closeActions(); emit('edit', design)">
+                  <Icon icon="material-symbols:edit-outline" aria-hidden="true" />
                   {{ t('editDesign.title') }}
                 </el-button>
                 <el-button v-if="isAdminUser && appId" size="small" @click="closeActions(); emit('transfer-owner', design)">
@@ -271,7 +319,7 @@
             </section>
             </div>
           </div>
-        </el-popover>
+        </component>
       </div>
     </div>
   </el-card>
@@ -289,12 +337,13 @@
 
 <script setup lang="ts" generic="T extends DesignListItem">
 import { computed, nextTick, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElPopover } from 'element-plus'
 import type { DesignListItem, DesignListTask } from '@/types/api/design'
-import { ArrowDown, Box, Delete, DocumentCopy, Download, Edit, EditPen, Switch, Upload } from '@element-plus/icons-vue'
+import { ArrowDown, Box, Delete, DocumentCopy, Download, Switch, Upload } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
+import InlineActions from './InlineActions.vue'
 import AppDetail from '@/views/meter/AppDetail.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
@@ -325,6 +374,9 @@ interface LoadingStates {
 
 const props = defineProps<{
   design: T
+  summaryOnly?: boolean
+  management?: boolean
+  informationTarget?: HTMLElement
   viewMode?: 'list' | 'grid'
   isMerchantUser: boolean
   isAdminUser: boolean
@@ -371,6 +423,7 @@ const userStore = useUserStore()
 const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const inactiveMembershipStatuses = new Set(['2', '3', '4', 'canceled', 'cancelled', 'past_due', 'paused'])
 
+const detailsUrl = computed(() => props.design.product?.appId ? `/faces/${props.design.product.appId}` : `/designs/${encodeURIComponent(props.design.designUid)}`)
 const design = computed(() => props.design)
 const isMerchantUser = computed(() => props.isMerchantUser)
 const isAdminUser = computed(() => props.isAdminUser)
@@ -447,6 +500,14 @@ const startRename = async () => {
   renameInput.value?.select()
 }
 
+const renameFromDetails = async () => {
+  if (!canEditCurrentDesign.value || renameSaving.value) return
+  try {
+    const { value } = await ElMessageBox.prompt('Design name', 'Rename design', { inputValue: design.value.name, inputValidator: value => !!value?.trim() })
+    const resolution = resolveDesignRename(value, design.value.name)
+    if (resolution.action === 'submit') emit('rename', design.value, resolution.name)
+  } catch { /* Cancel leaves the name unchanged. */ }
+}
 const cancelRename = () => {
   renameDraft.value = design.value.name
   renaming.value = false
@@ -566,6 +627,7 @@ const showPreviewPrgButton = computed(() => {
 const showPublishButton = computed(() => {
   return shouldShowPublishButton(design.value.product, isAdminUser.value)
 })
+watch(showPreviewPrgButton, (visible) => { if (props.management && visible) prepareActions() }, { immediate: true })
 const hasPreviewActions = computed(() => showPreviewPrgButton.value)
 const hasReleaseActions = computed(() => showPublishButton.value)
 
@@ -615,6 +677,7 @@ const packageRows = computed(() => {
     logId?: number
     canViewBuildLog: boolean
     canDownload: boolean
+    downloadUrl?: string
   }> = []
 
   const prgLog = product.prgPackagingLog
@@ -633,6 +696,7 @@ const packageRows = computed(() => {
       logId: currentPrgLog?.id,
       canViewBuildLog: shouldShowBuildLog(currentPrgLog),
       canDownload: !!currentPrgRelease?.prgUrl,
+      downloadUrl: currentPrgRelease?.prgUrl,
     })
   }
 
@@ -649,6 +713,7 @@ const packageRows = computed(() => {
       logId: iqLog?.id,
       canViewBuildLog: shouldShowBuildLog(iqLog),
       canDownload: !!product.release?.packageUrl,
+      downloadUrl: product.release?.packageUrl,
     })
   }
 
@@ -674,6 +739,17 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 </script>
 
 <style scoped>
+.summary-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--studio-text-muted); padding-top: 10px; }
+.title { text-decoration: none; color: inherit; }
+.design-card--management { height: auto; }
+.design-card--management .design-info, .design-card--management .actions-bar { display: flex; flex-direction: column; gap: 12px; }
+.design-card--management .actions-panel-grid { grid-template-columns: 1fr; }
+.design-card--management .primary-edit-action { width: 100%; }
+.management-information { padding: 20px; margin-bottom: 16px; border: 1px solid var(--studio-border); border-radius: 12px; background: var(--studio-surface-raised); }
+.management-status { margin-bottom: 12px; font-size: 13px; color: var(--studio-text-muted); }
+.management-information h2 { margin: 0 0 16px; font-size: 18px; }
+.management-information .meta { font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+
 .design-card {
   border: 1px solid var(--studio-border);
   border-radius: var(--studio-radius-lg);
@@ -1301,5 +1377,38 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card--list .last-go-live-row { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .design-card--list .list-subtitle { flex-wrap: nowrap; margin-top: 4px; }
 .list-design-uid { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.design-card--list .primary-edit-action { background: var(--studio-primary); border-color: var(--studio-primary); color: var(--studio-on-primary, #fff); }
+.design-card--management :deep(.el-button) { min-height: 36px; font-size: 13px; background: var(--studio-surface-raised); color: var(--studio-text); border-color: var(--studio-border); }
+.design-card--management :deep(.el-button:hover:not(:disabled)) { background: var(--studio-primary-soft); border-color: var(--studio-primary); }
+.design-card--management :deep(.el-button:disabled) { opacity: .5; }
+.design-card--management :deep(.el-button--danger) { color: var(--studio-danger, #c93838); }
+.design-card.design-card--summary.design-card--list { grid-template-columns: 48px minmax(160px, 1fr) auto; }
+.design-card--summary.design-card--list :deep(.el-card__header) { grid-column: 2; grid-row: 1; }
+.design-card--summary.design-card--list :deep(.el-card__body),
+.design-card--summary.design-card--list .design-info { display: contents; }
+.design-card--summary.design-card--list .summary-meta { grid-column: 3; grid-row: 1; padding: 0; gap: 24px; }
+.summary-downloads { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.design-card--summary .summary-meta .package-info { margin: 0; }
+.design-card--summary .summary-meta .package-icon-btn { text-decoration: none; flex-shrink: 0; }
+.design-card--summary.design-card--list .list-design-uid { display: none; }
+.design-card--summary.design-card--list .status-dot { display: inline-block; }
+.design-card--summary.design-card--list .title-row { justify-content: flex-start; gap: 12px; }
+.design-card--summary.design-card--list .title { flex: 0 1 auto; }
+.design-card--management { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.design-card--management:hover { transform: none; box-shadow: none; }
+.design-card--management :deep(.el-card__body) { padding: 0; }
+.design-card--management .actions-bar { gap: 8px; }
+.design-card--management .action-group { padding: 10px; }
+.management-information { padding: 22px; border-radius: 12px; }
+.record-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.management-information .record-heading h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.review-state { font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--studio-surface-soft); border: 1px solid var(--studio-border); }
+.record-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin: 0; }
+.record-grid dt { color: var(--studio-text-subtle); font-size: 11px; }
+.record-grid dd { margin: 5px 0 0; color: var(--studio-text); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.record-grid .package-info { border: 0; padding: 0; margin: 5px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.package-state { font-size: 11px; color: var(--studio-primary); background: var(--studio-primary-soft); border-radius: 4px; padding: 3px 7px; }.package-state.package-failed { color: var(--studio-danger, #c93838); }
+.new-release-label { display: block; margin-top: 5px; color: var(--studio-primary); font-size: 11px; }
+.record-business { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; padding-top: 16px; margin-top: 20px; border-top: 1px solid var(--studio-border); font-size: 11px; color: var(--studio-text-muted); }.record-business strong { margin-left: 8px; color: var(--studio-text); font-size: 13px; }.record-business .store-weight-editor { margin: 0 0 0 auto; }
+.record-identifiers { margin-top: 16px; color: var(--studio-text-subtle); font-size: 11px; }.record-identifiers summary { cursor: pointer; }.record-identifiers code, .record-identifiers > span { display: block; margin-top: 8px; overflow-wrap: anywhere; }
+@media(max-width: 720px) { .record-grid { gap: 16px; }.record-business { gap: 16px; }.record-business .store-weight-editor { margin-left: 0; } }
 </style>

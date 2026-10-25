@@ -9,6 +9,8 @@ import type { ProductTag } from '@/types/api/productTag'
 const mocks = vi.hoisted(() => ({
   isAdmin: false,
   updateAppUuid: vi.fn(),
+  unpublish: vi.fn(),
+  regenerateAppUuid: vi.fn(),
   confirmCost: vi.fn(),
   getDescriptionConfig: vi.fn(),
   getAiCapabilities: vi.fn(),
@@ -25,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   messageWarning: vi.fn()
 }))
 
+vi.mock('@/composables/useStudioMembershipGate', () => ({ useStudioMembershipGate: () => ({ requirePublish: () => true }) }))
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: mocks.getDesignByUid } }))
 vi.mock('@/api/wristo/designerDefaultConfig', () => ({ designerDefaultConfigApi: { getByUserId: mocks.getDescriptionConfig } }))
 vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabilities, getAiPrices: mocks.getAiPrices }))
@@ -34,6 +37,8 @@ vi.mock('@/api/wristo/products', () => ({
     getBundles: mocks.getBundles,
     publish: mocks.publish,
     updateAppUuid: mocks.updateAppUuid,
+    unpublish: mocks.unpublish,
+    regenerateAppUuid: mocks.regenerateAppUuid,
     generateDescription: mocks.generateDescription
   }
 }))
@@ -53,6 +58,7 @@ vi.mock('@/stores/user', () => ({
 }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('element-plus', () => ({
+  ElDialog: { name: 'ElDialog', props: ['modelValue'], template: '<div v-if="modelValue"><slot name="header"/><slot/><slot name="footer"/></div>' },
   ElMessageBox: { confirm: mocks.confirmCost },
   ElMessage: { error: vi.fn(), success: vi.fn() },
   ElLoading: { service: vi.fn(() => ({ close: vi.fn() })) }
@@ -83,7 +89,7 @@ const design = {
     categories: [{ id: 777 }],
     tags: [apiTags[3], apiTags[1]],
     bundles: [],
-    payment: null,
+    payment: { paymentMethod: 'wpay', price: 2.39 },
     trialLasts: 0.25,
     garminImageUrl: 'https://image.test/hero.png',
     rawImageUrl: '',
@@ -98,7 +104,7 @@ const design = {
 const ElFormStub = defineComponent({
   props: ['model', 'rules'],
   setup(props, { slots, expose }) {
-    expose({ validate: () => new Schema(props.rules).validate(props.model).then(() => true) })
+    expose({ validate: () => new Schema(props.rules).validate(props.model).then(() => true).catch(({ fields }) => Promise.reject(fields)) })
     return () => h('form', slots.default?.())
   }
 })
@@ -140,7 +146,7 @@ const stubs = {
     template: '<div><input :value="modelValue" :disabled="disabled" :readonly="readonly" @input="$emit(\'update:modelValue\', $event.target.value)"/><slot name="append"/></div>'
   },
   ElInputNumber: true,
-  ElRadioGroup: { template: '<div><slot/></div>' },
+  ElRadioGroup: { props: ['disabled'], template: '<div class="payment-radio-group" :aria-disabled="disabled"><slot/></div>' },
   ElRadio: { template: '<span><slot/></span>' },
   ElRadioButton: { template: '<span><slot/></span>' },
   ElButton: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot/></button>' },
@@ -151,6 +157,7 @@ const stubs = {
   ImageUpload: true,
   ProductImagesEditor: true,
   ProductTagSelector: ProductTagSelectorStub,
+  ElTag: true,
   BundleSelector: true,
   DesignerDefaultConfigDialog: true
 }
@@ -193,6 +200,42 @@ describe('GoLiveDialog product tag behavior', () => {
     expect(input.element.readOnly).toBe(true)
     expect(wrapper.get('.app-uuid-input').text()).not.toContain('common.save')
     expect(mocks.updateAppUuid).not.toHaveBeenCalled()
+  })
+
+  it('hides lifecycle actions from non-admin users', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect(wrapper.find('[data-testid="unpublish-app"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="regenerate-uuid"]').exists()).toBe(false)
+  })
+
+  it('unpublishes before offering backend UUID regeneration', async () => {
+    mocks.isAdmin = true
+    mocks.confirmCost.mockResolvedValue('confirm')
+    mocks.unpublish.mockResolvedValue({ code: 0, data: true })
+    const uuid = 'ddd3eb21-3a0a-48c4-96fe-3c8daadfe235'
+    mocks.regenerateAppUuid.mockResolvedValue({ code: 0, data: uuid })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect(wrapper.find('[data-testid="regenerate-uuid"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="unpublish-app"]').trigger('click')
+    await flushPromises()
+    expect(mocks.unpublish).toHaveBeenCalledWith(200)
+    await wrapper.get('[data-testid="regenerate-uuid"]').trigger('click')
+    await flushPromises()
+    expect(mocks.regenerateAppUuid).toHaveBeenCalledWith(200)
+    expect(wrapper.get<HTMLInputElement>('.app-uuid-input input').element.value).toBe(uuid)
+    expect(mocks.publish).not.toHaveBeenCalled()
+  })
+
+  it('does not unpublish when confirmation is cancelled', async () => {
+    mocks.isAdmin = true
+    mocks.confirmCost.mockRejectedValueOnce('cancel')
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await wrapper.get('[data-testid="unpublish-app"]').trigger('click')
+    await flushPromises()
+    expect(mocks.unpublish).not.toHaveBeenCalled()
   })
 
   it('lets an admin save a valid UUID through the admin endpoint without publishing', async () => {
@@ -683,4 +726,77 @@ describe('multilingual descriptions', () => {
     expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('French result')
   })
 
+})
+
+
+it('keeps all publishing fields inline and stays open after a successful save', async () => {
+  mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+  mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
+  mocks.publish.mockResolvedValue({ code: 0, data: true })
+  const wrapper = mount(GoLiveDialog, { props: { inline: true }, global: { stubs } })
+  await showDialog(wrapper)
+  expect(wrapper.find('.inline-publish-panel').exists()).toBe(true)
+  expect(wrapper.find('.inline-publish-panel .product-description-input').exists()).toBe(true)
+  expect(wrapper.find('.inline-publish-panel .app-uuid-input').exists()).toBe(true)
+  expect(wrapper.findAll('button').some(button => button.text() === 'common.cancel')).toBe(false)
+  await confirm(wrapper)
+  expect(mocks.publish).toHaveBeenCalled()
+  expect(wrapper.find('.inline-publish-panel').isVisible()).toBe(true)
+  wrapper.unmount()
+})
+
+
+it('preserves unsaved listing edits while changing information sections without publishing', async () => {
+  mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+  mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
+  mocks.publish.mockClear()
+  const wrapper = mount(GoLiveDialog, { props: { inline: true, activeSection: 'listing' }, global: { stubs } })
+  await showDialog(wrapper)
+  await wrapper.get('.product-name-input input').setValue('Unsaved title')
+  await wrapper.setProps({ activeSection: 'media' })
+  expect(wrapper.get('[data-publish-section="listing"]').isVisible()).toBe(false)
+  expect(wrapper.get('[data-publish-section="media"]').isVisible()).toBe(true)
+  expect(wrapper.get('[data-publish-section="distribution"]').isVisible()).toBe(false)
+  await wrapper.setProps({ activeSection: 'listing' })
+  expect((wrapper.get('.product-name-input input').element as HTMLInputElement).value).toBe('Unsaved title')
+  expect(mocks.publish).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it('points validation errors to the information section containing the invalid field', async () => {
+  mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+  mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
+  mocks.publish.mockClear()
+  const wrapper = mount(GoLiveDialog, { props: { inline: true, activeSection: 'media' }, global: { stubs } })
+  await showDialog(wrapper)
+  wrapper.getComponent(ElFormStub).props('model').name = ''
+  await confirm(wrapper)
+  expect(wrapper.emitted('section-change')?.at(-1)).toEqual(['listing'])
+  expect(mocks.publish).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it('resolves another author’s selected bundle and saves edited published payment information', async () => {
+  vi.clearAllMocks()
+  mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+  mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
+  mocks.publish.mockResolvedValue({ code: 0, data: true })
+  const wrapper = mountDialog()
+  const existing = structuredClone(design)
+  const bundle = { bundleId: 107642, bundleName: 'Outdoor collection' }
+  ;(wrapper.vm as any).show({ ...existing, product: { ...existing.product, lastGoLive: '2026-10-24', bundles: [bundle] } })
+  await flushPromises()
+  expect(wrapper.findComponent({ name: 'BundleSelector' }).props('bundles')).toEqual([bundle])
+  expect(wrapper.get('.payment-radio-group').attributes('aria-disabled')).toBe('true')
+  expect(wrapper.get('.payment-method-lock-reason').text()).toBe('payment.methodLockedAfterPublish')
+  expect(wrapper.find('el-input-number-stub[disabled="true"]').exists()).toBe(false)
+  const model = wrapper.getComponent(ElFormStub).props('model')
+  model.price = 3.99
+  model.trialLasts = 2
+  await confirm(wrapper)
+  expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
+    payment: expect.objectContaining({ paymentMethod: 'wpay', price: 3.99, trialLasts: 2 }),
+    bundleIds: [107642]
+  }))
+  wrapper.unmount()
 })

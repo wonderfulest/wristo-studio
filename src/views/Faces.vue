@@ -101,10 +101,13 @@
                 <span>{{ face.price === 0 ? 'Free' : face.price == null ? 'View pricing' : `$${face.price.toFixed(2)}` }}</span>
                 <span v-if="face.download != null">↓ {{ face.download.toLocaleString() }}</span>
                 <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
+                <span v-if="canEditFace(face)" class="face-editable" role="img" aria-label="Editable in Builder" title="Editable in Builder">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m16 3 5 5-12 12-6 1 1-6L16 3Z" />
+                    <path d="m14 5 5 5" />
+                  </svg>
+                </span>
               </div>
-              <RouterLink v-if="canEditFace(face)" class="face-edit" :to="{ path: '/design', query: { id: face.designId } }" :aria-label="`Edit ${face.name} in Builder`">
-                Edit in Builder <span aria-hidden="true">↗</span>
-              </RouterLink>
             </div>
           </article>
         </div>
@@ -504,6 +507,7 @@ h2 {
 }
 .face-meta {
   display: flex;
+  align-items: center;
   gap: 12px;
   font-size: 12px;
   color: var(--muted);
@@ -512,21 +516,11 @@ h2 {
 .face-meta span:first-child {
   margin-right: auto;
 }
-.face-edit {
-  display: flex;
+.face-editable {
+  display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  justify-content: space-between;
-  min-height: 44px;
-  margin-top: 12px;
-  padding: 0 12px;
-  border: 1px solid #dbe2cf;
-  border-radius: 6px;
-  background: #f1f4e9;
-  font-size: 14px;
-  font-weight: 700;
-}
-.face-edit:hover {
-  background: var(--accent);
+  color: var(--muted);
 }
 .image-placeholder {
   font-size: 12px;

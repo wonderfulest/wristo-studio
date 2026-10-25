@@ -3,6 +3,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import FaceDetail from './FaceDetail.vue'
+import { designApi } from '@/api/wristo/design'
+vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: vi.fn() } }))
 import { loadShareRewardProfile } from '@/api/wristo/shareRewards'
 vi.mock('@/api/wristo/shareRewards', () => ({ loadShareRewardProfile: vi.fn() }))
 import { remixFace } from './permissions'
@@ -15,19 +17,21 @@ vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateDesignSharing: vi.fn(), remixFace: vi.fn() }))
 import { loadFaceDetail, type FaceDetail as FaceDetailData } from './catalog'
 
+vi.mock('@/views/designs/DesignManagement.vue', () => ({ default: { props: ['designUid', 'informationTarget'], template: '<div data-testid="management"><a class="primary-button" :href="`/design?id=${designUid}`" @click.prevent="$router.push(`/design?id=${designUid}`)">Edit in Builder</a></div>' } }))
 vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<header>Public navigation</header>' } }))
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
 beforeEach(() => { auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
-async function setup() {
+async function setup(path = '/faces/123') {
   const router = createRouter({ history: createMemoryHistory(), routes: [
     { path: '/faces/:appId', component: FaceDetail },
+    { path: '/designs/:designUid', component: FaceDetail },
     { path: '/faces', component: { template: '<div>Gallery</div>' } },
     { path: '/design', component: { template: '<div>Editor</div>' } },
   ] })
-  await router.push('/faces/123')
+  await router.push(path)
   const wrapper = mount(FaceDetail, { global: { plugins: [router], stubs: { Icon: true } } })
   wrappers.push(wrapper)
   await flushPromises()
@@ -75,7 +79,8 @@ describe('watch face details', () => {
     auth.userInfo = { id: 8 }
     auth.isAdminUser = true
     const { wrapper, router } = await setup()
-    expect(wrapper.find('input[type=file]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="management"]').exists()).toBe(true)
+    expect(wrapper.find('input[type=file]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Edit description')
     const switches = wrapper.findAll('[role="switch"]')
     expect(switches).toHaveLength(2)
@@ -131,7 +136,7 @@ describe('watch face details', () => {
       dataOptions: { ':FIELD_TYPE_STEPS': { label: { eng: { long: 'Daily Steps' } } } },
     } })
     const { wrapper, router } = await setup()
-    expect(wrapper.get('.supported-data-fields').text()).toContain('Supported data fields 1')
+    expect(wrapper.get('.supported-data-fields').text()).toContain('1 supported data fields')
     expect(wrapper.get('.data-field-list li').text()).toBe('Daily Steps')
     vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, appId: 456 })
     await router.push('/faces/456')
@@ -213,5 +218,70 @@ describe('watch face details', () => {
     await flushPromises()
     expect(wrapper.get('h1').text()).toBe('Second face')
     expect(wrapper.get('a.primary-button').attributes('href')).toBe('/design?id=second')
+  })
+})
+
+
+describe('unpublished design details', () => {
+  it('keeps a draft without an App ID manageable without public product controls', async () => {
+    vi.mocked(designApi.getDesignByUid).mockResolvedValue({ code: 0, data: { designUid: 'draft', name: 'Draft', user: { id: 7 }, product: null } } as any)
+    const { wrapper } = await setup('/designs/draft')
+    expect(wrapper.get('h1').text()).toBe('Draft')
+    expect(wrapper.find('[data-testid="management"]').exists()).toBe(true)
+    expect(wrapper.find('.share-row').exists()).toBe(false)
+    expect(wrapper.find('input[type=file]').exists()).toBe(false)
+  })
+  it('does not redirect to an old draft’s application after navigating away', async () => {
+    let resolve!: (value: any) => void
+    vi.mocked(designApi.getDesignByUid).mockReturnValue(new Promise(done => { resolve = done }))
+    const { router, wrapper } = await setup('/designs/draft')
+    await router.push('/faces/456'); await flushPromises()
+    resolve({ code: 0, data: { designUid: 'draft', name: 'Old draft', user: { id: 7 }, product: { appId: 123 } } })
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/faces/456')
+    expect(wrapper.get('h1').text()).toBe('Test face')
+  })
+})
+
+
+describe('application information navigation', () => {
+  it('groups information into tabs and preserves the mounted management controller', async () => {
+    const { wrapper } = await setup()
+    expect(wrapper.findAll('[role="tab"]').map(tab => tab.text())).toEqual(['Overview', 'Store listing', 'Media', 'Availability'])
+    const controller = wrapper.get('[data-testid="management"]').element
+    await wrapper.get('#detail-tab-media').trigger('click')
+    expect(wrapper.get('#detail-tab-media').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('#detail-panel-overview').isVisible()).toBe(false)
+    expect(wrapper.get('[data-testid="management"]').element).toBe(controller)
+    await wrapper.get('#detail-tab-media').trigger('keydown', { key: 'ArrowRight' })
+    expect(wrapper.get('#detail-tab-distribution').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('[role="switch"]').isVisible()).toBe(true)
+    await wrapper.get('#detail-tab-distribution').trigger('keydown', { key: 'Home' })
+    expect(wrapper.get('#detail-tab-overview').attributes('aria-selected')).toBe('true')
+  })
+  it('does not expose management tabs to other users', async () => {
+    auth.userInfo = { id: 99 }
+    const { wrapper } = await setup()
+    expect(wrapper.find('[role="tablist"]').exists()).toBe(false)
+    expect(wrapper.get('.overview-content').isVisible()).toBe(true)
+  })
+})
+
+ describe('application information editing permissions', () => {
+  it.each(['owner', 'administrator'])('opens the information editor for the %s', async (role) => {
+    auth.userInfo = { id: role === 'owner' ? 7 : 8 }
+    auth.isAdminUser = role === 'administrator'
+    const { wrapper } = await setup()
+    await wrapper.get('.edit-app-information').trigger('click')
+    expect(wrapper.get('#detail-tab-listing').attributes('aria-selected')).toBe('true')
+    await wrapper.get('#detail-tab-overview').trigger('click')
+    await wrapper.get('.description-header button').trigger('click')
+    expect(wrapper.get('#detail-tab-listing').attributes('aria-selected')).toBe('true')
+  })
+  it.each([null, { id: 8 }])('hides information editing for a visitor %s', async (user) => {
+    auth.userInfo = user
+    const { wrapper } = await setup()
+    expect(wrapper.find('.edit-app-information').exists()).toBe(false)
+    expect(wrapper.find('.description-header button').exists()).toBe(false)
   })
 })

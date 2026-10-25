@@ -99,116 +99,31 @@
     </div>
 
     <div class="design-table-scroll" :class="{ 'is-list': viewMode === 'list' }">
-    <div v-if="viewMode === 'list' && designs.length" class="list-heading" aria-hidden="true">
-      <span>{{ t('card.design') }}</span>
-      <span>{{ t('project.status') }}</span>
-      <span>{{ t('card.appId') }}</span>
-      <span>{{ t('card.storeWeight') }}</span>
-      <span>{{ t('card.score') }}</span>
-      <span>{{ t('meter.downloads') }} / {{ t('meter.orders') }}</span>
-      <span>{{ t('card.lastUpdated') }}</span>
-      <span>{{ t('card.lastPackage') }}</span>
-      <span>{{ t('card.lastGoLive') }}</span>
-      <span>{{ t('card.buildActions') }}</span>
-      <span>{{ t('card.actions') }}</span>
-    </div>
     <div class="design-collection" :class="`design-collection--${viewMode}`">
       <div class="design-item" v-for="design in designs" :key="design.id">
-        <div v-if="userStore.isStudioConsumer" class="consumer-design-actions">
-          <span>{{ design.installUnlocked ? 'Unlocked' : 'Draft' }}</span>
-          <el-button v-if="!design.canInstall" type="primary" @click="router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`)">Unlock this design · $1.99</el-button>
-          <el-button v-else type="primary" @click="buildPrg(design)">Build for my watch</el-button>
-        </div>
         <DesignCard
           :design="design"
           :view-mode="viewMode"
+          summary-only
+          :show-package-download="true"
           :is-merchant-user="isMerchantUser"
           :is-admin-user="isAdminUser"
-          :can-delete-design="canDeleteDesign"
+          :can-delete-design="false"
           :show-creator="showCreator"
-          :loading-states="loadingStatesPlain"
+          :loading-states="emptyLoadingStates"
           :current-user-id="userStore.userInfo?.id ?? null"
           :status-text="getStatusText(design.designStatus)"
           :status-color="getStatusColor(design.designStatus)"
-          :last-go-live-text="formatDateNullable(design.product?.lastGoLive ?? null)"
+          :last-go-live-text="formatDateNullable(design.product?.lastGoLive)"
           :creator-name="getCreatorName(design)"
           :design-image-url="getDesignImageUrl(design)"
-          :has-new-release="hasNewRelease(design)"
-          :has-downloadable-package="hasDownloadablePackage(design)"
-          :show-package-download="true"
-          :show-prg-preview="true"
-          :store-weight-saving="storeWeightSavingAppIds.has(design.product?.appId ?? -1)"
-          :rename-saving="renameSavingDesignIds.has(design.id)"
-          :allow-rename="true"
-          :now-ms="nowMs"
-          @edit="editDesign"
-          @delete="confirmDelete"
-          @open="openCanvas"
-          @build-prg="buildPrg"
-          @cancel-prg="cancelPrg"
-          @prepare-preview-prg="preparePreviewPrg"
-          @preview-prg="previewPrg"
-          @run-prg="runPrg"
-          @submit="submitDesign"
-          @download-package="downloadPackage"
-          @go-live="goLive"
-          @copy="copyDesign"
-          @update-store-weight="updateStoreWeight"
-          @rename="renameDesign"
-          @transfer-owner="openTransferOwnerDialog"
+          :has-new-release="false"
+          :has-downloadable-package="false"
         />
       </div>
     </div>
 
     </div>
-
-    <el-dialog
-      v-model="duplicateLanguageDialogVisible"
-      :title="t('project.duplicateLanguageTitle')"
-      width="400px"
-      append-to-body
-    >
-      <p class="duplicate-language-hint">{{ t('project.duplicateLanguageHint') }}</p>
-      <el-radio-group v-model="duplicateLanguage">
-        <el-radio-button value="eng">English</el-radio-button>
-        <el-radio-button value="zhs">中文</el-radio-button>
-      </el-radio-group>
-      <template #footer>
-        <el-button @click="duplicateLanguageDialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="confirmDuplicateLanguage">{{ t('card.duplicate') }}</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog
-      v-model="transferDialogVisible"
-      :title="t('card.transferOwner.title')"
-      width="480px"
-      @closed="resetTransferOwnerDialog"
-    >
-      <div v-if="transferDesign" class="transfer-owner-summary">
-        <p>
-          {{ t('card.transferOwner.currentApp') }}:
-          <strong>{{ transferDesign.name }}</strong>
-          ({{ t('card.appId') }}: {{ transferDesign.product?.appId }})
-        </p>
-        <p>
-          {{ t('card.transferOwner.currentAuthor') }}:
-          {{ getCreatorName(transferDesign) }}
-        </p>
-      </div>
-      <DesignerSelect
-        v-model="transferTargetUserId"
-        :placeholder="t('card.transferOwner.placeholder')"
-      />
-      <template #footer>
-        <el-button :disabled="transferLoading" @click="transferDialogVisible = false">
-          {{ t('common.cancel') }}
-        </el-button>
-        <el-button type="primary" :loading="transferLoading" @click="confirmTransferOwner">
-          {{ t('card.transferOwner.confirm') }}
-        </el-button>
-      </template>
-    </el-dialog>
 
     <!-- 分页组件 -->
     <div class="pagination-container">
@@ -222,32 +137,6 @@
         @current-change="handleCurrentChange"
       />
     </div>
-
-    <!-- 删除确认对话框 -->
-    <el-dialog v-model="deleteDialogVisible" :title="t('project.confirmDelete')" width="30%">
-      <span>{{ t('project.deleteBody') }}</span>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="deleteDialogVisible = false">{{ t('common.cancel') }}</el-button>
-          <el-button 
-            type="danger" 
-            @click="confirmDeleteDesign"
-            :loading="!!designToDelete && loadingStates.delete.has(designToDelete.id)"
-          >
-            {{ t('project.confirmDeleteButton') }}
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
-
-    <!-- 设计详情对话框 -->
-    <EditDesignDialog ref="editDesignDialog" @success="fetchDesigns" />
-    
-    <!-- 提交设计对话框 -->
-    <SubmitDesignDialog ref="submitDesignDialog" @success="handleSubmitSuccess" />
-    
-    <!-- Publish 对话框 -->
-    <GoLiveDialog ref="goLiveDialog" @success="handleGoLiveSuccess" />
 
     <!-- 空列表提示对话框：引导用户前往 New Project 创建第一个应用 -->
     <el-dialog v-model="noDesignDialogVisible" :title="t('project.noProjectsTitle')" width="30%" :modal="false">
@@ -263,52 +152,24 @@
 </template>
 
 <script setup lang="ts">
-import { designUnlocksApi } from '@/api/wristo/designUnlocks'
 import { showErrorOnce } from '@/utils/errorMessage'
-
-import { ref, computed, h, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-// 移除旧的API导入，使用新的designApi
+import { Icon } from '@iconify/vue'
 import { designApi } from '@/api/wristo/design'
-import { productsApi } from '@/api/wristo/products'
 import { useMessageStore } from '@/stores/message'
-import { useBaseStore } from '@/stores/baseStore'
 import dayjs from 'dayjs'
 import { useUserStore } from '@/stores/user'
-import { ApiResponse, PageResponse } from '@/types/api/api'
-import { CreateCopyDesignParams } from '@/types/api/design'
+import type { ApiResponse, PageResponse } from '@/types/api/api'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
 import DesignerSelect from '@/components/users/DesignerSelect.vue'
-import EditDesignDialog from '@/components/dialogs/EditDesignDialog.vue'
-import SubmitDesignDialog from '@/components/dialogs/SubmitDesignDialog.vue'
-import GoLiveDialog from '@/components/dialogs/GoLiveDialog.vue'
-import { Design, type DesignListItem, DesignStatus, LaunchStatus, type DesignPageParams } from '@/types/api/design'
+import type { DesignListItem, DesignStatus, LaunchStatus, DesignPageParams } from '@/types/api/design'
 import DesignCard from '@/views/designs/DesignCard.vue'
 import { useI18n } from '@/i18n'
-import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
-import { downloadPackageFile } from '@/utils/packageDownload'
-import {
-  buildPrgInstallerDeepLink,
-  createPrgInstallerTicketCache,
-} from '@/api/wristo/prg-installer'
-import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import { normalizePositiveAppId } from '@/views/designs/designSearch'
 import { normalizeDesignSort, toDesignOrderBy, type DesignSortField, type DesignSortOrder } from '@/views/designs/designSort'
-import {
-  canChooseDuplicateLanguage,
-  getDuplicateSourceLanguage,
-  withDuplicateLanguage,
-} from '@/views/designs/designDuplicateLanguage'
-import type { AppLanguage } from '@/types/localization'
-import { createPrgInstallerPromptState } from '@/features/prg-installer/promptState'
-import { ElButton, ElMessageBox, ElNotification } from 'element-plus'
-const editDesignDialog = ref<any>(null)
-const submitDesignDialog = ref<any>(null)
-type GoLiveDialogRef = { show: (design: Design) => void }
-const goLiveDialog = ref<GoLiveDialogRef | null>(null)
 const router = useRouter()
 const messageStore = useMessageStore()
-const baseStore = useBaseStore()
 const userStore = useUserStore()
 const currentDeviceId = computed(() => userStore.userInfo?.device?.deviceId || '')
 const { t } = useI18n()
@@ -330,57 +191,12 @@ watch(viewMode, (mode) => {
     // The view remains usable when browser storage is unavailable.
   }
 })
-const membershipGate = useStudioMembershipGate()
-let prgInstallerPromptStorage: Pick<Storage, 'getItem' | 'setItem'> | undefined
-try {
-  prgInstallerPromptStorage = window.localStorage
-} catch {
-  prgInstallerPromptStorage = undefined
-}
-const prgInstallerPromptState = createPrgInstallerPromptState(prgInstallerPromptStorage)
-const nowMs = ref(Date.now())
-let prgClockTimer: ReturnType<typeof setInterval> | undefined
-let cancellationPollTimer: ReturnType<typeof setInterval> | undefined
-
-interface LoadingStates {
-  submit: Set<number>
-  copy: Set<number>
-  delete: Set<number>
-  favorite: Set<number>
-  prgBuild: Set<number>
-  previewPrg: Set<number>
-}
-
 const designs = ref<DesignListItem[]>([])
-const deviceDisplayRef = ref<InstanceType<typeof DeviceDisplay> | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
-const deleteDialogVisible = ref(false)
-const designToDelete = ref<DesignListItem | null>(null)
 const noDesignDialogVisible = ref(false)
-const storeWeightSavingAppIds = ref(new Set<number>())
-const renameSavingDesignIds = ref(new Set<number>())
-const transferDialogVisible = ref(false)
-const transferDesign = ref<DesignListItem | null>(null)
-const transferTargetUserId = ref<number | undefined>()
-const transferLoading = ref(false)
-const duplicateLanguageDialogVisible = ref(false)
-const duplicateSourceDesign = ref<Design | null>(null)
-const duplicateLanguage = ref<AppLanguage>('eng')
-
-// 添加加载状态
-const loadingStates = ref<LoadingStates>({
-  submit: new Set<number>(),
-  copy: new Set<number>(),
-  delete: new Set<number>(),
-  favorite: new Set<number>(),
-  prgBuild: new Set<number>(),
-  previewPrg: new Set<number>()
-})
-
-// plain loading states object for child components
-const loadingStatesPlain = computed(() => loadingStates.value)
+const emptyLoadingStates = { submit: new Set<number>(), copy: new Set<number>(), delete: new Set<number>(), favorite: new Set<number>(), prgBuild: new Set<number>(), previewPrg: new Set<number>() }
 
 // 搜索相关状态
 interface DesignSearchPreference {
@@ -482,14 +298,6 @@ const isMerchantUser = computed(() => {
 })
 
 const isAdminUser = computed(() => userStore.isAdminUser)
-
-const canDeleteDesign = computed(() => {
-  if (userStore.hasFullStudioAccess) return true
-  const level = userStore.studioMembership?.level || 'free'
-  return level !== 'free'
-})
-
-const isLaunchedDesign = (design: DesignListItem | null | undefined) => !!design?.product?.lastGoLive
 
 type DesignScope = 'mine' | 'all'
 
@@ -641,11 +449,6 @@ const getDesignImageUrl = (design: DesignListItem) => {
   return design.cover?.url || ''
 }
 
-const getCurrentDeviceParams = () => {
-  const deviceId = (userStore.userInfo as any)?.device?.deviceId
-  return deviceId ? { device: deviceId } : undefined
-}
-
 // 获取设计列表
 const fetchDesigns = async () => {
   try {
@@ -671,10 +474,6 @@ const fetchDesigns = async () => {
     
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
-      if (cancellationPollTimer && !designs.value.some(item => item.product?.prgPackagingLog?.packagingStatus === 'cancel_requested')) {
-        clearInterval(cancellationPollTimer)
-        cancellationPollTimer = undefined
-      }
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
@@ -719,407 +518,6 @@ const handleSizeChange = (val: number) => {
 }
 
 // 打开画布编辑器
-const openCanvas = async (design: DesignListItem) => {
-  try {
-    const response = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>
-    const designData = response.data || {} as Design
-
-    baseStore.watchFaceName = designData.name
-    baseStore.appId = designData.product?.appId || -1
-
-    await router.push('/design?id=' + designData.designUid)
-  } catch (error) {
-    if (isStaleDynamicImportError(error)) return
-    console.error('加载设计失败:', error)
-    showErrorOnce(error, t('project.loadDesignFailed'))
-  }
-}
-
-// 查看设计详情
-const editDesign = (design: DesignListItem) => {
-  if (editDesignDialog.value && typeof editDesignDialog.value.show === 'function') {
-    editDesignDialog.value.show(design.designUid)
-  }
-}
-
-const resetTransferOwnerDialog = () => {
-  if (transferLoading.value) return
-  transferDesign.value = null
-  transferTargetUserId.value = undefined
-}
-
-const openTransferOwnerDialog = (design: DesignListItem) => {
-  const appId = design.product?.appId
-  if (!isAdminUser.value || !appId) {
-    messageStore.error(t('card.transferOwner.unavailable'))
-    return
-  }
-
-  transferDesign.value = design
-  transferTargetUserId.value = undefined
-  transferDialogVisible.value = true
-}
-
-const confirmTransferOwner = async () => {
-  const design = transferDesign.value
-  const appId = design?.product?.appId
-  if (!isAdminUser.value || !appId) {
-    messageStore.error(t('card.transferOwner.unavailable'))
-    return
-  }
-  if (!transferTargetUserId.value) {
-    messageStore.warning(t('card.transferOwner.targetRequired'))
-    return
-  }
-  if (transferTargetUserId.value === design.user?.id) {
-    messageStore.warning(t('card.transferOwner.sameDesigner'))
-    return
-  }
-
-  transferLoading.value = true
-  try {
-    const response = await productsApi.transferOwner(appId, transferTargetUserId.value)
-    if (response.code !== 0) {
-      messageStore.error(response.msg || t('card.transferOwner.failed'))
-      return
-    }
-
-    messageStore.success(t('card.transferOwner.success'))
-    transferDialogVisible.value = false
-    transferDesign.value = null
-    transferTargetUserId.value = undefined
-    await fetchDesigns()
-  } catch (error: any) {
-    console.error('[MyDesigns] transfer product owner failed:', error)
-    showErrorOnce(error, error?.msg || error?.response?.data?.msg || t('card.transferOwner.failed'))
-  } finally {
-    transferLoading.value = false
-  }
-}
-
-const updateStoreWeight = async (design: DesignListItem, storeWeight: number) => {
-  const appId = design.product?.appId
-  if (!isAdminUser.value || !appId || storeWeightSavingAppIds.value.has(appId)) return
-
-  storeWeightSavingAppIds.value.add(appId)
-  try {
-    const response = await productsApi.updateStoreWeight(appId, storeWeight)
-    if (response.code === 0 && response.data) {
-      if (design.product) design.product.storeWeight = response.data.storeWeight ?? storeWeight
-      messageStore.success(t('common.savedSuccessfully'))
-    } else {
-      messageStore.error(response.msg || t('common.saveFailed'))
-    }
-  } catch (error: any) {
-    console.error('[MyDesigns] update Store weight failed:', error)
-    showErrorOnce(error, error?.response?.data?.msg || t('common.saveFailed'))
-  } finally {
-    storeWeightSavingAppIds.value.delete(appId)
-  }
-}
-
-const renameDesign = async (design: DesignListItem, name: string) => {
-  if (renameSavingDesignIds.value.has(design.id)) return
-
-  renameSavingDesignIds.value.add(design.id)
-  try {
-    const response = await designApi.updateDesign({ uid: design.designUid, name })
-    if (response.code === 0) {
-      design.name = response.data?.name || name
-      messageStore.success(t('common.savedSuccessfully'))
-    } else {
-      messageStore.error(response.msg || t('common.saveFailed'))
-    }
-  } catch (error: any) {
-    console.error('[MyDesigns] rename design failed:', error)
-    showErrorOnce(error, error?.response?.data?.msg || t('common.saveFailed'))
-  } finally {
-    renameSavingDesignIds.value.delete(design.id)
-  }
-}
-
-const executeDuplicateDesign = async (design: Design, targetLanguage: AppLanguage) => {
-  if (loadingStates.value.copy.has(design.id)) return
-
-  try {
-    loadingStates.value.copy.add(design.id)
-    const newDesignData = { uid: design.designUid } as CreateCopyDesignParams
-    const createResponse = await designApi.createDesignByCopy(newDesignData) as ApiResponse<Design>
-
-    if (createResponse.code === 0 && createResponse.data) {
-      const sourceLanguage = getDuplicateSourceLanguage(design.configJson)
-      if (targetLanguage !== sourceLanguage) {
-        const updateResponse = await designApi.updateDesign({
-          uid: createResponse.data.designUid,
-          configJson: withDuplicateLanguage(createResponse.data.configJson ?? design.configJson, targetLanguage),
-        })
-        if (!updateResponse || updateResponse.code !== 0) {
-          messageStore.error(updateResponse?.msg || t('project.copyLanguageFailed'))
-          return
-        }
-      }
-
-      messageStore.success(t('project.copySuccessful'))
-      await fetchDesigns()
-      await userStore.refreshUserInfo()
-    } else {
-      messageStore.error(createResponse.msg || t('project.copyFailed'))
-    }
-  } catch (error) {
-    console.error('复制失败:', error)
-    showErrorOnce(error, (error as any)?.response?.data?.msg || t('project.copyFailed'))
-  } finally {
-    loadingStates.value.copy.delete(design.id)
-  }
-}
-
-// Studio 卡片的 Duplicate：英文应用可选择保留英文或创建中文版。
-const copyDesign = async (design: DesignListItem) => {
-  if (loadingStates.value.copy.has(design.id)) return
-  if (!userStore.canCreateDesign) {
-    if (userStore.isStudioConsumer) window.dispatchEvent(new Event('studio-design-limit-reached'))
-    const max = userStore.studioMembership?.maxDesigns
-    messageStore.warning(max == null ? t('membership.freeCreateLimitReached') : t('membership.createLimitReached', { max }))
-    router.push(userStore.isStudioConsumer ? '/designs' : '/design-slots')
-    return
-  }
-
-  loadingStates.value.copy.add(design.id)
-  try {
-    const detailResponse = await designApi.getDesignByUid(design.designUid)
-    if (!detailResponse || detailResponse.code !== 0 || !detailResponse.data) {
-      messageStore.error(detailResponse?.msg || t('project.loadDesignFailed'))
-      return
-    }
-
-    if (canChooseDuplicateLanguage(detailResponse.data.configJson)) {
-      duplicateSourceDesign.value = detailResponse.data
-      duplicateLanguage.value = 'eng'
-      duplicateLanguageDialogVisible.value = true
-      return
-    }
-
-    loadingStates.value.copy.delete(design.id)
-    await executeDuplicateDesign(detailResponse.data, getDuplicateSourceLanguage(detailResponse.data.configJson))
-  } catch (error) {
-    console.error('加载待复制应用失败:', error)
-    showErrorOnce(error, (error as any)?.response?.data?.msg || t('project.loadDesignFailed'))
-  } finally {
-    loadingStates.value.copy.delete(design.id)
-  }
-}
-
-const confirmDuplicateLanguage = async () => {
-  const source = duplicateSourceDesign.value
-  if (!source) return
-  duplicateLanguageDialogVisible.value = false
-  duplicateSourceDesign.value = null
-  await executeDuplicateDesign(source, duplicateLanguage.value)
-}
-
-// 确认删除
-const confirmDelete = (design: DesignListItem) => {
-  if (isLaunchedDesign(design)) {
-    messageStore.warning(t('project.deletePublishedNotAllowed'))
-    return
-  }
-  designToDelete.value = design
-  deleteDialogVisible.value = true
-}
-
-// 执行删除
-const confirmDeleteDesign = async () => {
-  if (!designToDelete.value || loadingStates.value.delete.has(designToDelete.value.id)) return
-  if (isLaunchedDesign(designToDelete.value)) {
-    messageStore.warning(t('project.deletePublishedNotAllowed'))
-    deleteDialogVisible.value = false
-    designToDelete.value = null
-    return
-  }
-
-  try {
-    loadingStates.value.delete.add(designToDelete.value.id)
-    const response = await designApi.deleteDesign(designToDelete.value.designUid)
-    if (response.code === 0) {
-      messageStore.success(t('project.deleteSuccessful'))
-      deleteDialogVisible.value = false
-      await fetchDesigns()
-      await userStore.refreshUserInfo()
-    } else {
-      messageStore.error(response.msg || t('project.deleteFailed'))
-    }
-  } catch (error) {
-    console.error('删除失败:', error)
-    showErrorOnce(error, t('project.deleteFailed'))
-  } finally {
-    loadingStates.value.delete.delete(designToDelete.value.id)
-  }
-}
-
-// 提交设计
-const submitDesign = async (design: DesignListItem) => {
-  if (!membershipGate.requirePublish()) return
-  if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
-    submitDesignDialog.value.show(design)
-  }
-}
-
-// 提交 PRG 打包任务
-const buildPrg = async (design: DesignListItem) => {
-  if (userStore.isStudioConsumer && design.canInstall !== true) {
-    await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`)
-    return
-  }
-  if (!userStore.isStudioConsumer && !membershipGate.requireExport()) return
-  if (loadingStates.value.prgBuild.has(design.id)) return
-
-  // 获取当前设备 ID：优先使用用户资料中的设备，其次尝试本地已选设备
-  let deviceId: string | undefined
-  deviceId = (userStore.userInfo as any)?.device?.deviceId
-
-  if (!deviceId) {
-    messageStore.warning(t('project.selectDeviceFirst'))
-    // 联动打开设备选择器
-    deviceDisplayRef.value?.openSelector?.()
-    return
-  }
-
-  if (submitDesignDialog.value && typeof submitDesignDialog.value.show === 'function') {
-    submitDesignDialog.value.show(design, { mode: 'prg-build', deviceId: String(deviceId) })
-  }
-}
-
-const cancelPrg = async (design: DesignListItem) => {
-  const deviceId = userStore.userInfo?.device?.deviceId
-  const task = design.product?.prgPackagingLog
-  if (!deviceId || !task?.id) return
-  try {
-    await ElMessageBox.confirm(t('project.cancelPrgBuildConfirm'), t('card.cancelPrgBuild'), {
-      confirmButtonText: t('card.cancelPrgBuild'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning',
-    })
-    const response = await designApi.cancelPrgPackageTask(design.designUid, deviceId, task.id)
-    if (response.code !== 0) throw new Error(response.msg || t('project.cancelPrgBuildFailed'))
-    messageStore.success(t('project.cancelPrgBuildSubmitted'))
-    await fetchDesigns()
-    if (response.data?.status === 'cancel_requested' && !cancellationPollTimer) {
-      cancellationPollTimer = setInterval(() => { void fetchDesigns() }, 2000)
-    }
-  } catch (error: any) {
-    if (error === 'cancel' || error === 'close') return
-    showErrorOnce(error, error?.message || t('project.cancelPrgBuildFailed'))
-  }
-}
-
-// 下载安装包
-const downloadPackage = async (design: DesignListItem) => {
-  if (!membershipGate.requireExport()) return
-  const url = design.product?.release?.packageUrl
-  if (url) {
-    await downloadPackageFile(url, design.product?.name || design.name, 'iq')
-  } else {
-    messageStore.error(t('project.downloadUnavailable'))
-  }
-}
-
-// 运行 PRG：跳转下载 prgUrl
-const runPrg = async (design: DesignListItem) => {
-  if (userStore.isStudioConsumer) {
-    try {
-      const response = await designUnlocksApi.status(design.designUid)
-      if (!response.data?.canInstall) { await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`); return }
-    } catch (error) { showErrorOnce(error, 'Unable to check design access'); return }
-  } else if (!membershipGate.requireExport()) return
-  const url = (design.product as any)?.prgRelease?.prgUrl
-  if (url) {
-    await downloadPackageFile(url, design.product?.name || design.name, 'prg')
-  } else {
-    messageStore.error(t('project.prgUnavailable'))
-  }
-}
-
-const prgInstallerTicketCache = createPrgInstallerTicketCache()
-
-const showPrgInstallerGuideNotification = (message: string) => {
-  ElNotification({
-    title: t('prgInstallerGuide.title'),
-    message: h('div', { class: 'prg-installer-guide-notification' }, [
-      h('p', message),
-      h(ElButton, {
-        link: true,
-        type: 'primary',
-        onClick: () => { void router.push({ name: 'PrgInstallerGuide' }) },
-      }, () => t('project.prgInstallerGuideAction')),
-    ]),
-    duration: 8000,
-  })
-}
-
-const preparePreviewPrg = async (design: DesignListItem) => {
-  const releaseId = design.product?.prgRelease?.id
-  if (!releaseId || loadingStates.value.previewPrg.has(design.id)) return
-
-  loadingStates.value.previewPrg.add(design.id)
-  try {
-    await prgInstallerTicketCache.prepare(releaseId)
-  } catch (error) {
-    console.error('Failed to prepare simulator preview:', error)
-    showErrorOnce(error, t('project.prgInstallerPreviewFailed'))
-  } finally {
-    loadingStates.value.previewPrg.delete(design.id)
-  }
-}
-
-const previewPrg = (design: DesignListItem) => {
-  if (loadingStates.value.previewPrg.has(design.id)) return
-
-  const releaseId = design.product?.prgRelease?.id
-  const prgUrl = design.product?.prgRelease?.prgUrl
-  if (!releaseId || !prgUrl) {
-    messageStore.error(t('project.prgUnavailable'))
-    return
-  }
-
-  const ticket = prgInstallerTicketCache.take(releaseId)
-  if (!ticket) {
-    void preparePreviewPrg(design)
-    messageStore.error(t('project.prgInstallerPreviewFailed'))
-    return
-  }
-
-  void downloadPackageFile(prgUrl, design.product?.name || design.name, 'prg')
-  window.location.href = buildPrgInstallerDeepLink(ticket)
-  messageStore.info(t('project.prgInstallerOpening'))
-  showPrgInstallerGuideNotification(t('project.prgInstallerTroubleshoot'))
-}
-
-// 检查是否有可下载的安装包
-const hasDownloadablePackage = (design: DesignListItem): boolean => {
-  return !!(design.product?.release?.packageUrl)
-}
-
-// 检查是否有新版本需要上传
-const hasNewRelease = (design: DesignListItem): boolean => {
-  const releaseExists = !!design.product?.release
-  if (!releaseExists) return false
-
-  const releaseUpdatedAt = (design.product?.release as { updatedAt?: string | number })?.updatedAt
-  const lastGoLive = (design.product as { lastGoLive?: string | number | null })?.lastGoLive
-
-  if (!releaseUpdatedAt) return false
-  if (!lastGoLive) return true
-
-  return dayjs(releaseUpdatedAt).isAfter(dayjs(lastGoLive))
-}
-
-// 处理提交成功
-const handleSubmitSuccess = (payload: { mode: 'submit' | 'prg-build' }) => {
-  fetchDesigns() // 刷新设计列表
-  if (payload.mode !== 'prg-build' || !prgInstallerPromptState.takeBuildHint()) return
-  showPrgInstallerGuideNotification(t('project.prgInstallerBuildHint'))
-}
-
 // 处理刷新事件
 const handleRefresh = (event: any ) => {
   if (event.detail.route === 'my-designs') {
@@ -1131,40 +529,14 @@ const handleRefresh = (event: any ) => {
 // 首次挂载时加载数据
 onMounted(() => {
   void userStore.refreshUserInfo().catch(() => {})
-  prgClockTimer = setInterval(() => { nowMs.value = Date.now() }, 30000)
   fetchDesigns()
 })
 
 onUnmounted(() => {
-  if (prgClockTimer) clearInterval(prgClockTimer)
-  if (cancellationPollTimer) clearInterval(cancellationPollTimer)
   // 清理事件监听
   window.removeEventListener('refresh-list', handleRefresh)
 })
 
-// Publish 方法
-const goLive = async (design: DesignListItem) => {
-  if (!membershipGate.requirePublish()) return
-  try {
-    const res = await designApi.getDesignByUid(design.designUid, getCurrentDeviceParams()) as ApiResponse<Design>
-    const fullDesign = res.data as Design
-    if (!fullDesign) {
-      messageStore.error(t('project.loadDesignFailed'))
-      return
-    }
-    if (goLiveDialog.value && typeof goLiveDialog.value.show === 'function') {
-      console.log('show publish dialog')
-      goLiveDialog.value.show(fullDesign)
-    }
-  } catch (e) {
-    showErrorOnce(e, t('project.loadDesignFailed'))
-  }
-}
-
-// 处理 Publish 成功
-const handleGoLiveSuccess = () => {
-  fetchDesigns() // 刷新设计列表
-}
 </script>
 
 <style scoped>
@@ -1204,9 +576,9 @@ const handleGoLiveSuccess = () => {
 .view-switch button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 .design-collection--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
 .design-item { min-width: 0; }
-.design-table-scroll.is-list { overflow-x: auto; --design-list-columns: 48px minmax(200px, 1fr) 80px 80px 100px 130px 125px 140px 140px 140px 150px 190px; }
-.design-table-scroll.is-list > * { min-width: 1835px; }
-.design-collection--list { border: 1px solid var(--studio-border); border-radius: 0 0 14px 14px; overflow: hidden; }
+.design-table-scroll.is-list { overflow-x: auto; }
+.design-table-scroll.is-list > * { min-width: 420px; }
+.design-collection--list { border: 1px solid var(--studio-border); border-radius: 14px; overflow: hidden; }
 .design-collection--list .design-item + .design-item { border-top: 1px solid var(--studio-border); }
 .list-heading {
   display: grid;

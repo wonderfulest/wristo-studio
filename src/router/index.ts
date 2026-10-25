@@ -24,6 +24,12 @@ const ensureDesignDataCatalog = (to: { path: string; fullPath: string }) =>
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/designs/:designUid',
+    name: 'DesignDetail',
+    component: () => import('@/views/faces/FaceDetail.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/faces/:appId',
     name: 'FaceDetail',
     component: () => import('@/views/faces/FaceDetail.vue'),

@@ -8,7 +8,8 @@ import {
 } from './designCardActions'
 
 const source = readFileSync(new URL('./DesignCard.vue', import.meta.url), 'utf8')
-const workspaceSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
+const workspaceSource = readFileSync(new URL('./DesignManagement.vue', import.meta.url), 'utf8')
+const listSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
 const newProjectsSource = readFileSync(new URL('./RecentProjectsSection.vue', import.meta.url), 'utf8')
 
 describe('DesignCard Build IQ action', () => {
@@ -151,11 +152,11 @@ describe('My Designs PrgInstaller build hint', () => {
 
 describe('My Designs device-specific PRG refresh', () => {
   it('returns to the first page and reloads designs after the selected device changes', () => {
-    expect(workspaceSource).toContain('const currentDeviceId = computed(')
-    expect(workspaceSource).toContain('watch(currentDeviceId, (deviceId, previousDeviceId) =>')
-    expect(workspaceSource).toContain('if (deviceId === previousDeviceId) return')
-    expect(workspaceSource).toContain('currentPage.value = 1')
-    expect(workspaceSource).toContain('void fetchDesigns()')
+    expect(listSource).toContain('const currentDeviceId = computed(')
+    expect(listSource).toContain('watch(currentDeviceId, (deviceId, previousDeviceId) =>')
+    expect(listSource).toContain('if (deviceId === previousDeviceId) return')
+    expect(listSource).toContain('currentPage.value = 1')
+    expect(listSource).toContain('void fetchDesigns()')
   })
 })
 

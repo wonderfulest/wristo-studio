@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const cardSource = readFileSync(new URL('./DesignCard.vue', import.meta.url), 'utf8')
-const pageSource = readFileSync(new URL('./MyDesigns.vue', import.meta.url), 'utf8')
+const pageSource = readFileSync(new URL('./DesignManagement.vue', import.meta.url), 'utf8')
 
 describe('My Designs Store weight administration', () => {
   it('renders the editor only for administrators with an application', () => {

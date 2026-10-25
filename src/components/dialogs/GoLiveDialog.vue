@@ -1,5 +1,5 @@
 <template>
-  <el-dialog 
+  <component :is="inline ? InlinePublishPanel : ElDialog"
     v-model="dialogVisible" 
     :title="t('goLive.title')" 
     width="min(1200px, 94vw)"
@@ -8,8 +8,8 @@
   >
     <template #header>
       <div class="publish-header">
-        <span class="el-dialog__title">{{ t('goLive.title') }}</span>
-        <el-dropdown trigger="click" :disabled="loading" @command="selectLanguage">
+        <div><span class="el-dialog__title">{{ inline && activeSection ? publishSectionCopy[activeSection].title : t('goLive.title') }}</span><p v-if="inline && activeSection" class="section-intro">{{ publishSectionCopy[activeSection].description }}</p></div>
+        <el-dropdown v-show="!inline || !activeSection || activeSection === 'listing'" trigger="click" :disabled="loading" @command="selectLanguage">
           <el-button size="small" :disabled="loading">{{ descriptionLanguageLabel(descriptionLanguage) }} ▾</el-button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -22,23 +22,9 @@
         </el-dropdown>
       </div>
     </template>
-    <p v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
+    <p v-show="!inline || activeSection === 'listing'" v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
     <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="go-live-form">
-      <el-form-item :label="t('card.appId')">
-        <el-input v-model="form.appId" disabled>
-          <template #append>
-            <el-button @click="copyAppId" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
-          </template>
-        </el-input>
-      </el-form-item>
-      <el-form-item :label="t('goLive.appUuid')">
-        <el-input class="app-uuid-input" v-model="form.garminAppUuid" :readonly="!userStore.isAdminUser" :disabled="loading || savingAppUuid" maxlength="36">
-          <template #append>
-            <el-button @click="copyAppUuid" :icon="CopyDocument" :disabled="!form.garminAppUuid">{{ t('common.copy') }}</el-button>
-            <el-button v-if="userStore.isAdminUser" @click="saveAppUuid" :loading="savingAppUuid" :disabled="loading || form.garminAppUuid === currentDesign?.product.garminAppUuid">{{ t('common.save') }}</el-button>
-          </template>
-        </el-input>
-      </el-form-item>
+      <section v-show="!inline || !activeSection || activeSection === 'listing'" class="publish-content-group" data-publish-section="listing">
       <el-form-item :label="t('submitDesign.designName')" prop="name">
         <el-input class="product-name-input" :model-value="readName(descriptionLanguage)" @update:model-value="writeName(descriptionLanguage, $event)" :disabled="loading" maxlength="255" :aria-label="descriptionLanguageLabel(descriptionLanguage)" dir="auto">
           <template #append>
@@ -71,19 +57,7 @@
           >{{ t('goLive.openSourceGarminStore') }}</el-link>
         </div>
       </el-form-item>
-      <ProductTagSelector
-        :tag-ids="form.tagIds"
-        :show-generation="aiCapabilities.TAGS"
-        :can-generate="canGenerateTags && aiCapabilities.TAGS"
-        :generating="generatingTags"
-        :generation-status="tagGenerationStatus"
-        @generate="generateTags"
-        :limit="MAX_PRODUCT_TAGS"
-        @update:tag-ids="updateProductTags"
-        :tags="productTags"
-        :loading="loadingProductTags || loadingTagGeneration"
-        :disabled="productTagsLoadFailed"
-      />
+
       <el-form-item :label="t('submitDesign.description')" prop="description" required>
         <el-input class="product-description-input" :model-value="activeDescription" @update:model-value="writeDescription(descriptionLanguage, $event)" :disabled="loading" type="textarea" :rows="10" maxlength="20000" :aria-label="descriptionLanguageLabel(descriptionLanguage)" dir="auto" />
         <div class="description-actions">
@@ -99,6 +73,21 @@
           <el-link type="primary" @click="openSettings" style="font-size: 12px;">{{ t('nav.settings') }}</el-link>
         </div>
       </el-form-item>
+      <ProductTagSelector
+        :tag-ids="form.tagIds"
+        :show-generation="aiCapabilities.TAGS"
+        :can-generate="canGenerateTags && aiCapabilities.TAGS"
+        :generating="generatingTags"
+        :generation-status="tagGenerationStatus"
+        @generate="generateTags"
+        :limit="MAX_PRODUCT_TAGS"
+        @update:tag-ids="updateProductTags"
+        :tags="productTags"
+        :loading="loadingProductTags || loadingTagGeneration"
+        :disabled="productTagsLoadFailed"
+      />
+      </section>
+      <section v-show="!inline || !activeSection || activeSection === 'media'" class="publish-content-group media-library" data-publish-section="media">
       <el-form-item :label="t('goLive.heroImage')">
         <div class="image-pair">
           <div class="image-upload-container">
@@ -180,15 +169,14 @@
       </el-form-item>
 
       <!-- Product images -->
-      <el-form-item :label="t('goLive.productImages')">
-        <div class="product-image-section">
-          <div class="product-image-download-row">
+      <el-form-item class="media-gallery">
+        <template #label><div class="media-section-heading"><span>{{ t('goLive.productImages') }}</span>          <div class="product-image-download-row">
             <el-dropdown
               trigger="click"
               :disabled="form.productImages.length === 0 || downloadingImages"
               @command="downloadAllProductImages"
             >
-              <el-button :icon="Download" :loading="downloadingImages">
+              <el-button class="download-images-action" text size="small" :icon="Download" :loading="downloadingImages">
                 {{ t('goLive.downloadAllImages') }}
               </el-button>
               <template #dropdown>
@@ -206,18 +194,20 @@
               </template>
             </el-dropdown>
           </div>
+</div></template>
+        <div class="product-image-section">
           <ProductImagesEditor
             v-model="productImageItems"
             image-type="product"
             :total-count="form.productImages.length"
             :max-total="PRODUCT_IMAGE_LIMIT"
           />
-          <div class="form-tip">{{ t('goLive.productImagesUsed', { count: form.productImages.length, max: PRODUCT_IMAGE_LIMIT }) }}</div>
+          <div class="form-tip">{{ t('goLive.productImagesUsed', { count: productImageItems.length, max: PRODUCT_IMAGE_LIMIT }) }}</div>
         </div>
       </el-form-item>
 
       <!-- Social images -->
-      <el-form-item :label="t('goLive.socialImages')">
+      <el-form-item class="media-gallery" :label="t('goLive.socialImages')">
         <div class="product-image-section">
           <ProductImagesEditor
             v-model="socialImageItems"
@@ -225,10 +215,22 @@
             :total-count="form.productImages.length"
             :max-total="PRODUCT_IMAGE_LIMIT"
           />
-          <div class="form-tip">{{ t('goLive.productImagesUsed', { count: form.productImages.length, max: PRODUCT_IMAGE_LIMIT }) }}</div>
+          <div class="form-tip">{{ t('goLive.productImagesUsed', { count: socialImageItems.length, max: PRODUCT_IMAGE_LIMIT }) }}</div>
         </div>
       </el-form-item>
 
+      <el-form-item :label="t('goLive.youtubeUrl')">
+        <el-input
+          v-model="form.youtubeUrl"
+          :placeholder="t('goLive.enterYoutubeUrl')"
+          clearable
+        />
+        <div class="form-tip">
+          {{ t('goLive.youtubeUrlTip') }}
+        </div>
+      </el-form-item>
+      </section>
+      <section v-show="!inline || !activeSection || activeSection === 'distribution'" class="publish-content-group" data-publish-section="distribution">
       <!-- Garmin Store URL -->
       <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl" required>
         <el-input 
@@ -240,31 +242,20 @@
           {{ t('goLive.garminStoreUrlTip') }}
         </div>
       </el-form-item>
-      <el-form-item :label="t('goLive.youtubeUrl')">
-        <el-input
-          v-model="form.youtubeUrl"
-          :placeholder="t('goLive.enterYoutubeUrl')"
-          clearable
-        />
-        <div class="form-tip">
-          {{ t('goLive.youtubeUrlTip') }}
-        </div>
-      </el-form-item>
+
 
       <BundleSelector
         v-model:bundleIds="form.bundleIds"
-        :bundles="bundles"
+        :bundles="availableBundles"
         :loadingBundles="loadingBundles"
       />
       <el-form-item :label="t('submitDesign.paymentMethod')">
-        <el-radio-group v-model="form.paymentMethod" :disabled="paymentMethodLocked" @change="handlePaymentMethodChange">
+        <el-radio-group v-model="form.paymentMethod" :disabled="loading || paymentMethodLocked" @change="handlePaymentMethodChange">
           <el-radio label="free">{{ t('payment.free') }}</el-radio>
           <el-radio label="wpay" :disabled="!canPublishPaid">WPay</el-radio>
           <el-radio v-if="userStore.isAdminUser" label="garmin">{{ t('payment.garminOfficial') }}</el-radio>
         </el-radio-group>
-        <span v-if="paymentMethodLocked" class="merchant-required-tip">
-          {{ t('payment.methodLockedAfterPublish') }}
-        </span>
+        <p v-if="paymentMethodLocked" class="form-tip payment-method-lock-reason" role="note">{{ t('payment.methodLockedAfterPublish') }}</p>
         <span v-if="!canPublishPaid" class="merchant-required-tip">
           {{ t('submitDesign.paidMerchantOnly') }}
         </span>
@@ -272,7 +263,7 @@
       <el-form-item v-if="form.paymentMethod === 'wpay'" :label="t('goLive.trialDurationHours')">
         <el-input-number 
           v-model="form.trialLasts" 
-          :disabled="true"
+          :disabled="loading"
           :min="0" 
           :max="720" 
           :precision="2"
@@ -285,7 +276,7 @@
       <el-form-item v-if="form.paymentMethod !== 'free'" :label="t('goLive.priceUsd')">
         <el-input-number 
           v-model="form.price" 
-          :disabled="true"
+          :disabled="loading"
           :min="1.99"
           :max="5.99"
           :precision="3"
@@ -295,22 +286,49 @@
           {{ t('goLive.priceTip') }}
         </div>
       </el-form-item>
-      <CompanionAppLinks :visible="dialogVisible" />
+      <CompanionAppLinks :visible="dialogVisible" />      <details class="application-identity" :open="!inline">
+        <summary v-if="inline">Application identity &amp; lifecycle <span>App ID, UUID and availability</span></summary>
+      <el-form-item :label="t('card.appId')">
+        <el-input v-model="form.appId" disabled>
+          <template #append>
+            <el-button @click="copyAppId" :icon="CopyDocument">{{ t('common.copy') }}</el-button>
+          </template>
+        </el-input>
+      </el-form-item>
+      <el-form-item :label="t('goLive.appUuid')">
+        <el-input class="app-uuid-input" v-model="form.garminAppUuid" :readonly="!userStore.isAdminUser" :disabled="loading || savingAppUuid || lifecycleBusy" maxlength="36">
+          <template #append>
+            <el-button @click="copyAppUuid" :icon="CopyDocument" :disabled="!form.garminAppUuid">{{ t('common.copy') }}</el-button>
+            <el-button v-if="userStore.isAdminUser" @click="saveAppUuid" :loading="savingAppUuid" :disabled="loading || lifecycleBusy || form.garminAppUuid === currentDesign?.product.garminAppUuid">{{ t('common.save') }}</el-button>
+          </template>
+        </el-input>
+      </el-form-item>
+      <el-form-item v-if="userStore.isAdminUser" :label="t('goLive.lifecycle')">
+        <el-button v-if="currentDesign?.product.status !== 0" data-testid="unpublish-app" type="danger" plain :disabled="loading || savingAppUuid || lifecycleBusy" @click="changeLifecycle('unpublish')">{{ t('goLive.unpublish') }}</el-button>
+        <template v-else>
+          <el-tag type="info">{{ t('goLive.unpublished') }}</el-tag>
+          <el-button data-testid="regenerate-uuid" :disabled="loading || savingAppUuid || lifecycleBusy" @click="changeLifecycle('regenerate')">{{ t('goLive.regenerateUuid') }}</el-button>
+          <div class="form-tip">{{ t('goLive.repackageHint') }}</div>
+        </template>
+      </el-form-item>
+      </details>
+      </section>
+
     </el-form>
     <template #footer>
-      <span class="dialog-footer">
-        <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
+      <span class="dialog-footer"><span v-if="inline" class="publish-save-note">Changes across all sections are published together.</span>
+        <el-button v-if="!inline" @click="handleCancel">{{ t('common.cancel') }}</el-button>
         <el-button 
           type="primary" 
           @click="handleConfirm"
           :loading="loading"
           :disabled="generatingBanner"
         >
-          {{ t('common.submit') }}
+          {{ inline ? 'Save & publish' : t('common.submit') }}
         </el-button>
       </span>
     </template>
-  </el-dialog>
+  </component>
   <el-dialog v-model="bannerConfirmVisible" :title="t('goLive.generateBanner')" width="min(520px, 94vw)" append-to-body :close-on-click-modal="false">
     <p v-if="bannerCreditCost !== null">{{ t('goLive.bannerCreditCost', { cost: bannerCreditCost }) }}</p>
     <p class="form-tip">{{ t('goLive.bannerChargeNotice') }}</p>
@@ -328,6 +346,9 @@
 </template>
 
 <script setup lang="ts">
+import { publishSectionCopy, publishSectionForInvalidFields, type PublishSection } from './publishSections'
+import InlinePublishPanel from './InlinePublishPanel.vue'
+import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
 import CompanionAppLinks from '@/components/common/CompanionAppLinks.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 
@@ -343,7 +364,7 @@ import { Design } from '@/types/api/design'
 import { getAiCapabilities, getAiPrices, type AiCapabilities, type AiPrices } from '@/api/wristo/studioAi'
 import { Plus, CopyDocument, Download, QuestionFilled, Refresh } from '@element-plus/icons-vue'
 import { uploadBase64Image } from '@/utils/image'
-import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
+import { ElDialog, ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
@@ -425,6 +446,8 @@ const loadDescriptionConfig = async () => {
   }
 }
 
+const props = defineProps<{ inline?: boolean; activeSection?: PublishSection }>()
+const membershipGate = useStudioMembershipGate()
 const dialogVisible = ref(false)
 const loading = ref(false)
 const downloadingImages = ref(false)
@@ -632,9 +655,16 @@ const downloadAllProductImages = async (mode: ProductImageDownloadMode) => {
 
 const messageStore = useMessageStore()
 const userStore = useUserStore()
-const emit = defineEmits(['success', 'cancel'])
+const emit = defineEmits(['success', 'cancel', 'section-change'])
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
+const availableBundles = computed(() => {
+  const byId = new Map<number, Bundle>()
+  for (const bundle of [...bundles.value, ...(currentDesign.value?.product?.bundles || [])]) {
+    byId.set(Number(bundle.bundleId), { ...bundle, bundleId: Number(bundle.bundleId) })
+  }
+  return [...byId.values()]
+})
 
 let descriptionTagSuffix = ''
 const updateProductTags = (ids: number[]) => {
@@ -758,7 +788,7 @@ const loadDesign = (design: Design) => {
   delete form.descriptions.en
   descriptionLanguage.value = 'en'
   restoreCurrentProductTags()
-  form.bundleIds = design.product.bundles.map((bundle: Bundle) => bundle.bundleId)
+  form.bundleIds = (design.product.bundles || []).map((bundle: Bundle) => Number(bundle.bundleId))
   
   // 如果已有产品信息，使用现有数据
   if (design.product) {
@@ -797,14 +827,19 @@ const loadDesign = (design: Design) => {
 
 // 提交表单
 const handleConfirm = async () => {
-  if (!currentDesign.value || generatingBanner.value) return
+  if (!currentDesign.value || loading.value || generatingBanner.value || lifecycleBusy.value) return
+  if (props.inline && !membershipGate.requirePublish()) return
 
   if (productTagsLoadFailed.value) {
+    if (props.inline) emit('section-change', 'listing')
     messageStore.error(t('productTags.loadFailed'))
     return
   }
 
-  const valid = await formRef.value?.validate?.().catch(() => false)
+  const valid = await formRef.value?.validate?.().catch((fields: Record<string, unknown>) => {
+    if (props.inline) emit('section-change', publishSectionForInvalidFields(fields || {}))
+    return false
+  })
   if (valid === false) return
   if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 1.99 || form.price > 5.99)) {
     messageStore.error(t('submitDesign.priceRange'))
@@ -814,11 +849,13 @@ const handleConfirm = async () => {
   
   // 验证必填字段
   if (!form.garminImageUrl.trim()) {
+    if (props.inline) emit('section-change', 'media')
     messageStore.error(t('goLive.enterGarminImageUrl'))
     return
   }
   
   if (!form.garminStoreUrl.trim()) {
+    if (props.inline) emit('section-change', 'distribution')
     messageStore.error(t('goLive.enterGarminStoreUrlRequired'))
     return
   }
@@ -860,7 +897,7 @@ const handleConfirm = async () => {
     await productsApi.publish(data)
     messageStore.success(t('goLive.productUpdated'))
     emit('success')
-    dialogVisible.value = false
+    if (!props.inline) dialogVisible.value = false
   } finally {
     loading.value = false
   }
@@ -871,10 +908,36 @@ const handleCancel = () => {
   dialogVisible.value = false
 }
 
+const lifecycleBusy = ref(false)
+const changeLifecycle = async (action: 'unpublish' | 'regenerate'): Promise<void> => {
+  if (!userStore.isAdminUser || !currentDesign.value || lifecycleBusy.value || loading.value || savingAppUuid.value) return
+  const product = currentDesign.value.product
+  lifecycleBusy.value = true
+  try {
+    await ElMessageBox.confirm(t(action === 'unpublish' ? 'goLive.unpublishConfirm' : 'goLive.regenerateConfirm'), t('goLive.lifecycle'), { type: 'warning' })
+    if (action === 'unpublish') {
+      await productsApi.unpublish(product.appId)
+      product.status = 0
+    } else {
+      const response = await productsApi.regenerateAppUuid(product.appId)
+      if (!response.data) throw new Error(t('common.saveFailed'))
+      product.garminAppUuid = response.data
+      if (currentDesign.value?.product === product) form.garminAppUuid = response.data
+    }
+    product.garminStoreUrl = ''
+    if (currentDesign.value?.product === product) form.garminStoreUrl = ''
+    messageStore.success(t(action === 'unpublish' ? 'goLive.unpublished' : 'goLive.uuidRegenerated'))
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') showErrorOnce(error, t('common.saveFailed'))
+  } finally {
+    lifecycleBusy.value = false
+  }
+}
+
 const savingAppUuid = ref(false)
 
 const saveAppUuid = async (): Promise<void> => {
-  if (!userStore.isAdminUser || !currentDesign.value || savingAppUuid.value) return
+  if (!userStore.isAdminUser || !currentDesign.value || savingAppUuid.value || lifecycleBusy.value) return
   const uuid = form.garminAppUuid.trim()
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
     messageStore.error(t('goLive.invalidAppUuid'))
@@ -1190,6 +1253,16 @@ defineExpose({
 </script>
 
 <style scoped>
+.media-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.media-section-heading .product-image-download-row { margin: 0; }
+.download-images-action { color: var(--studio-text-muted); font-size: 12px; font-weight: 400; }
+
+.section-intro { font-size: 13px; color: var(--studio-text-muted); margin: 6px 0 0; line-height: 1.5; }
+.publish-save-note { font-size: 11px; color: var(--studio-text-muted); line-height: 1.4; }
+.application-identity { margin-top: 24px; border-top: 1px solid var(--studio-border); padding-top: 18px; }
+.application-identity summary { cursor: pointer; color: var(--studio-text); font-size: 13px; margin-bottom: 18px; font-weight: 600; }
+.application-identity summary span { display: block; margin-top: 3px; font-size: 11px; font-weight: 400; color: var(--studio-text-muted); }
+
 .publish-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-right: 24px; }
 
 .banner-container { position: relative; width: 240px; max-width: 100%; }
