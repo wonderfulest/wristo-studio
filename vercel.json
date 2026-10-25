@@ -9,8 +9,20 @@
       "destination": "https://api.wristo.io/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/guides/create-garmin-watch-face",
+      "destination": "/guides/create-garmin-watch-face/index.html"
+    },
+    {
+      "source": "/guides/install-garmin-watch-face",
+      "destination": "/guides/install-garmin-watch-face/index.html"
+    },
+    {
+      "source": "/:app(auth|faces|tokens|moon|prg-installer|create-watch-face|wiki|academy|data-catalog-unavailable|design|designs|fonts|number-font-library|icon-library|weather-font-library|icon-assets|FAQ|devices|tickets|meter|profile|design-unlocks|design-slots|credits|pricing|packaging-logs)/:path*",
+      "destination": "/app.html"
     }
   ],
   "headers": [

@@ -1,3 +1,4 @@
+import { searchPages } from '@/content/searchPages'
 const STUDIO_ROLE_CODES = new Set(['ROLE_ADMIN', 'ROLE_MERCHANT'])
 
 type StudioUser =
@@ -54,6 +55,7 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
 
 export const requiresStudioLogin = (path: string) => {
   const normalized = path.replace(/\/$/, '') || '/'
-  return !['/', '/tokens', '/faces', '/wiki', '/academy', '/auth/callback', '/auth/signed-out'].includes(normalized)
+  return !searchPages.some(page => page.path === normalized)
+    && !['/', '/tokens', '/faces', '/wiki', '/academy', '/auth/callback', '/auth/signed-out'].includes(normalized)
     && !/^\/faces\/[^/]+$/.test(normalized)
 }

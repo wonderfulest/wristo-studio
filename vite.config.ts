@@ -1,3 +1,4 @@
+import { searchPagesPlugin } from './scripts/search-pages'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
@@ -41,10 +42,12 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_SEMIANNUAL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_SEMIANNUAL || ''),
       'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_ANNUAL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_ANNUAL || ''),
       'import.meta.env.VITE_WRISTO_STUDIO_PADDLE_PRICE_PREMIUM_30D': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_PADDLE_PRICE_PREMIUM_30D || ''),
+      'import.meta.env.VITE_WRISTO_STUDIO_URL': JSON.stringify(rootEnv.VITE_WRISTO_STUDIO_URL || 'https://studio.wristo.io'),
       'import.meta.env.VITE_WRISTO_STORE_URL': JSON.stringify(rootEnv.VITE_WRISTO_STORE_URL || 'https://wristo.io'),
     },
     plugins: [
       vue(),
+      searchPagesPlugin(rootEnv.VITE_WRISTO_STUDIO_URL || 'https://studio.wristo.io'),
       Components({
         resolvers: [ElementPlusResolver({ importStyle: 'css' })],
       }),

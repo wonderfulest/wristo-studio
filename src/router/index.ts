@@ -1,3 +1,5 @@
+import { searchPages } from '@/content/searchPages'
+import { applySearchSeo } from '@/content/searchSeo'
 import { trackConversion } from '@/utils/studioConversion'
 import { wikiRoutes } from './wikiRoutes'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
@@ -24,6 +26,11 @@ const ensureDesignDataCatalog = (to: { path: string; fullPath: string }) =>
   shouldLoadDataCatalog(to.path) ? loadDesignDataCatalog(to.fullPath) : true
 
 const routes: RouteRecordRaw[] = [
+  ...searchPages.map(page => ({
+    path: page.path,
+    component: () => import('@/views/public/SearchPage.vue'),
+    meta: { requiresAuth: false },
+  })),
   {
     path: '/create-watch-face',
     name: 'CreateWatchFaceGuide',
@@ -95,9 +102,8 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    name: 'Home',
+    name: 'Workspace',
     component: Layout,
-    redirect: '/faces',
     meta: { requiresAuth: true },
     children: [
       {
@@ -291,6 +297,7 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to, _from, failure) => {
+  if (!failure) applySearchSeo(to.path)
   if (!failure && to.path === '/design') trackConversion('design_start', useUserStore().token || '')
 })
 

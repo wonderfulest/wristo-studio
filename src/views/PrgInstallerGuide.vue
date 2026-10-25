@@ -33,12 +33,15 @@
           <div>
             <h3>{{ t(`prgInstallerGuide.deviceStep${number}Title`) }}</h3>
             <p>{{ t(`prgInstallerGuide.deviceStep${number}Body`) }}</p>
+            <a v-if="number === 2" class="download-jump" href="#prg-installer-downloads" @click.prevent="scrollToDownloads">
+              {{ t('prgInstallerGuide.jumpToDownloads') }} <span aria-hidden="true">↓</span>
+            </a>
           </div>
         </li>
       </ol>
     </section>
 
-    <div class="download-heading">
+    <div id="prg-installer-downloads" ref="downloadHeading" class="download-heading" tabindex="-1">
       <h2>{{ t('prgInstallerGuide.download') }}</h2>
       <p>{{ t(activeAudience === 'watch' ? 'prgInstallerGuide.downloadHint' : 'prgInstallerGuide.designerDownloadHint') }}</p>
     </div>
@@ -204,6 +207,13 @@ import { detectPrgInstallerPlatform, getPrgInstallerReleases, type PrgInstallerP
 import { loadPrgInstallerReleases, type MacPrgInstallerArch, type WindowsInstallerKind } from '@/features/prg-installer/manifest'
 
 const { t } = useI18n()
+const downloadHeading = ref<HTMLElement | null>(null)
+const scrollToDownloads = () => {
+  const target = downloadHeading.value
+  if (!target) return
+  target.focus({ preventScroll: true })
+  target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
+}
 const audiences = ['watch', 'designer'] as const
 const activeAudience = ref<(typeof audiences)[number]>('watch')
 const platforms: PrgInstallerPlatform[] = ['windows', 'mac']
@@ -246,6 +256,24 @@ const steps = [
 </script>
 
 <style scoped>
+.download-heading {
+  scroll-margin-top: 112px;
+}
+.download-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--el-color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.download-jump:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 4px;
+}
+
 .prg-installer-guide {
   max-width: 1120px;
   margin: 0 auto;
