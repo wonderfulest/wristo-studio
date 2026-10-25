@@ -66,27 +66,32 @@ beforeEach(() => {
 })
 
 describe('PRG Installer guide', () => {
-  it('shows both platforms and the shared five-step workflow', () => {
+  it('defaults to watch installation without simulator setup and switches between audiences', async () => {
     const page = wrapper()
     expect(page.text()).toContain('prgInstallerGuide.platformMac')
     expect(page.text()).toContain('prgInstallerGuide.platformWindows')
+    expect(page.find('[data-test="watch-install"]').exists()).toBe(true)
+    expect(page.find('[data-test="designer-preview"]').exists()).toBe(false)
+    expect(page.find('a.sdk-link').exists()).toBe(false)
+    expect(page.text()).toContain('prgInstallerGuide.manualTitle')
+    await page.get('[data-test="audience-designer"]').trigger('click')
     expect(page.findAll('[data-test="prg-installer-step"]')).toHaveLength(5)
+    expect(page.find('[data-test="watch-install"]').exists()).toBe(false)
+    expect(page.find('a.sdk-link').exists()).toBe(true)
+    expect(page.text()).not.toContain('prgInstallerGuide.manualTitle')
+    await page.get('[data-test="switch-to-watch"]').trigger('click')
+    expect(page.get('[data-test="audience-watch"]').attributes('aria-pressed')).toBe('true')
+    expect(page.find('[data-test="watch-install"]').exists()).toBe(true)
   })
 
   it('shows safe fallback download links for each published installer', async () => {
     const page = wrapper()
     await flushPromises()
-    expect(page.get('[data-test="prg-installer-download-mac"]').attributes('href')).toBe(
-      'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg'
-    )
+    expect(page.get('[data-test="prg-installer-download-mac"]').attributes('href')).toBe('https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_macos_arm64.dmg')
     expect(page.get('[data-test="prg-installer-download-mac"]').attributes('rel')).toBe('noopener noreferrer')
     expect(page.get('[data-test="prg-installer-mac-architecture-label"]').text()).toBe('Apple Silicon (arm64)')
-    expect(page.get('[data-test="prg-installer-download-windows-exe"]').attributes('href')).toBe(
-      'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe'
-    )
-    expect(page.get('[data-test="prg-installer-download-windows-msi"]').attributes('href')).toBe(
-      'https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi'
-    )
+    expect(page.get('[data-test="prg-installer-download-windows-exe"]').attributes('href')).toBe('https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64_setup.exe')
+    expect(page.get('[data-test="prg-installer-download-windows-msi"]').attributes('href')).toBe('https://cdn.wristo.io/prg-installer/releases/0.1.0/Wristo_PRG_Installer_0.1.0_windows_x64.msi')
   })
 
   it('replaces fallback metadata and requires a choice when multiple macOS architectures exist', async () => {

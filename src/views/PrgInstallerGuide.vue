@@ -9,18 +9,45 @@
       </div>
     </header>
 
+    <nav class="audience-nav" :aria-label="t('prgInstallerGuide.chooseAudience')">
+      <button v-for="audience in audiences" :key="audience" type="button" :data-test="`audience-${audience}`" :aria-pressed="activeAudience === audience" @click="activeAudience = audience">
+        <strong>{{ t(`prgInstallerGuide.${audience}Title`) }}</strong>
+        <span>{{ t(`prgInstallerGuide.${audience}Summary`) }}</span>
+      </button>
+    </nav>
+
+    <section class="audience-intro" aria-live="polite">
+      <h2>{{ t(`prgInstallerGuide.${activeAudience}Title`) }}</h2>
+      <p>{{ t(`prgInstallerGuide.${activeAudience}Intro`) }}</p>
+    </section>
+
+    <section v-if="activeAudience === 'watch'" class="guide-section" data-test="watch-install">
+      <div class="section-heading">
+        <span>01</span>
+        <h2>{{ t('prgInstallerGuide.deviceTitle') }}</h2>
+      </div>
+      <p class="method-note">{{ t('prgInstallerGuide.deviceAvailability') }}</p>
+      <ol class="steps">
+        <li v-for="number in 4" :key="number">
+          <div class="step-number">{{ number }}</div>
+          <div>
+            <h3>{{ t(`prgInstallerGuide.deviceStep${number}Title`) }}</h3>
+            <p>{{ t(`prgInstallerGuide.deviceStep${number}Body`) }}</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <div class="download-heading">
+      <h2>{{ t('prgInstallerGuide.download') }}</h2>
+      <p>{{ t(activeAudience === 'watch' ? 'prgInstallerGuide.downloadHint' : 'prgInstallerGuide.designerDownloadHint') }}</p>
+    </div>
     <el-tabs v-model="activePlatform" class="platform-tabs">
       <el-tab-pane v-for="platform in platforms" :key="platform" :name="platform" :label="platformLabel(platform)">
         <section v-if="platform === 'mac'" class="download-card">
           <div>
             <h2>{{ platformLabel(platform) }}</h2>
-            <select
-              v-if="macArchitectures.length > 1"
-              v-model="activeMacArchitecture"
-              class="architecture-select"
-              data-test="prg-installer-mac-architecture"
-              aria-label="macOS architecture"
-            >
+            <select v-if="macArchitectures.length > 1" v-model="activeMacArchitecture" class="architecture-select" data-test="prg-installer-mac-architecture" aria-label="macOS architecture">
               <option :value="null" disabled>Architecture</option>
               <option v-for="arch in macArchitectures" :key="arch" :value="arch">{{ architectureLabel(arch) }}</option>
             </select>
@@ -77,8 +104,7 @@
                 v-if="windowsInstallerFor(kind).available && windowsInstallerFor(kind).url"
                 :data-test="`prg-installer-download-windows-${kind}`"
                 :href="windowsInstallerFor(kind).url!"
-                rel="noopener noreferrer"
-              >
+                rel="noopener noreferrer">
                 <el-button :type="kind === 'exe' ? 'primary' : 'default'" size="large">{{ t('prgInstallerGuide.download') }}</el-button>
               </a>
               <el-button v-else :data-test="`prg-installer-download-windows-${kind}-unavailable`" size="large" disabled>
@@ -93,7 +119,7 @@
       </el-tab-pane>
     </el-tabs>
 
-    <section data-onboarding="install" class="guide-section">
+    <section v-if="activeAudience === 'designer'" data-onboarding="install" class="guide-section" data-test="designer-preview">
       <div class="section-heading">
         <span>01</span>
         <h2>{{ t('prgInstallerGuide.getReady') }}</h2>
@@ -110,7 +136,7 @@
       <a class="sdk-link" href="https://developer.garmin.com/connect-iq/sdk/" target="_blank" rel="noopener noreferrer">{{ t('prgInstallerGuide.garminSdk') }} ↗</a>
     </section>
 
-    <section class="guide-section manual-install" aria-labelledby="manual-install-title">
+    <section v-if="activeAudience === 'watch'" class="guide-section manual-install" aria-labelledby="manual-install-title">
       <div class="section-heading">
         <span>02</span>
         <h2 id="manual-install-title">{{ t('prgInstallerGuide.manualTitle') }}</h2>
@@ -122,6 +148,8 @@
         <li>{{ t('prgInstallerGuide.manualStep2') }}</li>
         <li>{{ t('prgInstallerGuide.manualStep3') }}</li>
       </ol>
+      <p>{{ t('prgInstallerGuide.usbWindows') }}</p>
+      <p>{{ t('prgInstallerGuide.usbMac') }}</p>
       <p class="manual-note">{{ t('prgInstallerGuide.manualNote') }}</p>
     </section>
 
@@ -133,7 +161,8 @@
         </div>
         <ul>
           <li>{{ t('prgInstallerGuide.deviceLimit') }}</li>
-          <li>{{ t('prgInstallerGuide.simulatorLimit') }}</li>
+          <li v-if="activeAudience === 'designer'">{{ t('prgInstallerGuide.simulatorLimit') }}</li>
+          <li v-else>{{ t('prgInstallerGuide.manualNote') }}</li>
         </ul>
       </section>
       <section class="guide-section compact">
@@ -142,13 +171,24 @@
           <h2>{{ t('prgInstallerGuide.troubleshootingTitle') }}</h2>
         </div>
         <ul>
-          <li>{{ t('prgInstallerGuide.troublePrgInstaller') }}</li>
-          <li>{{ t('prgInstallerGuide.troubleSdk') }}</li>
-          <li>{{ t('prgInstallerGuide.troubleSimulator') }}</li>
+          <template v-if="activeAudience === 'designer'">
+            <li>{{ t('prgInstallerGuide.troublePrgInstaller') }}</li>
+            <li>{{ t('prgInstallerGuide.troubleSdk') }}</li>
+            <li>{{ t('prgInstallerGuide.troubleSimulator') }}</li>
+          </template>
+          <template v-else>
+            <li>{{ t('prgInstallerGuide.troubleUsb') }}</li>
+            <li>{{ t('prgInstallerGuide.troubleModel') }}</li>
+          </template>
         </ul>
       </section>
     </div>
 
+    <section v-if="activeAudience === 'designer'" class="guide-section">
+      <h2>{{ t('prgInstallerGuide.testWatchTitle') }}</h2>
+      <p>{{ t('prgInstallerGuide.simulatorLimit') }}</p>
+      <el-button data-test="switch-to-watch" @click="activeAudience = 'watch'">{{ t('prgInstallerGuide.watchTitle') }}</el-button>
+    </section>
     <footer>
       <router-link to="/designs">
         <el-button>{{ t('prgInstallerGuide.returnStudio') }}</el-button>
@@ -164,6 +204,8 @@ import { detectPrgInstallerPlatform, getPrgInstallerReleases, type PrgInstallerP
 import { loadPrgInstallerReleases, type MacPrgInstallerArch, type WindowsInstallerKind } from '@/features/prg-installer/manifest'
 
 const { t } = useI18n()
+const audiences = ['watch', 'designer'] as const
+const activeAudience = ref<(typeof audiences)[number]>('watch')
 const platforms: PrgInstallerPlatform[] = ['windows', 'mac']
 const releases = ref(getPrgInstallerReleases())
 const macReleases = ref<Partial<Record<MacPrgInstallerArch, PrgInstallerRelease>>>({})
@@ -208,6 +250,55 @@ const steps = [
   max-width: 1120px;
   margin: 0 auto;
   padding: 64px 28px 80px;
+}
+.audience-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.audience-nav button {
+  padding: 24px;
+  text-align: left;
+  border: 1px solid var(--studio-border);
+  border-radius: 16px;
+  background: var(--studio-surface-raised);
+  color: var(--studio-text);
+  cursor: pointer;
+  font: inherit;
+}
+.audience-nav button[aria-pressed='true'] {
+  border-color: #2563eb;
+  box-shadow: inset 0 0 0 1px #2563eb;
+}
+.audience-nav button:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+.audience-nav strong,
+.audience-nav span {
+  display: block;
+}
+.audience-nav strong {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.audience-nav span,
+.audience-intro p,
+.download-heading p {
+  line-height: 1.65;
+  color: var(--studio-text-secondary, #64748b);
+}
+.audience-intro {
+  margin-top: 28px;
+  padding: 4px 0;
+}
+.download-heading {
+  margin-top: 32px;
+}
+@media (max-width: 720px) {
+  .audience-nav {
+    grid-template-columns: 1fr;
+  }
 }
 .architecture-select {
   min-width: 210px;
