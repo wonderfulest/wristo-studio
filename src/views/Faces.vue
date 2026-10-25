@@ -102,6 +102,9 @@
                 <span v-if="face.download != null">↓ {{ face.download.toLocaleString() }}</span>
                 <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
               </div>
+              <RouterLink v-if="canEditFace(face)" class="face-edit" :to="{ path: '/design', query: { id: face.designId } }" :aria-label="`Edit ${face.name} in Builder`">
+                Edit in Builder <span aria-hidden="true">↗</span>
+              </RouterLink>
             </div>
           </article>
         </div>
@@ -158,8 +161,13 @@ import { useRoute } from 'vue-router'
 import '@fontsource/roboto-condensed/latin-700.css'
 import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
+import { useUserStore } from '@/stores/user'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
 import { faceDetailsUrl, faceImage, loadFaces, loadFaceDevices, type PublishedFace, type FaceDevice } from './faces/catalog'
+const userStore = useUserStore()
+function canEditFace(face: PublishedFace) {
+  return !!face.designId && (userStore.isAdminUser || (userStore.userInfo?.id != null && face.ownerId != null && String(userStore.userInfo.id) === String(face.ownerId)))
+}
 const faces = ref<PublishedFace[]>([])
 const featured = ref<PublishedFace[]>([])
 const devices = ref<FaceDevice[]>([])
@@ -503,6 +511,22 @@ h2 {
 }
 .face-meta span:first-child {
   margin-right: auto;
+}
+.face-edit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border: 1px solid #dbe2cf;
+  border-radius: 6px;
+  background: #f1f4e9;
+  font-size: 14px;
+  font-weight: 700;
+}
+.face-edit:hover {
+  background: var(--accent);
 }
 .image-placeholder {
   font-size: 12px;

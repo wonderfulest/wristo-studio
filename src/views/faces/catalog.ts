@@ -1,4 +1,5 @@
 export interface PublishedFace {
+  ownerId?: number
   appId: number
   designId?: string | null
   name: string
@@ -24,7 +25,6 @@ export interface FaceDevice {
   displayName: string
 }
 export interface FaceDetail extends PublishedFace {
-  ownerId?: number
   publiclyVisible?: boolean
   allowRemix?: boolean
   configJson?: unknown
