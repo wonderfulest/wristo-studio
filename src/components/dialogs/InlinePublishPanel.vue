@@ -44,5 +44,57 @@ footer { position: sticky; bottom: 0; z-index: 2; margin: 24px -24px -24px; padd
 .inline-publish-panel :deep(.media-library .product-image-thumb) { object-fit: contain; padding: 6px; box-sizing: border-box; }
 .inline-publish-panel :deep(.media-library .upload-card) { background: var(--studio-surface-soft); border-radius: 8px; box-sizing: border-box; }
 .inline-publish-panel :deep(.media-library .image-wrapper:focus-within .delete-button) { opacity: 1; }
+.inline-publish-panel :deep(.media-library > .media-primary-card) {
+  padding: 18px;
+  border: 1px solid var(--studio-border);
+  border-radius: 12px;
+  background: var(--studio-surface-soft);
+}
+.inline-publish-panel :deep(.media-primary-card > .el-form-item__label) {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.inline-publish-panel :deep(.media-primary-card .image-pair) { gap: 16px; }
+.inline-publish-panel :deep(.media-primary-card .image-upload-container) { gap: 8px; }
+.inline-publish-panel :deep(.media-primary-card .upload-title-row) { line-height: 20px; gap: 6px; }
+.inline-publish-panel :deep(.media-primary-card .box) {
+  border-style: solid;
+  border-radius: 10px;
+  background: var(--studio-surface-raised);
+}
+.inline-publish-panel :deep(.media-primary-card .ratio-tip) {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.inline-publish-panel :deep(.media-banner-card .banner-container) {
+  width: 100%;
+  padding-top: 28px;
+}
+.inline-publish-panel :deep(.media-banner-card .banner-refresh) { top: -4px; right: 0; }
+.inline-publish-panel :deep(.media-banner-card .tip-icon) { top: 1px; right: 34px; }
+.inline-publish-panel :deep(.media-banner-card .image-uploader .el-upload) { display: flex; width: 100%; }
+.inline-publish-panel :deep(.media-banner-card .banner-area) {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+  border-width: 1px;
+  border-radius: 10px;
+  background: var(--studio-surface-raised);
+}
+.inline-publish-panel :deep(.media-banner-card .banner-area:hover) {
+  background: var(--studio-primary-soft);
+  border-color: var(--studio-primary);
+}
+.inline-publish-panel :deep(.media-banner-card .upload-placeholder) { gap: 10px; font-size: 12px; line-height: 1.5; }
+.inline-publish-panel :deep(.media-banner-card .upload-icon) {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
+  font-size: 20px;
+}
 @media (max-width: 1100px) { .inline-publish-panel :deep(.media-library) { grid-template-columns: minmax(0, 1fr); } }
 </style>

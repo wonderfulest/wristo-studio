@@ -10,15 +10,26 @@
       <p>Role allowance: {{ membership?.baseDesignLimit ?? 'Unlimited' }} · Extra slots: {{ membership?.extraDesignSlots ?? 0 }}</p>
       <p v-if="membership?.maxDesigns == null">Your current role already allows unlimited designs. Extra slots remain yours if your plan changes.</p>
       <p v-else-if="!user.canCreateDesign">Your design allowance is full. Add a slot, upgrade your plan, or delete an existing design to create another.</p>
-      <div class="purchase-options">
-        <article><h3>Use credits</h3><strong>{{ catalog.creditCost }} credits</strong><p>Balance: {{ balance ?? '—' }} credits</p>
-          <button :disabled="busy || !catalog.creditsAvailable || balance == null || balance < catalog.creditCost" @click="redeem">Redeem 1 slot</button>
-          <RouterLink v-if="balance != null && balance < catalog.creditCost" to="/credits">Get credits</RouterLink>
-          <p v-if="!catalog.creditsAvailable">Credit redemption is currently unavailable.</p>
+      <div class="tier-options" role="group" aria-label="Choose additional design slots">
+        <button v-for="pack in catalog.packs" :key="pack.code" class="tier" :class="{ selected: selectedCode === pack.code }"
+          :aria-pressed="selectedCode === pack.code" :disabled="busy" @click="selectedCode = pack.code">
+          <span class="tier-label">{{ pack.slots === 5 ? 'Recommended' : pack.slots === 10 ? 'Best value' : 'Permanent slots' }}</span>
+          <strong>{{ pack.slots }} {{ pack.slots === 1 ? 'slot' : 'slots' }}</strong>
+          <strong>{{ money(pack.priceCents) }}</strong>
+          <span>{{ money(pack.priceCents / pack.slots) }} / slot</span>
+          <span>{{ pack.creditCost.toLocaleString('en-US') }} credits</span>
+          <span v-if="savings(pack.priceCents, pack.slots) > 0">Save {{ savings(pack.priceCents, pack.slots) }}%</span>
+        </button>
+      </div>
+      <div v-if="selectedPack" class="purchase-options">
+        <article><h3>Use credits</h3><strong>{{ selectedPack.creditCost }} credits</strong><p>Balance: {{ balance ?? '—' }} credits</p>
+          <button :disabled="busy || !selectedPack.creditsAvailable || balance == null || balance < selectedPack.creditCost" @click="redeem">Redeem {{ selectedPack.slots }} {{ selectedPack.slots === 1 ? 'slot' : 'slots' }}</button>
+          <RouterLink v-if="balance != null && balance < selectedPack.creditCost" to="/credits">Get credits</RouterLink>
+          <p v-if="!selectedPack.creditsAvailable">Credit redemption is currently unavailable.</p>
         </article>
-        <article><h3>Pay once</h3><strong>{{ money(catalog.priceCents) }}</strong><p>One permanent slot · before tax</p>
-          <button :disabled="busy || !catalog.available || !paymentReady" @click="buy">Buy 1 slot</button>
-          <p v-if="!catalog.available || !paymentReady">Cash purchases are not available yet.</p>
+        <article><h3>Pay once</h3><strong>{{ money(selectedPack.priceCents) }}</strong><p>{{ selectedPack.slots }} permanent {{ selectedPack.slots === 1 ? 'slot' : 'slots' }} · before tax</p>
+          <button :disabled="busy || !selectedPack.available || !paymentReady" @click="buy">Buy {{ selectedPack.slots }} {{ selectedPack.slots === 1 ? 'slot' : 'slots' }}</button>
+          <p v-if="!selectedPack.available || !paymentReady">Cash purchases are not available yet.</p>
         </article>
       </div>
       <p>Slots do not expire. Subscription changes never delete your existing designs.</p>
@@ -26,7 +37,7 @@
     </section>
     <p v-if="notice" role="status">{{ notice }}</p>
     <section v-if="orders.length" class="slot-card"><h2>Recent slot purchases</h2>
-      <div v-for="order in orders" :key="order.id" class="order"><span>{{ new Date(order.createdAt).toLocaleDateString() }} · {{ money(order.priceCents) }} · {{ order.status }}</span>
+      <div v-for="order in orders" :key="order.id" class="order"><span>{{ new Date(order.createdAt).toLocaleDateString() }} · {{ order.slots }} slots · {{ money(order.priceCents) }} · {{ order.status }}</span>
         <button v-if="order.transactionId" :disabled="busy" @click="check(order, true)">Check / resume payment</button></div>
       <p>If you have already paid, check the order before starting another payment.</p>
     </section>
@@ -41,12 +52,20 @@ import { useUserStore } from '@/stores/user'
 import { loadPaddle, onPaddleEvent, paddleConfigured } from '@/utils/paddleCheckout'
 const user = useUserStore(), membership = computed(() => user.studioMembership)
 const catalog = ref<SlotCatalog>(), balance = ref<number>(), orders = ref<SlotOrder[]>([])
+const selectedCode = ref('design-slot-5')
+const selectedPack = computed(() => catalog.value?.packs.find(pack => pack.code === selectedCode.value))
+const savings = (price: number, slots: number) => {
+  const single = catalog.value?.packs.find(pack => pack.slots === 1)?.priceCents
+  return single ? Math.max(0, Math.round((1 - price / (single * slots)) * 100)) : 0
+}
 const busy = ref(false), loading = ref(false), error = ref(''), notice = ref('')
 const paymentReady = paddleConfigured()
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
-let generation = 0, redeemId = '', purchaseId = '', client: Awaited<ReturnType<typeof loadPaddle>> | undefined
-const key = () => `studio-slot-requests:${user.userInfo?.id}`
-function persist() { try { sessionStorage.setItem(key(), JSON.stringify({ redeemId, purchaseId })) } catch { /* Retain request IDs in memory. */ } }
+let requests: Record<string, { redeemId?: string; purchaseId?: string }> = {}
+const requestFor = (code: string) => requests[code] ||= {}
+let generation = 0, client: Awaited<ReturnType<typeof loadPaddle>> | undefined
+const key = () => `studio-slot-package-requests:${user.userInfo?.id}`
+function persist() { try { sessionStorage.setItem(key(), JSON.stringify(requests)) } catch { /* Retain request IDs in memory. */ } }
 async function load() {
   const current = generation; loading.value = true; error.value = ''
   try {
@@ -57,15 +76,15 @@ async function load() {
   finally { if (current === generation) loading.value = false }
 }
 async function redeem() {
-  if (busy.value || !catalog.value) return
-  const cost = catalog.value.creditCost, current = generation
-  try { await ElMessageBox.confirm(`Spend ${cost} credits for 1 permanent design slot?`, 'Add a design slot', { confirmButtonText: 'Redeem', cancelButtonText: 'Cancel' }) } catch { return }
+  if (busy.value || !selectedPack.value) return
+  const pack = selectedPack.value, cost = pack.creditCost, current = generation
+  try { await ElMessageBox.confirm(`Spend ${cost} credits for ${pack.slots} permanent design ${pack.slots === 1 ? 'slot' : 'slots'}?`, 'Add design slots', { confirmButtonText: 'Redeem', cancelButtonText: 'Cancel' }) } catch { return }
   if (current !== generation || busy.value) return
-  busy.value = true; error.value = ''; redeemId ||= crypto.randomUUID(); persist()
+  busy.value = true; error.value = ''; const pending = requestFor(pack.code); pending.redeemId ||= crypto.randomUUID(); persist()
   try {
-    await designSlotsApi.redeem(redeemId, cost)
+    await designSlotsApi.redeem(pending.redeemId, cost, pack.code)
     if (current !== generation) return
-    redeemId = ''; persist(); await load(); notice.value = 'Your permanent design slot is ready.'
+    pending.redeemId = ''; persist(); await load(); notice.value = `${pack.slots} permanent design ${pack.slots === 1 ? 'slot is' : 'slots are'} ready.`
     window.dispatchEvent(new Event('studio-credits-changed'))
   } catch { if (current === generation) error.value = 'Redemption was not confirmed. Refresh your balance, then retry; the same request will not charge twice.' }
   finally { if (current === generation) busy.value = false }
@@ -76,19 +95,20 @@ async function open(order: SlotOrder) {
   client.Checkout.open({ transactionId: order.transactionId, customer: { email: user.userInfo?.email }, settings: { displayMode: 'overlay', locale: 'en', allowLogout: false, showAddDiscounts: false } })
 }
 async function buy() {
-  if (busy.value || !catalog.value?.available) return
-  const current = generation; busy.value = true; error.value = ''; purchaseId ||= crypto.randomUUID(); persist()
+  if (busy.value || !selectedPack.value?.available) return
+  const pack = selectedPack.value, current = generation, pending = requestFor(pack.code)
+  busy.value = true; error.value = ''; pending.purchaseId ||= crypto.randomUUID(); persist()
   try {
     client = await loadPaddle(); if (current !== generation) return
-    const result = await designSlotsApi.create(purchaseId, catalog.value.priceCents)
+    const result = await designSlotsApi.create(pending.purchaseId, pack.priceCents, pack.code)
     if (current !== generation || !result.data) return
     await accept(result.data); if (current === generation) await open(result.data)
   } catch { if (current === generation) error.value = 'Unable to open checkout. Retry to recover the same order.' }
   finally { if (current === generation) busy.value = false }
 }
 async function accept(order: SlotOrder) {
-  if (!['CREATING', 'PENDING'].includes(order.status)) { purchaseId = ''; persist() }
-  notice.value = order.status === 'PAID' ? 'Payment confirmed. Your permanent design slot is ready.' : `Order: ${order.status}. Your allowance updates after payment verification.`
+  if (!['CREATING', 'PENDING'].includes(order.status)) { requestFor(order.packageCode).purchaseId = ''; persist() }
+  notice.value = order.status === 'PAID' ? `Payment confirmed. ${order.slots} permanent design ${order.slots === 1 ? 'slot is' : 'slots are'} ready.` : `Order: ${order.status}. Your allowance updates after payment verification.`
   await load()
 }
 async function check(order: SlotOrder, resume = false) {
@@ -109,9 +129,9 @@ const unsubscribe = onPaddleEvent(event => {
 })
 watch(() => user.isAuthenticated ? user.userInfo?.id : null, () => {
   generation++; client?.Checkout.close(); catalog.value = undefined; orders.value = []; balance.value = undefined
-  busy.value = false; error.value = ''; notice.value = ''; redeemId = ''; purchaseId = ''
+  busy.value = false; error.value = ''; notice.value = ''; requests = {}; selectedCode.value = 'design-slot-5'
   if (!user.isAuthenticated) return
-  try { const saved = JSON.parse(sessionStorage.getItem(key()) || '{}'); redeemId = saved.redeemId || ''; purchaseId = saved.purchaseId || '' } catch { /* Use fresh request IDs. */ }
+  try { const saved = JSON.parse(sessionStorage.getItem(key()) || '{}'); if (saved && typeof saved === 'object' && !Array.isArray(saved)) requests = saved } catch { /* Use fresh request IDs. */ }
   void load()
 }, { immediate: true })
 onBeforeUnmount(() => { generation++; unsubscribe(); client?.Checkout.close() })
@@ -122,5 +142,10 @@ onBeforeUnmount(() => { generation++; unsubscribe(); client?.Checkout.close() })
 p { line-height: 1.7; color: var(--studio-text-muted); }.slot-card { background: var(--studio-surface); border: 1px solid var(--studio-border); border-radius: 16px; padding: 26px; margin: 24px 0; }
 .purchase-options { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; } article { border: 1px solid var(--studio-border); border-radius: 12px; padding: 24px; } article strong { font-size: 30px; }
 button { background: var(--studio-primary); color: white; border: none; border-radius: 8px; padding: 12px 18px; cursor: pointer; font: inherit; } button:disabled { opacity: .5; cursor: not-allowed; } a { color: var(--studio-primary); } article a { display: block; margin-top: 12px; } nav, .order { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; margin: 16px 0; } [role=alert] { color: #c44239; }
-@media(max-width:600px) { .purchase-options { grid-template-columns: 1fr; }.slots-page { padding: 24px 16px; }.slot-card { padding: 20px; } }
+.tier-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.tier { display: flex; flex-direction: column; gap: 10px; text-align: left; padding: 18px 14px; background: var(--studio-surface); color: var(--studio-text); border: 2px solid var(--studio-border); }
+.tier.selected { border-color: var(--studio-primary); background: color-mix(in srgb, var(--studio-primary) 8%, var(--studio-surface)); }
+.tier:focus-visible { outline: 3px solid var(--studio-primary); outline-offset: 3px; }
+.tier strong { font-size: 23px; }.tier span { font-size: 14px; }.tier .tier-label { color: var(--studio-primary); min-height: 20px; }
+@media(max-width:600px) { .tier-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }.purchase-options { grid-template-columns: 1fr; }.slots-page { padding: 24px 16px; }.slot-card { padding: 20px; } }
 </style>

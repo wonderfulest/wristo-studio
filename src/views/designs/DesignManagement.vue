@@ -748,5 +748,29 @@ onUnmounted(() => {
 <style scoped>
 .design-management { margin-top: 16px; }
 .management-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.management-heading > span { font-size: 9px; letter-spacing: 1.2px; color: var(--studio-text-subtle); }.management-heading :deep(.device-display) { font-size: 11px; }
+.management-heading > span { font-size: 9px; letter-spacing: 1.2px; color: var(--studio-text-subtle); }
+.management-heading :deep(.device-display-container) { min-width: 0; }
+.management-heading :deep(.device-info) {
+  min-width: 0;
+  min-height: 28px;
+  gap: 6px;
+  padding: 3px 6px;
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+}
+.management-heading :deep(.device-info:hover) {
+  border-color: var(--studio-border);
+  background: var(--studio-surface-soft);
+  box-shadow: none;
+}
+.management-heading :deep(.device-avatar) {
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
+  border: 0;
+  background: transparent;
+}
+.management-heading :deep(.device-avatar img) { padding: 0; background: transparent; }
+.management-heading :deep(.device-name) { font-size: 11px; }
 </style>

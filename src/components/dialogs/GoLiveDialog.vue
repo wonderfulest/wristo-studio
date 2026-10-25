@@ -88,7 +88,7 @@
       />
       </section>
       <section v-show="!inline || !activeSection || activeSection === 'media'" class="publish-content-group media-library" data-publish-section="media">
-      <el-form-item :label="t('goLive.heroImage')">
+      <el-form-item class="media-primary-card" :label="t('goLive.heroImage')">
         <div class="image-pair">
           <div class="image-upload-container">
             <div class="upload-title-row">
@@ -121,7 +121,7 @@
           </div>
         </div>
       </el-form-item>
-      <el-form-item :label="t('goLive.homepageBanner')">
+      <el-form-item class="media-primary-card media-banner-card" :label="t('goLive.homepageBanner')">
         <div class="image-upload-container banner-container" :aria-busy="generatingBanner">
           <el-button
             v-if="aiCapabilities.BANNER"
