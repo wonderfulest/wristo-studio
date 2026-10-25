@@ -12,6 +12,7 @@
       <article v-for="pack in packs" :key="pack.code" class="pack" :class="{ recommended: pack.recommended }">
         <div class="pack-heading"><h2>{{ pack.name }}</h2><span v-if="pack.recommended" class="badge">Recommended</span></div>
         <p class="pack-credits"><strong>{{ pack.credits }}</strong> credits</p>
+        <p v-if="watchfaceCost" class="pack-note" data-watchface-estimate>{{ t('credits.watchfaceEstimate', { count: Math.floor(pack.credits / watchfaceCost) }) }}<br>{{ t('credits.watchfaceEstimateBasis', { cost: watchfaceCost }) }}</p>
         <p class="pack-price">{{ money(pack.priceCents, pack.currency) }} <span>USD · one-time</span></p>
         <p class="unit-price">{{ money(pack.priceCents / pack.credits, pack.currency, 3) }} per credit</p>
         <button :data-buy="pack.code" class="buy-button" :disabled="!!busy || !pack.available || !clientReady" @click="buy(pack)">{{ busy === pack.code ? 'Opening checkout…' : `Buy ${pack.credits} Credits` }}</button>
@@ -44,12 +45,18 @@
 </template>
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useI18n } from '@/i18n'
 import { studioCreditsApi, type CreditOrder, type CreditPackage } from '@/api/wristo/studioCredits'
 import { getAiPrices, type AiPrices } from '@/api/wristo/studioAi'
 import { useUserStore } from '@/stores/user'
 import { loadPaddle, onPaddleEvent, paddleConfigured, type PaddleEvent } from '@/utils/paddleCheckout'
+const { t } = useI18n()
 const user = useUserStore()
 const packs = ref<CreditPackage[]>([]), orders = ref<CreditOrder[]>([]), prices = ref<AiPrices>()
+const watchfaceCost = computed(() => {
+  const cost = prices.value?.WATCHFACE
+  return typeof cost === 'number' && Number.isFinite(cost) && cost > 0 ? cost : null
+})
 const balance = ref<number>(), activeOrder = ref<CreditOrder>()
 const loading = ref(false), checking = ref(false), busy = ref(''), loadError = ref(''), error = ref('')
 const clientReady = paddleConfigured()
