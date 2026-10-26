@@ -190,11 +190,12 @@
       </section>
       </Teleport>
       <div v-if="summaryOnly" class="summary-meta">
-        <el-button v-if="isAdminUser && canDeleteCurrentAction" class="delete-action" type="danger" plain size="small" :loading="loadingStates.delete.has(design.id)" @click.stop="emit('delete', design)">
-          <el-icon><Delete /></el-icon>
-          {{ t('common.delete') }}
-        </el-button>
-        <span v-if="canViewBusinessMetrics && design.product" class="summary-downloads">{{ t('meter.downloads') }}: {{ downloadCountText }}</span>
+        <div v-if="(canViewBusinessMetrics && design.product) || (isAdminUser && canDeleteCurrentAction)" class="summary-downloads-row">
+          <span v-if="canViewBusinessMetrics && design.product" class="summary-downloads">{{ t('meter.downloads') }}: {{ downloadCountText }}</span>
+          <button v-if="isAdminUser && canDeleteCurrentAction" class="delete-action summary-delete-action" type="button" :aria-label="t('common.delete')" :title="t('common.delete')" :disabled="loadingStates.delete.has(design.id)" @click.stop="emit('delete', design)">
+            <el-icon><Delete /></el-icon>
+          </button>
+        </div>
         <div v-if="packageRows.length" class="package-info">
           <div v-for="row in packageRows" :key="row.key" class="package-info-item" :class="`package-${row.tone}`">
             <strong>{{ row.label }}:</strong>
@@ -1559,6 +1560,10 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card--summary.design-card--list :deep(.el-card__body),
 .design-card--summary.design-card--list .design-info { display: contents; }
 .design-card--summary.design-card--list .summary-meta { grid-column: 3; grid-row: 1; padding: 0; gap: 8px; }
+.summary-downloads-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.summary-delete-action { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-left: auto; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--studio-text-muted); font-size: 14px; cursor: pointer; }
+.summary-delete-action:hover { color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
+.summary-delete-action:disabled { opacity: 0.45; cursor: not-allowed; }
 .summary-downloads { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .design-card--summary .summary-meta .package-info { display: flex; flex-direction: column; gap: 2px; margin: 0; }
 .design-card--summary .summary-meta .package-icon-btn { text-decoration: none; flex-shrink: 0; }
