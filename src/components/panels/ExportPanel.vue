@@ -277,6 +277,7 @@ const requestCoverImageSaveChoice = async () => {
       {
         confirmButtonText: t('export.updateCover'),
         cancelButtonText: t('export.keepExistingCover'),
+        customClass: 'preview-image-confirm',
         distinguishCancelAndClose: true,
         type: 'warning',
       },
@@ -736,5 +737,37 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+</style>
+
+<style>
+.el-message-box.preview-image-confirm {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+}
+
+.preview-image-confirm .el-message-box__btns {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 20px;
+}
+
+.preview-image-confirm .el-message-box__btns .el-button {
+  margin: 0;
+  min-height: 36px;
+}
+
+@media (max-width: 520px) {
+  .preview-image-confirm .el-message-box__btns {
+    flex-direction: column;
+  }
+
+  .preview-image-confirm .el-message-box__btns .el-button {
+    width: 100%;
+    height: auto;
+    white-space: normal;
+  }
 }
 </style>

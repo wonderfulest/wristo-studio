@@ -9,6 +9,7 @@ import * as preview from './sunEvents.preview'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('sun events default indicator rendering', () => {
@@ -104,4 +105,40 @@ describe('sun events default indicator rendering', () => {
     expect(indicator).toBeInstanceOf(Group)
     expect(indicator).toEqual(expect.objectContaining({ left: peak.x, top: peak.y, angle: peak.angle }))
   })
+})
+
+it('loads the persisted default SVG even when it was uploaded as a binary asset', async () => {
+  const { DEFAULT_SUN_EVENT_INDICATOR_SVG } = await import('./sunEvents.defaults')
+  const svg = decodeURIComponent(DEFAULT_SUN_EVENT_INDICATOR_SVG.split(',')[1])
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => svg }))
+  vi.stubGlobal('Image', class {
+    onerror?: () => void
+    set src(_url: string) { queueMicrotask(() => this.onerror?.()) }
+  })
+  const objects = await buildCurveSunEventObjects({
+    ...curveSunEventsSchema.defaultConfig, id: 'legacy-bin', eleType: 'curveSunEvents',
+    indicator: { ...curveSunEventsSchema.defaultConfig.indicator, imageSvg: 'https://cdn.test/legacy.bin' },
+  } as any)
+  expect(objects.at(-1)).toBeInstanceOf(Group)
+})
+
+it('reports a failed legacy asset request and permits retry', async () => {
+  const { DEFAULT_SUN_EVENT_INDICATOR_SVG } = await import('./sunEvents.defaults')
+  const fetcher = vi.fn().mockResolvedValueOnce({ ok: false, status: 503 })
+    .mockResolvedValueOnce({ ok: true, text: async () => decodeURIComponent(DEFAULT_SUN_EVENT_INDICATOR_SVG.split(',')[1]) })
+  vi.stubGlobal('fetch', fetcher)
+  const config = {
+    ...curveSunEventsSchema.defaultConfig, id: 'retry-bin', eleType: 'curveSunEvents',
+    indicator: { ...curveSunEventsSchema.defaultConfig.indicator, imageSvg: 'https://cdn.test/retry.bin' },
+  } as any
+  await expect(buildCurveSunEventObjects(config)).rejects.toThrow('HTTP 503')
+  expect((await buildCurveSunEventObjects(config)).at(-1)).toBeInstanceOf(Group)
+})
+
+it('rejects non-SVG binary assets with a readable error', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => '<html>Error</html>' }))
+  await expect(buildCurveSunEventObjects({
+    ...curveSunEventsSchema.defaultConfig, id: 'invalid-bin', eleType: 'curveSunEvents',
+    indicator: { ...curveSunEventsSchema.defaultConfig.indicator, imageSvg: 'https://cdn.test/invalid.bin' },
+  } as any)).rejects.toThrow('does not contain SVG data')
 })

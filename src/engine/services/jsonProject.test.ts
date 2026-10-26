@@ -169,3 +169,11 @@ it('refuses to save an active bitmap reference without glyphs', async () => {
   await expect(saveJsonProject('target', { ...config(), elements: [{ fontRenderType: 'bitmap', bitmapFontId: 144 }] })).rejects.toThrow(/144/)
   expect(update).not.toHaveBeenCalled()
 })
+
+it('saves charset-qualified SVG resources with an SVG filename and MIME type', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['<svg/>'], { type: 'image/svg+xml;charset=utf-8' }) }))
+  await saveJsonProject('target', { ...config(), elements: [{ indicator: { imageSvg: 'data:image/svg+xml;charset=utf-8,charset-regression' } }] })
+  const file = upload.mock.calls[0][0] as File
+  expect(file.name).toBe('asset.svg')
+  expect(file.type).toBe('image/svg+xml')
+})

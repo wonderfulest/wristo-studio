@@ -111,7 +111,6 @@ const bitmapDialogVisible = ref(false)
 const currentFontName = ref<string>('')
 const editingBitmapFontId = ref<number | null>(null)
 const editingBitmapFontName = ref<string>('')
-const editingBitmapFontIsTempRand = ref<boolean>(false)
 const downloadingFontId = ref<number | null>(null)
 const deletingFontId = ref<number | null>(null)
 type BitmapRow = {
@@ -165,7 +164,6 @@ const findBitmapFontName = (fontId: number) => {
 const setEditingBitmapFont = (fontId: number | null, fontName = '') => {
   editingBitmapFontId.value = fontId
   editingBitmapFontName.value = fontName || (fontId ? findBitmapFontName(fontId) : '')
-  editingBitmapFontIsTempRand.value = typeof editingBitmapFontName.value === 'string' && editingBitmapFontName.value.startsWith('rand_')
 }
 
 const locateCurrentFont = async () => {
@@ -255,7 +253,9 @@ const openBitmapDialog = async (fontId?: number) => {
   await loadBitmapRows(id)
 }
 
-const confirmBitmapDialog = async () => {
+const confirmBitmapDialog = async (name: string) => {
+  const newName = name.trim()
+  if (!newName) return
   if (!canUsePremiumAssets.value) {
     membershipGate.requirePremium('font.premiumAssetRequired')
     bitmapDialogVisible.value = false
@@ -275,39 +275,16 @@ const confirmBitmapDialog = async () => {
     return
   }
   try {
-    // 如果是自动创建的 rand_ 前缀名字，引导用户修改名字
-    const editingId = editingBitmapFontId.value
-    if (editingId && editingBitmapFontIsTempRand.value) {
-      const { value } = await ElMessageBox.prompt(
-        t('font.renameBitmapPrompt'),
-        t('font.renameBitmapTitle'),
-        {
-          inputValue: editingBitmapFontName.value || '',
-          inputPlaceholder: t('font.enterFontName'),
-        },
-      )
-      const newName = String(value || '').trim()
-      if (newName && newName !== editingBitmapFontName.value) {
-        try {
-          await updateBitmapFont({ id: editingId, fontName: newName })
-          editingBitmapFontName.value = newName
-          if (props.modelValue === editingId) {
-            currentFontName.value = newName
-          }
-        } catch (e) {
-          console.warn('update bitmap font name failed', e)
-        }
-      }
-      editingBitmapFontIsTempRand.value = false
+    if (newName !== editingBitmapFontName.value) {
+      await updateBitmapFont({ id: fontId, fontName: newName })
+      editingBitmapFontName.value = newName
+      if (props.modelValue === fontId) currentFontName.value = newName
     }
-  } catch {
-    // 用户取消重命名则保持原名
-  } finally {
     bitmapDialogVisible.value = false
-    // 每次点击 OK 结束编辑后，清理 bitmap 字体缓存
     bitmapFontStore.clearSession()
-    // 并重新加载列表，确保 UI 展示的是最新的 bitmap 字体信息
     void bitmapFontStore.loadPage(1, undefined, includeAllUsers.value)
+  } catch (error) {
+    showErrorOnce(error, t('common.saveFailed'))
   }
 }
 

@@ -6,9 +6,14 @@
     append-to-body
     @close="handleClose"
   >
-    <div v-if="editingFontLabel" class="bitmap-dialog-editing-font">
+    <div v-if="editingFontId" class="bitmap-dialog-editing-font">
       <span>{{ t('font.editingBitmapFont') }}</span>
-      <strong>{{ editingFontLabel }}</strong>
+      <el-input
+        v-model="fontName"
+        :aria-label="t('font.enterFontName')"
+        :placeholder="t('font.enterFontName')"
+      />
+      <span>#{{ editingFontId }}</span>
     </div>
     <div class="bitmap-dialog-header-extra">
       <a
@@ -118,14 +123,14 @@
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="onCancel">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="onOk">{{ t('common.ok') }}</el-button>
+        <el-button type="primary" :disabled="!fontName.trim()" @click="onOk">{{ t('common.ok') }}</el-button>
       </span>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -150,7 +155,7 @@ const emit = defineEmits<{
   (e: 'reset-row', index: string): void
   (e: 'upload-row', payload: { index: string; file: File; previewUrl: string }): void
   (e: 'upload-rows', payload: { index: string; file: File; previewUrl: string }[]): void
-  (e: 'confirm'): void
+  (e: 'confirm', name: string): void
 }>()
 
 const visibleRef = ref(props.modelValue)
@@ -165,14 +170,14 @@ const batchUploadRef = ref<any>()
 let batchUploadTimer: ReturnType<typeof setTimeout> | undefined
 let pendingBatchUploadFiles: any[] = []
 
-const editingFontLabel = computed(() => {
-  const name = String(props.editingFontName || '').trim()
-  const id = props.editingFontId
-  if (name && id) return `${name} (#${id})`
-  if (name) return name
-  if (id) return `#${id}`
-  return ''
-})
+const fontName = ref('')
+watch(
+  () => [props.modelValue, props.editingFontId, props.editingFontName] as const,
+  () => {
+    if (props.modelValue) fontName.value = props.editingFontName || ''
+  },
+  { immediate: true },
+)
 
 const localRows = ref<DigitRowState[]>([])
 const localSymbolRows = ref<DigitRowState[]>([])
@@ -272,7 +277,7 @@ const onCancel = () => {
 }
 
 const onOk = () => {
-  emit('confirm')
+  if (fontName.value.trim()) emit('confirm', fontName.value.trim())
 }
 
 const handleClose = () => {
@@ -384,13 +389,14 @@ const handleClose = () => {
   line-height: 18px;
 }
 
-.bitmap-dialog-editing-font strong {
-  min-width: 0;
-  color: var(--studio-text);
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.bitmap-dialog-editing-font > span {
+  flex-shrink: 0;
   white-space: nowrap;
+}
+
+.bitmap-dialog-editing-font .el-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .bitmap-tutorial-link {

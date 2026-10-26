@@ -269,12 +269,15 @@ const steps = [
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+.sdk-link:focus-visible,
+.architecture-select:focus-visible,
 .download-jump:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 4px;
 }
 
 .prg-installer-guide {
+  color: var(--studio-text);
   max-width: 1120px;
   margin: 0 auto;
   padding: 64px 28px 80px;
@@ -294,12 +297,17 @@ const steps = [
   cursor: pointer;
   font: inherit;
 }
+.audience-nav button:hover {
+  border-color: var(--studio-primary-border);
+  background: var(--studio-surface-soft);
+}
 .audience-nav button[aria-pressed='true'] {
-  border-color: #2563eb;
-  box-shadow: inset 0 0 0 1px #2563eb;
+  background: var(--studio-primary-soft);
+  border-color: var(--studio-primary);
+  box-shadow: inset 0 0 0 1px var(--studio-primary);
 }
 .audience-nav button:focus-visible {
-  outline: 3px solid #2563eb;
+  outline: 3px solid var(--studio-primary);
   outline-offset: 3px;
 }
 .audience-nav strong,
@@ -314,7 +322,7 @@ const steps = [
 .audience-intro p,
 .download-heading p {
   line-height: 1.65;
-  color: var(--studio-text-secondary, #64748b);
+  color: var(--studio-text-muted);
 }
 .audience-intro {
   margin-top: 28px;
@@ -350,15 +358,16 @@ const steps = [
   height: 76px;
   flex: 0 0 auto;
   border-radius: 20px;
-  background: #111827;
-  color: #fff;
+  background: var(--studio-primary-soft);
+  border: 1px solid var(--studio-primary-border);
+  color: var(--studio-primary);
   font-size: 21px;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
 .eyebrow {
   margin: 0 0 8px;
-  color: #64748b;
+  color: var(--studio-text-muted);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -373,7 +382,7 @@ h1 {
 .subtitle {
   max-width: 720px;
   margin: 18px 0 10px;
-  color: #64748b;
+  color: var(--studio-text-muted);
   font-size: 19px;
   line-height: 1.6;
 }
@@ -386,9 +395,12 @@ h1 {
   justify-content: space-between;
   gap: 32px;
   padding: 30px;
-  border: 1px solid #dbe3ec;
+  border: 1px solid var(--studio-border);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--studio-surface);
+}
+.download-card > div {
+  min-width: 0;
 }
 .download-card h2 {
   margin: 0 0 16px;
@@ -406,12 +418,13 @@ h1 {
   justify-content: space-between;
   gap: 24px;
   padding: 20px 0;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--studio-border);
 }
 .installer-details {
   min-width: 0;
 }
 .installer-heading {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -423,14 +436,14 @@ h1 {
 .recommended {
   padding: 3px 8px;
   border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
   font-size: 12px;
   font-weight: 700;
 }
 .installer-details p {
   margin: 6px 0 12px;
-  color: #64748b;
+  color: var(--studio-text-muted);
 }
 .installer-meta {
   font-size: 13px;
@@ -440,7 +453,7 @@ h1 {
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 8px 18px;
   margin: 0;
-  color: #64748b;
+  color: var(--studio-text-muted);
 }
 .release-meta dt {
   font-weight: 600;
@@ -454,11 +467,12 @@ h1 {
   font-size: 12px;
 }
 .guide-section {
+  box-shadow: var(--studio-shadow-sm);
   margin-top: 32px;
   padding: 32px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid #e2e8f0;
+  background: var(--studio-surface);
+  border: 1px solid var(--studio-border);
 }
 .section-heading {
   display: flex;
@@ -467,7 +481,7 @@ h1 {
   margin-bottom: 24px;
 }
 .section-heading span {
-  color: #2563eb;
+  color: var(--studio-primary);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -476,9 +490,14 @@ h1 {
   margin: 0;
   font-size: 25px;
 }
+.method-note {
+  margin: 0 0 24px;
+  color: var(--studio-text-muted);
+  line-height: 1.65;
+}
 .steps {
   display: grid;
-  gap: 18px;
+  gap: 24px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -494,8 +513,8 @@ h1 {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--studio-primary-soft);
+  color: var(--studio-primary);
   font-weight: 800;
 }
 .steps h3 {
@@ -505,26 +524,26 @@ h1 {
 .steps p,
 .compact li {
   margin: 0;
-  color: #64748b;
+  color: var(--studio-text-muted);
   line-height: 1.65;
 }
 .sdk-link {
   display: inline-block;
   margin-top: 24px;
-  color: #2563eb;
+  color: var(--studio-primary);
   font-weight: 650;
   text-decoration: none;
 }
 .manual-install p,
 .manual-install li {
-  color: #475569;
+  color: var(--studio-text-muted);
   line-height: 1.65;
 }
 .manual-path {
   display: block;
   padding: 14px 18px;
   border-radius: 10px;
-  background: #f1f5f9;
+  background: var(--studio-surface-soft);
   overflow-wrap: anywhere;
 }
 .manual-install ol {

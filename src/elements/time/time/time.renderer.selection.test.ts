@@ -67,10 +67,15 @@ vi.mock('@/composables/useGarminSystemFont', () => ({
   resolveCurrentElementPreviewFont: vi.fn((config: any) => config),
 }))
 
-import { createTime, updateTime } from './time.renderer'
+import { packageBitmapChars } from '@/engine/services/packageAssetRegistry'
+import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
+import { createTime, updateTime, invalidateBitmapTimeFontCache } from './time.renderer'
 
 describe('bitmap time replacement selection', () => {
   beforeEach(() => {
+    packageBitmapChars.clear()
+    invalidateBitmapTimeFontCache()
+    vi.mocked(listBitmapFontChars).mockClear()
     runtime.upsertElement.mockClear()
     runtime.patchElement.mockClear()
     runtime.setActiveObject.mockClear()
@@ -91,6 +96,22 @@ describe('bitmap time replacement selection', () => {
       scaleX: 1,
       scaleY: 1,
     }]
+  })
+
+  it('uses refreshed library glyphs after an embedded bitmap font is explicitly invalidated', async () => {
+    packageBitmapChars.set(7, [{ charValue: '1', image: { url: 'https://example.com/old.png' } }] as any)
+    packageBitmapChars.set(8, [{ charValue: '1', image: { url: 'https://example.com/offline.png' } }] as any)
+    invalidateBitmapTimeFontCache(7)
+    await updateTime(runtime.objects[0], { bitmapFontId: 7 } as any)
+    expect(listBitmapFontChars).toHaveBeenCalledWith(7)
+    expect(packageBitmapChars.has(7)).toBe(false)
+    expect(packageBitmapChars.has(8)).toBe(true)
+  })
+
+  it('preserves embedded fonts when only clearing the runtime cache', () => {
+    packageBitmapChars.set(7, [] as any)
+    invalidateBitmapTimeFontCache()
+    expect(packageBitmapChars.has(7)).toBe(true)
   })
 
   it('does not select an unselected bitmap time group when the minute changes', async () => {

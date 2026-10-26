@@ -47,7 +47,8 @@ async function readBlob(url: string): Promise<Blob> {
 function uploadBlob(blob: Blob, name?: string): Promise<string> {
   let pending = uploadedBlobs.get(blob)
   if (!pending) {
-    pending = uploadPersistentDesignAsset(new File([blob], name || `asset.${extensions[blob.type] || 'bin'}`, { type: blob.type || 'application/octet-stream' }))
+    const mime = blob.type.split(';')[0].trim().toLowerCase() || 'application/octet-stream'
+    pending = uploadPersistentDesignAsset(new File([blob], name || `asset.${extensions[mime] || 'bin'}`, { type: mime }))
       .catch(error => { uploadedBlobs.delete(blob); throw error })
     uploadedBlobs.set(blob, pending)
   }

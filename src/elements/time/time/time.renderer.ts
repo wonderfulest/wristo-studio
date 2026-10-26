@@ -29,6 +29,9 @@ export function invalidateBitmapTimeFontCache(fontId?: number | null) {
     return
   }
   bitmapCharCache.delete(Number(fontId))
+  // Explicit library selection/edit replaces the embedded snapshot too. Both
+  // rendering and project export prefer package glyphs over the library cache.
+  packageBitmapChars.delete(Number(fontId))
 }
 
 // 确保同一 id 的 bitmap 时间元素在画布上只存在一个 Group
