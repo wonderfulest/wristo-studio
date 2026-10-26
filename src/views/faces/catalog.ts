@@ -47,6 +47,7 @@ export interface FaceDetail extends PublishedFace {
   }> | null
 }
 export interface FaceQuery {
+  allowRemix?: boolean
   keyword: string
   device: string
   sort: string
@@ -74,6 +75,7 @@ async function publicGet<T>(path: string, params: Record<string, string>, token?
 }
 export function loadFaces(query: FaceQuery): Promise<FacePage> {
   const params: Record<string, string> = { pageNum: String(query.page), pageSize: '25', lang: 'en' }
+  if (query.allowRemix != null) params.allowRemix = String(query.allowRemix)
   if (query.device) params.device = query.device
   if (query.keyword.trim()) {
     params.keyword = query.keyword.trim()

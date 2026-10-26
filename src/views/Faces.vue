@@ -64,6 +64,14 @@
               </select>
             </label>
             <label>
+              Allow copying
+              <select v-model="allowRemix" @change="resetPage">
+                <option value="">All</option>
+                <option value="true">Allowed</option>
+                <option value="false">Not allowed</option>
+              </select>
+            </label>
+            <label>
               Sort
               <span v-if="keyword">Relevance</span>
               <select v-else v-model="sort" @change="resetPage">
@@ -177,6 +185,7 @@ const devices = ref<FaceDevice[]>([])
 const draft = ref(''),
   keyword = ref(''),
   device = ref(String(useRoute().query.device || '')),
+  allowRemix = ref('true'),
   sort = ref('createdAt:desc')
 const page = ref(1),
   pages = ref(0),
@@ -201,7 +210,7 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    const result = await loadFaces({ keyword: keyword.value, device: device.value, sort: sort.value, page: page.value })
+    const result = await loadFaces({ keyword: keyword.value, device: device.value, sort: sort.value, page: page.value, allowRemix: allowRemix.value === '' ? undefined : allowRemix.value === 'true' })
     if (current !== request) return
     faces.value = result.list || []
     total.value = result.total
@@ -229,6 +238,7 @@ function clearFilters() {
   draft.value = ''
   keyword.value = ''
   device.value = ''
+  allowRemix.value = ''
   resetPage()
 }
 function changePage(delta: number) {
@@ -444,6 +454,7 @@ h2 {
 }
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 .filters label {

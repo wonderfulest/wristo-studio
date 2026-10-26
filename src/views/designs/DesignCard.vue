@@ -250,6 +250,35 @@
                 {{ t('common.download') }}
               </el-button>
               <el-tooltip
+                v-if="row.key === 'prg' && showPreviewPrgButton"
+                :content="t('card.previewInSimulator')"
+                placement="top"
+              >
+                <el-button
+                  class="build-task-preview"
+                  size="small"
+                  :aria-label="t('card.previewInSimulator')"
+                  :loading="loadingStates.previewPrg.has(design.id)"
+                  @click.stop="closeActions(); emit('preview-prg', design)"
+                >
+                  <Icon icon="material-symbols:play-circle-outline-rounded" />
+                </el-button>
+              </el-tooltip>
+              <el-tooltip
+                v-if="row.key === 'iq' && showPublishButton"
+                :content="t('card.publish')"
+                placement="top"
+              >
+                <el-button
+                  class="build-task-publish"
+                  size="small"
+                  :aria-label="t('card.publish')"
+                  @click.stop="closeActions(); router.push({ path: detailsUrl, query: { section: 'distribution' } })"
+                >
+                  <el-icon><Upload /></el-icon>
+                </el-button>
+              </el-tooltip>
+              <el-tooltip
                 v-if="(row.key === 'prg' ? prgCardAction : iqCancellationAction) === 'cancel'"
                 :content="t(row.key === 'iq' ? 'card.cancelIqBuild' : 'card.cancelPrgBuild')"
                 placement="top"
@@ -292,7 +321,7 @@
           </template>
           <div :id="actionsPanelId" class="actions-panel">
             <div class="actions-panel-grid">
-            <section v-if="hasPreviewActions" class="action-group action-group-preview">
+            <section v-if="!management && hasPreviewActions" class="action-group action-group-preview">
               <div class="action-group-title">{{ t('card.previewActions') }}</div>
               <div class="action-group-actions">
                 <el-button
@@ -347,7 +376,7 @@
               </div>
             </section>
 
-            <section v-if="hasReleaseActions" class="action-group action-group-release">
+            <section v-if="!management && hasReleaseActions" class="action-group action-group-release">
               <div class="action-group-title">{{ t('card.releaseActions') }}</div>
               <div class="action-group-actions">
                 <el-button v-if="showPublishButton" size="small" @click="closeActions(); router.push({ path: detailsUrl, query: { section: 'distribution' } })">
@@ -357,12 +386,11 @@
               </div>
             </section>
 
-            <section v-if="management && packageRows.length" class="action-group">
+            <section v-if="management && packageRows.some(row => row.canViewBuildLog)" class="action-group">
               <div class="action-group-title">Packages</div>
               <div class="action-group-actions">
                 <template v-for="row in packageRows" :key="row.key">
                   <el-button v-if="row.canViewBuildLog" size="small" @click="openBuildLog(row.logId)">{{ row.label }} · {{ t('editDesign.viewBuildLog') }}</el-button>
-                  <el-button v-if="showPackageDownload && row.canDownload" size="small" @click="downloadPackage(row.key)">{{ row.label }} · {{ t('editDesign.downloadPackage') }}</el-button>
                 </template>
               </div>
             </section>
@@ -393,6 +421,8 @@
 
   <el-drawer
     v-model="operationsDrawerVisible"
+    append-to-body
+    :z-index="4000"
     :title="t('card.appOperations')"
     direction="rtl"
     size="min(1100px, 92vw)"
@@ -1484,7 +1514,9 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card--list .list-subtitle { flex-wrap: nowrap; margin-top: 4px; }
 .list-design-uid { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .design-card--management :deep(.el-button) { min-height: 36px; font-size: 13px; background: var(--studio-surface-raised); color: var(--studio-text); border-color: var(--studio-border); }
-.design-card--management .build-task-row :deep(.build-task-download) {
+.design-card--management .build-task-row :deep(.build-task-download),
+.design-card--management .build-task-row :deep(.build-task-preview),
+.design-card--management .build-task-row :deep(.build-task-publish) {
   flex: 0 0 auto;
   width: auto;
   min-height: 26px;

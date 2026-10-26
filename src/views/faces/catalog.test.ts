@@ -5,6 +5,15 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 describe('published face catalog', () => {
+  it.each([undefined, true, false])('sends the copy permission filter %s without dropping false', async (allowRemix) => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ list: [], total: 0, pages: 0 }) })
+    vi.stubGlobal('fetch', fetch)
+    await loadFaces({ keyword: 'Alpha', device: '42', sort: 'createdAt:desc', page: 1, allowRemix })
+    const params = new URL(fetch.mock.calls[0][0], 'https://studio.wristo.io').searchParams
+    expect(params.get('allowRemix')).toBe(allowRemix == null ? null : String(allowRemix))
+    expect(params.get('keyword')).toBe('Alpha')
+    expect(params.get('device')).toBe('42')
+  })
   it('loads a device-filtered public page without credentials', async () => {
     const page = { list: [], total: 0, pages: 0 }
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => page })
