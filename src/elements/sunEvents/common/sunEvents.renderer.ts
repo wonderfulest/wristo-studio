@@ -87,11 +87,17 @@ async function createIndicator(url: string | undefined, width: number, height: n
   url = await resolveLegacySvgSource(url)
   if (url === DEFAULT_SUN_EVENT_INDICATOR_SVG) return createDefaultSunIndicator(width, height)
   const htmlImage = await loadHtmlImage(url)
-  const naturalWidth = Math.max(1, htmlImage.naturalWidth || htmlImage.width || 1)
-  const naturalHeight = Math.max(1, htmlImage.naturalHeight || htmlImage.height || 1)
-  return new FabricImage(htmlImage, {
-    originX: 'center', originY: 'center', width: naturalWidth, height: naturalHeight,
-    scaleX: Math.max(1, width) / naturalWidth, scaleY: Math.max(1, height) / naturalHeight,
+  // SVGs with only a viewBox can be cropped incorrectly by drawImage's
+  // nine-argument source rectangle. Rasterize the full image first.
+  const raster = document.createElement('canvas')
+  raster.width = Math.max(1, Math.ceil(width * 2))
+  raster.height = Math.max(1, Math.ceil(height * 2))
+  const context = raster.getContext('2d')
+  if (!context) throw new Error('Sun event indicator canvas could not be initialized')
+  context.drawImage(htmlImage, 0, 0, raster.width, raster.height)
+  return new FabricImage(raster, {
+    originX: 'center', originY: 'center', width: raster.width, height: raster.height,
+    scaleX: Math.max(1, width) / raster.width, scaleY: Math.max(1, height) / raster.height,
     selectable: false, evented: false,
   })
 }
