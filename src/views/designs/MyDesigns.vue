@@ -153,6 +153,12 @@
         <el-option :label="t('project.ascending')" value="asc" />
         <el-option :label="t('project.descending')" value="desc" />
       </el-select>
+    <el-button v-if="isAdminUser" class="batch-mode-toggle" :disabled="batchTransferBusy" @click="toggleBatchMode">{{ t(batchMode ? 'batchActions.exit' : 'batchActions.title') }}</el-button>
+    <BatchDesignActions v-if="batchMode && isAdminUser"
+      v-model="selectedDesignIds" :designs="designs" :is-admin="isAdminUser"
+      :loading="listLoading" :context-key="batchContextKey" :device-id="currentDeviceId"
+      @busy="batchTransferBusy = $event" @updated="fetchDesigns(requestParams)"
+    />
       <span class="collection-count">{{ t('project.designCount', { count: total }) }}</span>
       <div class="collection-controls">
         <div class="view-switch" role="group" :aria-label="t('project.viewMode')">
@@ -178,7 +184,14 @@
 
     <div :ref="el => container = el as HTMLElement | null" class="design-table-scroll" :class="{ 'is-list': viewMode === 'list' }">
     <div class="design-collection" :class="`design-collection--${viewMode}`" :style="{ '--design-grid-columns': columns }">
-      <div class="design-item" v-for="design in designs" :key="design.id">
+      <div class="design-item" :class="{ 'is-selectable': batchMode && isAdminUser, 'is-selected': batchMode && selectedDesignIds.includes(design.id) }" v-for="design in designs" :key="design.id">
+        <label v-if="isAdminUser && batchMode" class="design-selection" @click.stop>
+          <input type="checkbox"
+            :aria-label="t('batchTransfer.selectDesign', { name: design.name })"
+            :checked="selectedDesignIds.includes(design.id)"
+            :disabled="batchTransferBusy || listLoading"
+            @change="toggleDesignSelection(design, ($event.target as HTMLInputElement).checked)" />
+        </label>
         <DesignCard
           :design="design"
           :view-mode="viewMode"
@@ -229,6 +242,7 @@
 </template>
 
 <script setup lang="ts">
+import BatchDesignActions from './BatchDesignActions.vue'
 import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
@@ -273,6 +287,21 @@ watch(viewMode, (mode) => {
   }
 })
 const designs = ref<DesignListItem[]>([])
+const selectedDesignIds = ref<number[]>([])
+const batchMode = ref(false)
+const toggleBatchMode = () => {
+  if (!isAdminUser.value || batchTransferBusy.value) return
+  selectedDesignIds.value = []
+  batchMode.value = !batchMode.value
+}
+const batchTransferBusy = ref(false)
+const listLoading = ref(false)
+const toggleDesignSelection = (design: DesignListItem, checked: unknown) => {
+  if (!isAdminUser.value || !batchMode.value || batchTransferBusy.value || listLoading.value) return
+  selectedDesignIds.value = checked
+    ? [...new Set([...selectedDesignIds.value, design.id])]
+    : selectedDesignIds.value.filter(id => id !== design.id)
+}
 const { container, columns, currentPage, pageSize, pageSizes, ready } = useDesignPagination(viewMode)
 const refreshVersion = ref(0)
 const total = ref(0)
@@ -525,6 +554,8 @@ const handleDesignScopeChange = () => {
 
 watch(isAdminUser, (isAdmin) => {
   if (!isAdmin) {
+    batchMode.value = false
+    selectedDesignIds.value = []
     selectedCreatorUserId.value = undefined
     packagedVersion.value = ''
     const normalized = normalizeDesignSort(sortField.value, sortOrder.value, false)
@@ -622,15 +653,23 @@ const requestParams = computed<DesignPageParams>(() => ({
   device: currentDeviceId.value || undefined,
   summaryOnly: true,
 }))
+const batchContextKey = computed(() => JSON.stringify([
+  requestParams.value, refreshVersion.value, searchName.value, searchAppId.value,
+  packagedVersion.value, packagedVersionOperator.value, selectedCreatorUserId.value,
+  selectedStatus.value, selectedLaunchStatus.value, selectedPaymentMethod.value,
+  sortField.value, sortOrder.value, designScope.value,
+]))
 let requestVersion = 0
 const fetchDesigns = async (params: DesignPageParams) => {
   const version = ++requestVersion
+  listLoading.value = true
   try {
     const response: ApiResponse<PageResponse<DesignListItem>> = await designApi.getDesignCards(params)
     if (version !== requestVersion) return
 
     if (response.code === 0 && response.data) {
       designs.value = response.data.list
+      selectedDesignIds.value = selectedDesignIds.value.filter(id => designs.value.some(design => design.id === id))
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
@@ -647,6 +686,8 @@ const fetchDesigns = async (params: DesignPageParams) => {
     console.error('[MyDesigns] fetchDesigns error:', error)
     console.error('错误详情:', error.response?.data)
     showErrorOnce(error, t('project.getListFailed'))
+  } finally {
+    if (version === requestVersion) listLoading.value = false
   }
 }
 
@@ -726,6 +767,15 @@ onUnmounted(() => {
 .view-switch button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 .design-collection--grid { display: grid; grid-template-columns: repeat(var(--design-grid-columns, 1), minmax(0, 1fr)); gap: 20px; }
 .design-item { min-width: 0; }
+.batch-mode-toggle { flex-shrink: 0; }
+.filter-preferences :deep(.batch-actions) { padding: 0; }
+.design-item.is-selectable { position: relative; }
+.design-selection { position: absolute; top: 4px; right: 4px; z-index: 2; width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; border-radius: 8px; background: var(--studio-surface); }
+.design-selection input { width: 20px; height: 20px; margin: 0; cursor: pointer; accent-color: var(--studio-primary); }
+.design-selection:has(input:focus-visible) { outline: 2px solid var(--studio-primary); }
+.design-selection:has(input:disabled) { cursor: wait; opacity: .5; }
+.is-selectable :deep(.card-header) { padding-right: 38px; }
+.is-selected :deep(.design-card) { outline: 2px solid var(--studio-primary); outline-offset: -2px; }
 .design-table-scroll.is-list { overflow-x: auto; }
 .design-table-scroll.is-list > * { min-width: 420px; }
 .design-collection--list { border: 1px solid var(--studio-border); border-radius: 14px; overflow: hidden; }

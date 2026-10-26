@@ -32,12 +32,50 @@ beforeEach(() => {
 afterEach(() => { wrapper?.unmount(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers() })
 async function setup() {
   wrapper = mount(MyDesigns, { global: { stubs: {
-    Icon: true, RouterLink: true, ElInput: true, ElSelect: true, ElOption: true, ElButton: true, ElSegmented: true, ElSwitch: true,
+    Icon: true, RouterLink: true, ElInput: true, ElSelect: true, ElOption: true, ElButton: true, ElSegmented: true, ElSwitch: true, ElCheckbox: true, ElInputNumber: true,
     ElDialog: true, ElPagination: { name: 'ElPagination', props: ['pageSize', 'currentPage', 'pageSizes'], template: '<div />' },
   } } })
   await flushPromises()
 }
 describe('My Designs request coordination', () => {
+  it('supports admin selection in both views and clears it when paging or editing filters', async () => {
+    mocks.get.mockResolvedValue({ code: 0, data: { total: 99, list: [
+      { id: 1, name: 'Transferable', product: { appId: 101 } },
+      { id: 2, name: 'No app' },
+    ] } })
+    await setup()
+    const vm = wrapper.vm as any
+    expect(wrapper.findAll('.design-selection')).toHaveLength(0)
+    expect(wrapper.find('.batch-actions').exists()).toBe(false)
+    vm.toggleBatchMode()
+    await nextTick()
+    expect(vm.selectedDesignIds).toEqual([])
+    const boxes = wrapper.findAll('.design-selection')
+    expect(boxes).toHaveLength(2)
+    vm.toggleDesignSelection(vm.designs[0], true)
+    vm.toggleDesignSelection(vm.designs[1], true)
+    await nextTick()
+    expect(vm.selectedDesignIds).toEqual([1, 2])
+    vm.viewMode = 'list'
+    await flushPromises()
+    expect(wrapper.find('.design-collection--list').exists()).toBe(true)
+    vm.toggleDesignSelection(vm.designs[0], true)
+    vm.searchName = 'new filter'
+    await nextTick()
+    expect(vm.selectedDesignIds).toEqual([])
+    vm.toggleDesignSelection(vm.designs[0], true)
+    vm.currentPage = 2
+    await flushPromises()
+    expect(vm.selectedDesignIds).toEqual([])
+    vm.toggleBatchMode()
+    await nextTick()
+    expect(vm.selectedDesignIds).toEqual([])
+    expect(wrapper.findAll('.design-selection')).toHaveLength(0)
+    mocks.user.isAdminUser = false
+    await flushPromises()
+    expect(wrapper.findAll('.design-selection')).toHaveLength(0)
+    expect(wrapper.find('.batch-actions').exists()).toBe(false)
+  })
   it('defaults to Grid and groups administrator controls', async () => {
     localStorage.removeItem('wristo-studio:design-view-mode')
     await setup()
