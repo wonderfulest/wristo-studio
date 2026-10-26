@@ -43,6 +43,8 @@ function arcPath(radius: number, startAngle: number, endAngle: number, counterCl
 function loadHtmlImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
+    // Set before src so CDN images remain safe for canvas screenshot export.
+    image.crossOrigin = 'anonymous'
     image.onload = () => resolve(image)
     image.onerror = () => reject(new Error('Sun event indicator image could not be loaded'))
     image.src = url
