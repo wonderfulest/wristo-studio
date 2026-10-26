@@ -7,7 +7,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { buildLineSunEventObjects, createSunEventsGroup } from '../common/sunEvents.renderer'
 import { encodeLineSunEvents } from './lineSunEvents.encoder'
 import { scaleLineSunEventsConfig } from '../common/sunEvents.geometry'
-import { normalizeSunEventIndicator } from '../common/sunEvents.defaults'
+import { prepareSunEventIndicator } from '../common/sunEvents.assets'
 
 function attachScaleHandler(group: any): void {
   if (group.__sunEventsScaleHandlerBound) return
@@ -50,7 +50,7 @@ function attachScaleHandler(group: any): void {
 export async function createLineSunEvents(input: LineSunEventsElementConfig): Promise<FabricElement> {
   const canvas = useCanvasStore().canvas
   if (!canvas) throw new Error('Canvas not initialized')
-  const config = { ...input, id: input.id || nanoid(), indicator: normalizeSunEventIndicator(input.indicator), phases: input.phases.map((phase) => ({ ...phase })) }
+  const config = { ...input, id: input.id || nanoid(), indicator: await prepareSunEventIndicator(input.indicator), phases: input.phases.map((phase) => ({ ...phase })) }
   const group = createSunEventsGroup(await buildLineSunEventObjects(config), config)
   attachScaleHandler(group)
   canvas.add(group)
@@ -68,7 +68,7 @@ export async function updateLineSunEvents(element: FabricElement, patch: Partial
   const next: LineSunEventsElementConfig = {
     ...current, ...persistentPatch,
     phases: patch.phases ? patch.phases.map((phase) => ({ ...phase })) : current.phases,
-    indicator: { ...current.indicator, ...(patch.indicator ?? {}) },
+    indicator: await prepareSunEventIndicator({ ...current.indicator, ...(patch.indicator ?? {}) }),
   }
   group.remove(...group.getObjects())
   group.add(...await buildLineSunEventObjects(next, simulatedTime))

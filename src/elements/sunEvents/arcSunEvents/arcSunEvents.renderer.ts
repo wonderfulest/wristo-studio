@@ -7,7 +7,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { buildArcSunEventObjects, createSunEventsGroup, setArcSunEventsCenterOffset } from '../common/sunEvents.renderer'
 import { encodeArcSunEvents } from './arcSunEvents.encoder'
 import { scaleArcSunEventsConfig } from '../common/sunEvents.geometry'
-import { normalizeSunEventIndicator } from '../common/sunEvents.defaults'
+import { prepareSunEventIndicator } from '../common/sunEvents.assets'
 
 function attachScaleHandler(group: any): void {
   if (group.__sunEventsScaleHandlerBound) return
@@ -49,7 +49,7 @@ function attachScaleHandler(group: any): void {
 export async function createArcSunEvents(input: ArcSunEventsElementConfig): Promise<FabricElement> {
   const canvas = useCanvasStore().canvas
   if (!canvas) throw new Error('Canvas not initialized')
-  const config = { ...input, id: input.id || nanoid(), indicator: normalizeSunEventIndicator(input.indicator), phases: input.phases.map((phase) => ({ ...phase })) }
+  const config = { ...input, id: input.id || nanoid(), indicator: await prepareSunEventIndicator(input.indicator), phases: input.phases.map((phase) => ({ ...phase })) }
   const group = createSunEventsGroup(await buildArcSunEventObjects(config), config)
   attachScaleHandler(group)
   canvas.add(group)
@@ -67,7 +67,7 @@ export async function updateArcSunEvents(element: FabricElement, patch: Partial<
   const next: ArcSunEventsElementConfig = {
     ...current, ...persistentPatch,
     phases: patch.phases ? patch.phases.map((phase) => ({ ...phase })) : current.phases,
-    indicator: { ...current.indicator, ...(patch.indicator ?? {}) },
+    indicator: await prepareSunEventIndicator({ ...current.indicator, ...(patch.indicator ?? {}) }),
   }
   const objects = await buildArcSunEventObjects(next, simulatedTime)
   setArcSunEventsCenterOffset(group, objects)

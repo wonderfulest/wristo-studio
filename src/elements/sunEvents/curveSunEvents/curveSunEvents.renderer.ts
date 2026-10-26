@@ -7,7 +7,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import { buildCurveSunEventObjects, createSunEventsGroup } from '../common/sunEvents.renderer'
 import { encodeCurveSunEvents } from './curveSunEvents.encoder'
 import { scaleCurveSunEventsConfig } from '../common/sunEvents.geometry'
-import { normalizeSunEventIndicator } from '../common/sunEvents.defaults'
+import { prepareSunEventIndicator } from '../common/sunEvents.assets'
 import { createDefaultSunEventStyles } from '../common/sunEvents.model'
 
 function attachScaleHandler(group: any): void {
@@ -51,7 +51,7 @@ function attachScaleHandler(group: any): void {
 export async function createCurveSunEvents(input: CurveSunEventsElementConfig): Promise<FabricElement> {
   const canvas = useCanvasStore().canvas
   if (!canvas) throw new Error('Canvas not initialized')
-  const normalizedIndicator = normalizeSunEventIndicator(input.indicator)
+  const normalizedIndicator = await prepareSunEventIndicator(input.indicator)
   const config: CurveSunEventsElementConfig = {
     ...input,
     id: input.id || nanoid(),
@@ -83,7 +83,7 @@ export async function updateCurveSunEvents(
     ...current,
     ...persistentPatch,
     phases: patch.phases ? patch.phases.map((phase) => ({ ...phase })) : current.phases,
-    indicator: { ...current.indicator, ...(patch.indicator ?? {}) },
+    indicator: await prepareSunEventIndicator({ ...current.indicator, ...(patch.indicator ?? {}) }),
   }
   group.remove(...group.getObjects())
   group.add(...await buildCurveSunEventObjects(next, simulatedTime))

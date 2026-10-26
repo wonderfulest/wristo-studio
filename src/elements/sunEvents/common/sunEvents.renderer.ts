@@ -1,3 +1,4 @@
+import { resolveLegacySvgSource } from './sunEvents.assets'
 import { Circle, Group, Image as FabricImage, Line, Path, Rect, type FabricObject } from 'fabric'
 import type { ArcSunEventsElementConfig, CurveSunEventsElementConfig, LineSunEventsElementConfig, SunEventIndicatorBase } from '@/types/elements/sunEvents'
 import { normalizeSunEventSegments, timeFractionToArcAngle, type SunEventSegment } from './sunEvents.model'
@@ -79,26 +80,6 @@ function createDefaultSunIndicator(width: number, height: number): Group {
     scaleY: Math.max(1, height) / Math.max(1, sun.height),
   })
   return sun
-}
-
-// Older JSON saves uploaded charset-qualified SVGs as application/octet-stream .bin files.
-const legacySvgSources = new Map<string, Promise<string>>()
-async function resolveLegacySvgSource(url: string): Promise<string> {
-  if (!/\.bin(?:$|[?#])/i.test(url)) return url
-  let pending = legacySvgSources.get(url)
-  if (!pending) {
-    pending = (async () => {
-      const response = await fetch(url, { credentials: 'omit' })
-      if (!response.ok) throw new Error(`Sun event indicator request failed (HTTP ${response.status})`)
-      const svg = (await response.text()).trim()
-      if (!/^(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(svg)) {
-        throw new Error('Sun event indicator asset does not contain SVG data')
-      }
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-    })().catch(error => { legacySvgSources.delete(url); throw error })
-    legacySvgSources.set(url, pending)
-  }
-  return pending
 }
 
 async function createIndicator(url: string | undefined, width: number, height: number): Promise<FabricObject | null> {
