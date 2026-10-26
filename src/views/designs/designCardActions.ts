@@ -53,7 +53,15 @@ export const getIqCancellationAction = (
 export const shouldShowPublishButton = (
   product: PackagingState | null | undefined,
   isAdminUser: boolean,
-) => isAdminUser || !!product?.release
+) => {
+  const task = product?.packagingLog
+  const status = String(task?.packagingStatus || '').toLowerCase()
+  const isFinished = ['complete', 'completed', 'failed', 'cancelled', 'canceled'].includes(status)
+  const isPackaging = !isFinished && (
+    task?.rank != null || ['init', 'pending', 'processing', 'cancel_requested'].includes(status)
+  )
+  return !isPackaging && (isAdminUser || !!product?.release)
+}
 
 export const getPrgCardAction = (
   product: PackagingState | null | undefined,

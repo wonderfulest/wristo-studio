@@ -1,21 +1,22 @@
 // @vitest-environment jsdom
 import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ get: vi.fn(), refresh: vi.fn(), error: vi.fn(), user: null as any }))
-vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignCards: mocks.get } }))
+const mocks = vi.hoisted(() => ({ remove: vi.fn(), success: vi.fn(), get: vi.fn(), refresh: vi.fn(), error: vi.fn(), user: null as any }))
+vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignCards: mocks.get, deleteDesign: mocks.remove } }))
 vi.mock('@/stores/user', async () => {
   const { reactive } = await import('vue')
   mocks.user = reactive({ userInfo: { id: 7, roles: [], device: { deviceId: 'venu3' } }, isAdminUser: true, refreshUserInfo: mocks.refresh })
   return { useUserStore: () => mocks.user }
 })
-vi.mock('@/stores/message', () => ({ useMessageStore: () => ({ error: mocks.error }) }))
+vi.mock('@/stores/message', () => ({ useMessageStore: () => ({ error: mocks.error, success: mocks.success }) }))
 vi.mock('@/utils/errorMessage', () => ({ showErrorOnce: mocks.error }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/components/common/DeviceDisplay.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/users/DesignerSelect.vue', () => ({ default: { name: 'DesignerSelect', template: '<div />' } }))
-vi.mock('./DesignCard.vue', () => ({ default: { props: ['design'], template: '<div class="test-card">{{ design.name }}</div>' } }))
+vi.mock('./DesignCard.vue', () => ({ default: { name: 'DesignCard', props: ['design'], template: '<div class="test-card">{{ design.name }}</div>' } }))
 import MyDesigns from './MyDesigns.vue'
 let wrapper: ReturnType<typeof mount>
 let resize: ResizeObserverCallback
@@ -92,4 +93,40 @@ describe('My Designs request coordination', () => {
     expect(wrapper.text()).not.toContain('Old')
     expect(mocks.get).toHaveBeenCalledTimes(2)
   })
+})
+
+async function deleteFirst() {
+  wrapper.findComponent({ name: 'DesignCard' }).vm.$emit('delete', { id: 0, name: 'Face', designUid: 'd0' })
+  await flushPromises()
+}
+it('confirms administrator deletion and refreshes the current list', async () => {
+  const confirm = vi.spyOn(ElMessageBox, 'confirm').mockResolvedValue('confirm' as any)
+  mocks.remove.mockResolvedValue({ code: 0 })
+  await setup()
+  await deleteFirst()
+  expect(confirm).toHaveBeenCalled()
+  expect(mocks.remove).toHaveBeenCalledWith('d0')
+  expect(mocks.get).toHaveBeenCalledTimes(2)
+})
+it('does not delete after cancellation', async () => {
+  vi.spyOn(ElMessageBox, 'confirm').mockRejectedValue('cancel')
+  await setup()
+  await deleteFirst()
+  expect(mocks.remove).not.toHaveBeenCalled()
+})
+it('rejects deletion from a regular user', async () => {
+  mocks.user.isAdminUser = false
+  const confirm = vi.spyOn(ElMessageBox, 'confirm')
+  await setup()
+  await deleteFirst()
+  expect(confirm).not.toHaveBeenCalled()
+  expect(mocks.remove).not.toHaveBeenCalled()
+})
+it('keeps the list on API failure', async () => {
+  vi.spyOn(ElMessageBox, 'confirm').mockResolvedValue('confirm' as any)
+  mocks.remove.mockResolvedValue({ code: 1, msg: 'Cannot delete' })
+  await setup()
+  await deleteFirst()
+  expect(mocks.error).toHaveBeenCalledWith('Cannot delete')
+  expect(mocks.get).toHaveBeenCalledTimes(1)
 })

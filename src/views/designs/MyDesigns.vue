@@ -186,7 +186,8 @@
           :show-package-download="true"
           :is-merchant-user="isMerchantUser"
           :is-admin-user="isAdminUser"
-          :can-delete-design="false"
+          :can-delete-design="isAdminUser"
+          @delete="deleteDesign"
           :show-creator="showCreator"
           :loading-states="emptyLoadingStates"
           :current-user-id="userStore.userInfo?.id ?? null"
@@ -232,6 +233,7 @@ import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { onboarding } from '@/features/onboarding/progress'
 import { Icon } from '@iconify/vue'
 import { designApi } from '@/api/wristo/design'
@@ -275,7 +277,36 @@ const { container, columns, currentPage, pageSize, pageSizes, ready } = useDesig
 const refreshVersion = ref(0)
 const total = ref(0)
 const noDesignDialogVisible = ref(false)
-const emptyLoadingStates = { submit: new Set<number>(), copy: new Set<number>(), delete: new Set<number>(), favorite: new Set<number>(), prgBuild: new Set<number>(), previewPrg: new Set<number>() }
+const emptyLoadingStates = ref({ submit: new Set<number>(), copy: new Set<number>(), delete: new Set<number>(), favorite: new Set<number>(), prgBuild: new Set<number>(), previewPrg: new Set<number>() })
+
+const deleteDesign = async (design: DesignListItem) => {
+  if (!isAdminUser.value || design.product?.lastGoLive || emptyLoadingStates.value.delete.has(design.id)) return
+  emptyLoadingStates.value.delete.add(design.id)
+  try {
+    try {
+      await ElMessageBox.confirm(`${design.name} — ${t('project.deleteBody')}`, t('project.confirmDelete'), {
+        type: 'warning',
+        confirmButtonText: t('project.confirmDeleteButton'),
+        cancelButtonText: t('common.cancel'),
+      })
+    } catch {
+      return
+    }
+    if (!isAdminUser.value) return
+    const response = await designApi.deleteDesign(design.designUid)
+    if (response.code !== 0) {
+      messageStore.error(response.msg || t('project.deleteFailed'))
+      return
+    }
+    messageStore.success(t('project.deleteSuccessful'))
+    if (designs.value.length === 1 && currentPage.value > 1) currentPage.value--
+    refreshVersion.value++
+  } catch (error) {
+    showErrorOnce(error, t('project.deleteFailed'))
+  } finally {
+    emptyLoadingStates.value.delete.delete(design.id)
+  }
+}
 
 // 搜索相关状态
 interface DesignSearchPreference {

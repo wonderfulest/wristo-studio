@@ -190,6 +190,10 @@
       </section>
       </Teleport>
       <div v-if="summaryOnly" class="summary-meta">
+        <el-button v-if="isAdminUser && canDeleteCurrentAction" class="delete-action" type="danger" plain size="small" :loading="loadingStates.delete.has(design.id)" @click.stop="emit('delete', design)">
+          <el-icon><Delete /></el-icon>
+          {{ t('common.delete') }}
+        </el-button>
         <span v-if="canViewBusinessMetrics && design.product" class="summary-downloads">{{ t('meter.downloads') }}: {{ downloadCountText }}</span>
         <div v-if="packageRows.length" class="package-info">
           <div v-for="row in packageRows" :key="row.key" class="package-info-item" :class="`package-${row.tone}`">

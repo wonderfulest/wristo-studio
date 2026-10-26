@@ -38,6 +38,18 @@ describe('DesignCard Build IQ action', () => {
 })
 
 describe('DesignCard Publish action', () => {
+  it.each([true, false])('hides upload during an active IQ build (admin=%s)', (isAdmin) => {
+    for (const task of [
+      { rank: 0 }, { rank: 2 },
+      ...['init', 'pending', 'processing', 'cancel_requested'].map(packagingStatus => ({ packagingStatus })),
+    ]) {
+      expect(shouldShowPublishButton({ release: { id: 9 }, packagingLog: task }, isAdmin)).toBe(false)
+    }
+    for (const packagingStatus of ['complete', 'completed', 'failed', 'cancelled', 'canceled']) {
+      expect(shouldShowPublishButton({ release: { id: 9 }, packagingLog: { packagingStatus } }, isAdmin)).toBe(true)
+    }
+  })
+
   it('lets administrators publish without an IQ release', () => {
     expect(shouldShowPublishButton({}, true)).toBe(true)
   })

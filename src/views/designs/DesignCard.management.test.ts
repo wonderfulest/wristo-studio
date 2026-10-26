@@ -112,8 +112,8 @@ describe('design card management placement', () => {
     expect(wrapper.find('.build-task-download').exists()).toBe(false)
     wrapper.unmount()
   })
-  it('keeps list cards read-only with links to the application details', async () => {
-    const { wrapper, router } = await setup({ summaryOnly: true })
+  it('keeps list cards read-only when deletion is disabled', async () => {
+    const { wrapper, router } = await setup({ summaryOnly: true, canDeleteDesign: false })
     expect(wrapper.find('button').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('View details')
     expect(wrapper.find('.store-weight-editor').exists()).toBe(false)
@@ -263,5 +263,16 @@ it('renders timing beneath the build status and updates when the task finishes',
   await wrapper.setProps({ design: { ...design, product: { ...design.product,
     prgPackagingLog: { ...task, packagingStatus: 'complete' } } } as any })
   expect(wrapper.find('.build-task-row .package-timing').exists()).toBe(false)
+  wrapper.unmount()
+})
+
+it.each(['grid', 'list'])('allows admin deletion in %s summaries, preserving launched protection', async (viewMode) => {
+  const { wrapper } = await setup({ summaryOnly: true, viewMode, currentUserId: 99 })
+  await wrapper.get('.delete-action').trigger('click')
+  expect(wrapper.emitted('delete')?.[0]).toEqual([design])
+  await wrapper.setProps({ isAdminUser: false })
+  expect(wrapper.find('.delete-action').exists()).toBe(false)
+  await wrapper.setProps({ isAdminUser: true, design: { ...design, product: { ...design.product, lastGoLive: 123 } } as any })
+  expect(wrapper.find('.delete-action').exists()).toBe(false)
   wrapper.unmount()
 })
