@@ -233,6 +233,7 @@ export interface DesignListItem {
 }
 
 export interface DesignListTask {
+  timeEstimate?: { durationMs: number | null; waitMs: number | null; calculatedAt: number } | null
   processingStartedAt?: string | number | null
   processingFinishedAt?: string | number | null
   id: number

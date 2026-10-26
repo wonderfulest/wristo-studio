@@ -26,6 +26,7 @@ export interface FaceDevice {
 }
 export interface FaceDetail extends PublishedFace {
   publiclyVisible?: boolean
+  copyEligible?: boolean
   allowRemix?: boolean
   configJson?: unknown
   dataFieldCatalog?: unknown

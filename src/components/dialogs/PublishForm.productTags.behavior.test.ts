@@ -703,6 +703,32 @@ describe('multilingual descriptions', () => {
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { fr: design.product.name }, description: expect.stringContaining('Generated en'), descriptions: { fr: 'Generated fr' } }))
   })
 
+  it('generates and saves all seven free languages even when AI is disabled', async () => {
+    const translations = ['fr', 'de', 'es', 'it', 'pt']
+    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
+      descriptionTemplateFree: 'Free English', descriptionTemplateFreeZh: '免费中文',
+      descriptionTemplates: Object.fromEntries(translations.map(language => [language, {
+        free: `Free ${language}`, wpay: `Paid ${language}`,
+      }])),
+    } })
+    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: false, DESCRIPTION: false, BANNER: false } })
+    mocks.generateDescription.mockImplementation(async ({ language }) => ({ code: 0, data: `Free ${language}` }))
+    const wrapper = mountDialog()
+    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, payment: { paymentMethod: 'free', price: 0 } } })
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
+    await flushPromises()
+    expect(mocks.generateDescription.mock.calls.map(([payload]) => [payload.language, payload.paymentMethod]))
+      .toEqual(['en', 'zh', ...translations].map(language => [language, 'free']))
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
+      payment: expect.objectContaining({ paymentMethod: 'free', price: 0 }),
+      description: expect.stringContaining('Free en'),
+      descriptions: Object.fromEntries(['zh', ...translations].map(language => [language, `Free ${language}`])),
+    }))
+    expect(mocks.confirmCost).not.toHaveBeenCalled()
+  })
+
   it('preserves an existing localized name during bulk generation', async () => {
     const wrapper = mountDialog()
     ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' } } })

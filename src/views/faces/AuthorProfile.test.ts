@@ -5,6 +5,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import AuthorProfile from './AuthorProfile.vue'
 import { loadAuthorProfile } from './catalog'
 vi.mock('./catalog', async () => ({ ...await vi.importActual<object>('./catalog'), loadAuthorProfile: vi.fn() }))
+vi.mock('@/stores/user', () => ({ useUserStore: () => ({ isAdminUser: false, isMerchantUser: false, userInfo: null }) }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ locale: { value: 'zh' } }) }))
 vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<header />' } }))
 const wrappers: ReturnType<typeof mount>[] = []
@@ -23,7 +24,7 @@ describe('creator public profile', () => {
     const { wrapper, router } = await setup()
     expect(wrapper.text()).toContain('Maisie')
     expect(wrapper.text()).toContain('25 件公开作品')
-    expect(wrapper.get('a[href="/faces/123"]').text()).toContain('Pixel Tank')
+    expect(wrapper.get('.face-name').text()).toContain('Pixel Tank')
     await wrapper.findAll('button').at(-1)!.trigger('click'); await flushPromises()
     expect(router.currentRoute.value.query.page).toBe('2')
     expect(loadAuthorProfile).toHaveBeenLastCalledWith('7', 2)

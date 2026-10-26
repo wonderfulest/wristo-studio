@@ -149,6 +149,7 @@
             <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">
               {{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span>
             </span>
+            <span v-if="row.timing" class="package-timing">{{ row.timing }}</span>
             <el-tooltip
               v-if="!management && row.canViewBuildLog"
               :content="t('editDesign.viewBuildLog')"
@@ -178,7 +179,7 @@
           <div><dt>{{ t('card.lastUpdated') }}</dt><dd>{{ lastUpdatedText }}</dd></div>
           <div><dt>{{ t('card.lastGoLive') }}</dt><dd>{{ lastGoLiveText }}</dd></div>
           <div v-if="hasDownloadablePackage"><dt>{{ t('card.lastPackage') }}</dt><dd>{{ lastPackageTimeText }} <span v-if="hasNewRelease" class="new-release-label">{{ t('card.newRelease') }}</span></dd></div>
-          <div v-if="packageRows.length"><dt>{{ t('faceDetail.buildStatus') }}</dt><dd class="package-info"><span v-for="row in packageRows" :key="row.key" class="package-state" :class="`package-${row.tone}`">{{ row.label }} · {{ row.value }}</span></dd></div>
+          <div v-if="packageRows.length"><dt>{{ t('faceDetail.buildStatus') }}</dt><dd class="package-info"><span v-for="row in packageRows" :key="row.key" class="package-state" :class="`package-${row.tone}`">{{ row.label }} · {{ row.value }}<span v-if="row.timing" class="package-timing">{{ row.timing }}</span></span></dd></div>
         </dl>
         <div v-if="design.product" class="record-business">
           <span v-if="canViewBusinessMetrics">{{ t('meter.orders') }} <strong>{{ orderCountText }}</strong></span>
@@ -195,6 +196,7 @@
             <strong>{{ row.label }}:</strong>
             <span v-if="row.releaseVersion" class="package-version">{{ row.releaseVersion }}</span>
             <span class="package-rank" :class="{ 'packaging-progress': row.isPackaging }">{{ row.value }}<span v-if="row.isPackaging" class="ellipsis">...</span></span>
+            <span v-if="row.timing" class="package-timing">{{ row.timing }}</span>
             <a v-if="showPackageDownload && row.canDownload" :href="row.downloadUrl" @click="trackConversion('download_start', userStore.token || '', design.product?.id)" :aria-label="`${row.label} · ${t('editDesign.downloadPackage')}`" class="package-icon-btn" target="_blank" rel="noopener noreferrer" download><el-icon><Download /></el-icon></a>
             <button v-if="row.canViewBuildLog" class="package-icon-btn" type="button" :aria-label="`${row.label} · ${t('editDesign.viewBuildLog')}`" @click.stop="openBuildLog(row.logId)"><Icon icon="material-symbols:article-outline-rounded" /></button>
           </div>
@@ -241,6 +243,7 @@
               <strong>{{ row.label }}</strong>
               <span v-if="row.releaseVersion" class="package-version">{{ row.releaseVersion }}</span>
               <span class="package-rank">{{ row.value }}</span>
+              <span v-if="row.timing" class="package-timing">{{ row.timing }}</span>
               <el-button
                 v-if="showPackageDownload && row.canDownload && row.tone === 'ready'"
                 :data-onboarding="row.key === 'prg' ? 'download' : undefined"
@@ -437,6 +440,8 @@
 
 <script setup lang="ts" generic="T extends DesignListItem">
 import { isGuidedDesign } from '@/features/onboarding/progress'
+import { useNow } from '@vueuse/core'
+import { packagingTimeText } from './packagingTime'
 import { trackConversion } from '@/utils/studioConversion'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { loadAppBuildVersion } from '@/api/wristo/platformVersions'
@@ -779,6 +784,7 @@ onMounted(async () => {
   if (props.management) latestBuildVersion.value = await loadAppBuildVersion()
 })
 
+const packagingClock = useNow({ interval: 10_000 })
 const packageRows = computed(() => {
   const product = design.value.product
   if (!product) return []
@@ -790,6 +796,7 @@ const packageRows = computed(() => {
     releaseVersion?: string
     tone: string
     isPackaging: boolean
+    timing: string
     logId?: number
     canViewBuildLog: boolean
     canDownload: boolean
@@ -805,6 +812,7 @@ const packageRows = computed(() => {
     const value = packageStatusText(currentPrgLog) || (prgReleaseUpdatedAt ? `${t('card.packageReady')} ${dayjs(prgReleaseUpdatedAt).format('MM-DD HH:mm')}` : t('card.packageReady'))
     rows.push({
       key: 'prg',
+      timing: packagingTimeText(currentPrgLog, props.nowMs ?? packagingClock.value.getTime(), t),
       label: 'PRG',
       releaseVersion: currentPrgRelease?.releaseVersion,
       value,
@@ -823,6 +831,7 @@ const packageRows = computed(() => {
     const value = packageStatusText(iqLog) || (iqReleaseUpdatedAt ? `${t('card.packageReady')} ${dayjs(iqReleaseUpdatedAt).format('MM-DD HH:mm')}` : t('card.packageReady'))
     rows.push({
       key: 'iq',
+      timing: packagingTimeText(iqLog, props.nowMs ?? packagingClock.value.getTime(), t),
       label: 'IQ',
       releaseVersion: product.release?.releaseVersion,
       value,
@@ -873,6 +882,8 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .prg-build-action .build-version-hint,
 .iq-build-action .iq-build-version-hint { flex: 1 1 120px; text-align: right; line-height: 1.5; font-weight: 400; }
 .build-version-hint { flex-basis: 100%; color: var(--studio-text-muted); font-size: 11px; }
+.package-timing { flex-basis: 100%; color: var(--el-text-color-secondary); font-size: 12px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+.package-state .package-timing { display: block; }
 .build-task-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; }
 .build-task-row .package-version {
   flex: 0 0 auto;
@@ -1250,6 +1261,7 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 
 .package-info-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
   min-width: 0;

@@ -4,6 +4,7 @@ import type { ApiResponse } from '@/types/api/api'
 export interface DesignSharingSettings {
   publiclyVisible: boolean
   allowRemix: boolean
+  copyEligible?: boolean
 }
 
 const path = (uid: string) => `/dsn/design/${encodeURIComponent(uid)}/sharing`

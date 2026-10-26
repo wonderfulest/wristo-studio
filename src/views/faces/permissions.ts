@@ -4,6 +4,7 @@ import type { ApiResponse } from '@/types/api/api'
 export interface FaceSharingSettings {
   publiclyVisible: boolean
   allowRemix: boolean
+  copyEligible?: boolean
 }
 export async function updateFaceSharing(appId: number, settings: Partial<FaceSharingSettings>): Promise<FaceSharingSettings> {
   const result: ApiResponse<FaceSharingSettings> = await instance.patch(`/dsn/products/${appId}/face-sharing`, settings, { suppressForbiddenRedirect: true })

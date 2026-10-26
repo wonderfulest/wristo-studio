@@ -1,10 +1,10 @@
 <template>
   <section class="design-sharing-settings" :class="{ compact }" :aria-label="t('designSharing.title')" :aria-busy="loading || saving">
     <h3 v-if="!compact">{{ t('designSharing.title') }}</h3>
-    <div v-for="field in fields" :key="field.key" class="sharing-row" :title="compact ? t(field.help) : undefined">
+    <div v-for="field in fields" :key="field.key" class="sharing-row" :title="compact ? t(field.key === 'allowRemix' && settings?.copyEligible === false ? 'designSharing.copyFreeOnly' : field.help) : undefined">
       <div>
         <label :for="`${controlId}-${field.key}`">{{ t(field.label) }}</label>
-        <p :id="`${controlId}-${field.key}-help`" :class="{ 'visually-hidden': compact }">{{ t(field.help) }}</p>
+        <p :id="`${controlId}-${field.key}-help`" :class="{ 'visually-hidden': compact }">{{ t(field.key === 'allowRemix' && settings?.copyEligible === false ? 'designSharing.copyFreeOnly' : field.help) }}</p>
       </div>
       <button
         :id="`${controlId}-${field.key}`"
@@ -14,7 +14,7 @@
         :aria-label="t(field.label)"
         :aria-describedby="`${controlId}-${field.key}-help`"
         :aria-checked="settings?.[field.key] ?? false"
-        :disabled="loading || saving || !settings"
+        :disabled="loading || saving || !settings || (field.key === 'allowRemix' && settings.copyEligible === false)"
         @click="toggle(field.key)"
       ><span class="toggle-thumb" aria-hidden="true"></span></button>
       <span v-if="compact && settings" class="sharing-value" aria-live="polite">{{ t(`designSharing.${field.key}${settings[field.key] ? 'On' : 'Off'}`) }}</span>
@@ -58,19 +58,19 @@ async function load() {
       result = await getDesignSharing(props.designUid)
     } else if (props.appId) {
       const face = await loadFaceDetail(String(props.appId))
-      result = { publiclyVisible: face.publiclyVisible === true, allowRemix: face.allowRemix === true }
+      result = { publiclyVisible: face.publiclyVisible === true, allowRemix: face.allowRemix === true && face.copyEligible !== false, copyEligible: face.copyEligible }
     } else {
       throw new Error('Missing sharing target')
     }
-    if (current === request) settings.value = result
+    if (current === request) settings.value = { ...result, allowRemix: result.copyEligible === false ? false : result.allowRemix }
   } catch {
     if (current === request) error.value = t('designSharing.loadFailed')
   } finally {
     if (current === request) loading.value = false
   }
 }
-async function toggle(key: keyof DesignSharingSettings) {
-  if (!settings.value || loading.value || saving.value) return
+async function toggle(key: 'publiclyVisible' | 'allowRemix') {
+  if (!settings.value || loading.value || saving.value || (key === 'allowRemix' && settings.value.copyEligible === false)) return
   const current = request
   saving.value = true
   error.value = ''

@@ -15,6 +15,18 @@ describe('independent design visibility and copying switches', () => {
     vi.clearAllMocks()
     api.getDesignSharing.mockResolvedValue({ publiclyVisible: true, allowRemix: false })
   })
+  it('forces ineligible copying off and keeps visibility editable', async () => {
+    api.getDesignSharing.mockResolvedValue({ publiclyVisible: true, allowRemix: true, copyEligible: false })
+    const wrapper = await show()
+    const switches = wrapper.findAll('[role="switch"]')
+    expect(switches[1].attributes('aria-checked')).toBe('false')
+    expect(switches[1].attributes('disabled')).toBeDefined()
+    expect(switches[0].attributes('disabled')).toBeUndefined()
+    expect(wrapper.text()).toContain('designSharing.copyFreeOnly')
+    await switches[1].trigger('click')
+    expect(api.updateDesignSharing).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
   it('loads persisted values and saves only visibility', async () => {
     const wrapper = await show()
     const switches = wrapper.findAll('[role="switch"]')

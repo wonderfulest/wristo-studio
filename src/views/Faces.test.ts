@@ -17,8 +17,8 @@ vi.mock('./faces/catalog', async () => ({
 }))
 describe('catalog edit actions', () => {
   it.each([
-    ['owner', { id: 7 }, false, ['/design?id=mine']],
-    ['admin', { id: 9 }, true, ['/design?id=mine', '/design?id=other']],
+    ['owner', { id: 7 }, false, ['Mine']],
+    ['admin', { id: 9 }, true, ['Mine', 'Other']],
     ['visitor', null, false, []],
     ['other user', { id: 9 }, false, []],
   ] as const)('shows only editable designs for %s', async (_, user, admin, links) => {
@@ -30,7 +30,7 @@ describe('catalog edit actions', () => {
     await router.push('/faces')
     const wrapper = mount(Faces, { global: { plugins: [router] } })
     await flushPromises()
-    expect(wrapper.findAll('.face-edit').map(link => link.attributes('href'))).toEqual(links)
+    expect(wrapper.findAll('.face-card').filter(card => card.find('.face-editable').exists()).map(card => card.get('.face-name').text())).toEqual(links)
     wrapper.unmount()
   })
 })

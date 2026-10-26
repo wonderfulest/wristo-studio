@@ -98,26 +98,7 @@
           <button @click="clearFilters">Browse all faces</button>
         </div>
         <div v-else class="face-grid">
-          <article v-for="face in faces" :key="face.appId" class="face-card">
-            <RouterLink :to="faceDetailsUrl(face.appId)" class="face-art">
-              <img v-if="faceImage(face)" :src="faceImage(face)" :alt="face.name" loading="lazy" @error="hideBrokenImage" />
-              <span v-else class="image-placeholder">Preview unavailable</span>
-            </RouterLink>
-            <div class="face-info">
-              <RouterLink :to="faceDetailsUrl(face.appId)" class="face-name">{{ face.name }}</RouterLink>
-              <div class="face-meta">
-                <span>{{ face.price === 0 ? 'Free' : face.price == null ? 'View pricing' : `$${face.price.toFixed(2)}` }}</span>
-                <span v-if="face.download != null">↓ {{ formatDownloadCount(face.download, userStore.isAdminUser || userStore.isMerchantUser) }}</span>
-                <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
-                <span v-if="canEditFace(face)" class="face-editable" role="img" aria-label="Editable in Builder" title="Editable in Builder">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m16 3 5 5-12 12-6 1 1-6L16 3Z" />
-                    <path d="m14 5 5 5" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-          </article>
+          <FaceCard v-for="face in faces" :key="face.appId" :face="face" />
         </div>
         <div v-if="!loading && !error && pages > 1" class="pagination">
           <button :disabled="page === 1" @click="changePage(-1)">← Previous</button>
@@ -172,14 +153,9 @@ import { useRoute } from 'vue-router'
 import '@fontsource/roboto-condensed/latin-700.css'
 import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
-import { useUserStore } from '@/stores/user'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
-import { formatDownloadCount } from './faces/downloadCount'
+import FaceCard from './faces/FaceCard.vue'
 import { faceDetailsUrl, faceImage, loadFaces, loadFaceDevices, type PublishedFace, type FaceDevice } from './faces/catalog'
-const userStore = useUserStore()
-function canEditFace(face: PublishedFace) {
-  return !!face.designId && (userStore.isAdminUser || (userStore.userInfo?.id != null && face.ownerId != null && String(userStore.userInfo.id) === String(face.ownerId)))
-}
 const faces = ref<PublishedFace[]>([])
 const featured = ref<PublishedFace[]>([])
 const devices = ref<FaceDevice[]>([])
@@ -481,63 +457,6 @@ h2 {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 22px 18px;
 }
-.face-card {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
-}
-.face-card:hover {
-  box-shadow: 0 8px 24px #252b2910;
-  transform: translateY(-3px);
-}
-.face-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1;
-  background: #f4f5f0;
-  padding: 12px;
-}
-.face-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.face-info {
-  padding: 13px 14px;
-}
-.face-name {
-  display: block;
-  font-weight: 700;
-  font-size: 16px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.face-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 8px;
-}
-.face-meta span:first-child {
-  margin-right: auto;
-}
-.face-editable {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  color: var(--muted);
-}
-.image-placeholder {
-  font-size: 12px;
-  color: var(--muted);
-}
 .empty {
   text-align: center;
   padding: 65px 15px;
@@ -705,9 +624,6 @@ select:focus-visible {
   .face-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 10px;
-  }
-  .face-info {
-    padding: 11px;
   }
   .catalog {
     padding: 28px 16px 42px;

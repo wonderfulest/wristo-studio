@@ -249,3 +249,19 @@ describe('design card management placement', () => {
     wrapper.unmount(); target.remove()
   })
 })
+
+it('renders timing beneath the build status and updates when the task finishes', async () => {
+  const task = { id: 9, deviceId: 'venu3', packagingStatus: 'pending', rank: 0,
+    createdAt: 1, processingStartedAt: 965000,
+    timeEstimate: { durationMs: 95000, waitMs: null, calculatedAt: 1000000 } }
+  const { wrapper } = await setup({ management: true, nowMs: 1000000,
+    design: { ...design, product: { ...design.product, prgPackagingLog: task } } })
+  expect(wrapper.get('.build-task-row .package-timing').text()).toContain('card.buildElapsed')
+  expect(wrapper.get('.build-task-row .package-timing').text()).toContain('card.buildRemaining')
+  await wrapper.setProps({ nowMs: 1100000 })
+  expect(wrapper.get('.build-task-row .package-timing').text()).toContain('card.buildOverEstimate')
+  await wrapper.setProps({ design: { ...design, product: { ...design.product,
+    prgPackagingLog: { ...task, packagingStatus: 'complete' } } } as any })
+  expect(wrapper.find('.build-task-row .package-timing').exists()).toBe(false)
+  wrapper.unmount()
+})

@@ -15,10 +15,7 @@
           <h2>{{ text.works }}</h2>
           <p v-if="!author.works.list.length" class="state">{{ text.empty }}</p>
           <div v-else class="face-grid">
-            <RouterLink v-for="face in author.works.list" :key="face.appId" :to="faceDetailsUrl(face.appId)" class="face-card">
-              <div class="face-art"><img v-if="faceImage(face) && !failedImages.has(face.appId)" :src="faceImage(face)" :alt="face.name" loading="lazy" @error="failedImages.add(face.appId)" /><span v-else>{{ text.noPreview }}</span></div>
-              <div class="face-info"><h3>{{ face.name }}</h3><span>{{ face.price === 0 ? text.free : face.price == null ? text.pricing : `$${face.price.toFixed(2)}` }}</span></div>
-            </RouterLink>
+            <FaceCard v-for="face in author.works.list" :key="face.appId" :face="face" />
           </div>
           <nav v-if="author.works.pages > 1" class="pagination" :aria-label="text.pagination">
             <button :disabled="page <= 1" @click="changePage(-1)">← {{ text.previous }}</button>
@@ -35,8 +32,9 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
+import FaceCard from './FaceCard.vue'
 import { useI18n } from '@/i18n'
-import { faceDetailsUrl, faceImage, loadAuthorProfile, type AuthorProfile } from './catalog'
+import { loadAuthorProfile, type AuthorProfile } from './catalog'
 const route = useRoute()
 const router = useRouter()
 const { locale } = useI18n()
@@ -50,7 +48,6 @@ const author = ref<AuthorProfile | null>(null)
 const loading = ref(false)
 const error = ref(false)
 const avatarFailed = ref(false)
-const failedImages = ref(new Set<number>())
 let request = 0
 async function load() {
   const current = ++request
@@ -58,7 +55,6 @@ async function load() {
   error.value = false
   author.value = null
   avatarFailed.value = false
-  failedImages.value.clear()
   try {
     const result = await loadAuthorProfile(String(route.params.userId), page.value)
     if (current === request) author.value = result
@@ -80,14 +76,12 @@ h1 { font-size: clamp(28px, 5vw, 42px); margin: 4px 0 8px; overflow-wrap: anywhe
 .eyebrow { color: var(--studio-primary); font-size: 12px; letter-spacing: .14em; }
 p { margin: 0; color: var(--studio-text-muted); }
 h2 { font-size: 22px; margin-bottom: 24px; }
-.face-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
-.face-card { color: inherit; text-decoration: none; border: 1px solid var(--studio-border); background: var(--studio-surface-raised); border-radius: 16px; overflow: hidden; }
-.face-card:hover { border-color: var(--studio-primary); }
-.face-art { aspect-ratio: 1; padding: 24px; display: grid; place-items: center; background: var(--studio-surface-soft); color: var(--studio-text-muted); }
-.face-art img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
-.face-info { padding: 16px 20px; }.face-info h3 { margin: 0 0 6px; font-size: 18px; overflow-wrap: anywhere; }.face-info span { color: var(--studio-text-muted); }
+.face-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px 18px; }
+@media (max-width: 1100px) { .face-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .face-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .face-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; } }
 .state { text-align: center; padding: 64px 16px; }.state h1 { font-size: 22px; margin-bottom: 20px; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 32px; }
 button { background: var(--studio-surface-raised); color: var(--studio-text); border: 1px solid var(--studio-border); border-radius: 8px; padding: 10px 16px; cursor: pointer; }button:disabled { opacity: .45; cursor: default; }
-@media (max-width: 540px) { main { padding: 24px 16px 48px; }.profile { padding: 32px 0; gap: 16px; }.avatar { width: 64px; height: 64px; }.face-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }.face-art { padding: 12px; }.face-info { padding: 12px; } }
+@media (max-width: 540px) { main { padding: 24px 16px 48px; }.profile { padding: 32px 0; gap: 16px; }.avatar { width: 64px; height: 64px; } }
 </style>
