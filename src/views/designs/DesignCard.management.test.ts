@@ -23,6 +23,16 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it.each(['grid', 'list'])('shows summary AppId only to administrators in %s view', async viewMode => {
+    const { wrapper } = await setup({ summaryOnly: true, viewMode })
+    expect(wrapper.get('.summary-meta .app-id').text()).toBe('card.appId: 211889')
+    await wrapper.setProps({ isAdminUser: false })
+    expect(wrapper.find('.summary-meta .app-id').exists()).toBe(false)
+    await wrapper.setProps({ isAdminUser: true, design: { ...design, product: undefined } })
+    expect(wrapper.find('.summary-meta .app-id').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it.each([['2.9.4', true], ['2.10.0', false], ['3.0.0', false], [undefined, false]])('shows a gentle rebuild hint only for older packages: %s', async (releaseVersion, expected) => {
     const { wrapper } = await setup({ management: true, design: { ...design, product: { ...design.product, release: { ...design.product.release, releaseVersion } } } })
     await flushPromises()

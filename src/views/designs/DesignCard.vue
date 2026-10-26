@@ -190,7 +190,8 @@
       </section>
       </Teleport>
       <div v-if="summaryOnly" class="summary-meta">
-        <div v-if="(canViewBusinessMetrics && design.product) || (isAdminUser && canDeleteCurrentAction)" class="summary-downloads-row">
+        <div v-if="(isAdminUser && design.product?.appId) || (canViewBusinessMetrics && design.product) || (isAdminUser && canDeleteCurrentAction)" class="summary-downloads-row">
+          <span v-if="isAdminUser && design.product?.appId" class="app-id">{{ t('card.appId') }}: {{ design.product.appId }}</span>
           <span v-if="canViewBusinessMetrics && design.product" class="summary-downloads">{{ t('meter.downloads') }}: {{ downloadCountText }}</span>
           <button v-if="isAdminUser && canDeleteCurrentAction" class="delete-action summary-delete-action" type="button" :aria-label="t('common.delete')" :title="t('common.delete')" :disabled="loadingStates.delete.has(design.id)" @click.stop="emit('delete', design)">
             <el-icon><Delete /></el-icon>
@@ -901,7 +902,7 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .build-task-cancel:hover { background: var(--studio-surface-raised); color: var(--studio-text); }
 .build-task-cancel:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 
-.summary-meta { display: flex; flex-direction: column; align-items: stretch; gap: 8px; font-size: 12px; color: var(--studio-text-muted); padding-top: 10px; }
+.summary-meta { display: flex; flex-direction: column; align-items: stretch; gap: 2px; font-size: 12px; color: var(--studio-text-muted); padding-top: 4px; }
 .title { text-decoration: none; color: inherit; }
 .design-card--management { height: auto; }
 .design-card--management .design-info, .design-card--management .actions-bar { display: flex; flex-direction: column; gap: 12px; }
@@ -1559,8 +1560,10 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 .design-card--summary.design-card--list :deep(.el-card__header) { grid-column: 2; grid-row: 1; }
 .design-card--summary.design-card--list :deep(.el-card__body),
 .design-card--summary.design-card--list .design-info { display: contents; }
-.design-card--summary.design-card--list .summary-meta { grid-column: 3; grid-row: 1; padding: 0; gap: 8px; }
-.summary-downloads-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.design-card--summary.design-card--list .summary-meta { grid-column: 3; grid-row: 1; padding: 0; gap: 2px; }
+.summary-downloads-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 24px; }
+.summary-downloads-row .app-id { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.design-card--summary:not(.design-card--list) :deep(.el-card__body) { padding-bottom: 6px; }
 .summary-delete-action { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-left: auto; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--studio-text-muted); font-size: 14px; cursor: pointer; }
 .summary-delete-action:hover { color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
 .summary-delete-action:disabled { opacity: 0.45; cursor: not-allowed; }
