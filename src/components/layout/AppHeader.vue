@@ -187,7 +187,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--studio-primary); outline-offset: 2px; }
 .preferences { gap: 2px; }
 .studio-tools :deep(.theme-button), .studio-tools :deep(.language-button) { width: 30px; min-height: 32px; height: 32px; padding: 0; justify-content: center; }
-.studio-tools :deep(.theme-button span), .studio-tools :deep(.language-button span), .studio-tools :deep(.language-button .el-icon), .studio-tools :deep(.user-trigger-copy), .studio-tools :deep(.user-trigger-arrow), .studio-tools :deep(.ticket-reminder) { display: none; }
+.studio-tools :deep(.theme-button span), .studio-tools :deep(.language-button span), .studio-tools :deep(.language-button .el-icon), .studio-tools :deep(.user-trigger-copy), .studio-tools :deep(.user-trigger-arrow) { display: none; }
 .studio-tools :deep(.user-avatar-container) { padding: 0 2px; border: 0; background: transparent; }
 .studio-tools :deep(.user-avatar) { width: 28px; height: 28px; }
 .studio-tools :deep(.device-info) { min-height: 34px; height: 34px; padding: 3px 8px; border-radius: 5px; }

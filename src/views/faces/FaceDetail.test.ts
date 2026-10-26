@@ -40,6 +40,13 @@ async function setup(path = '/faces/123') {
   return { wrapper, router }
 }
 describe('watch face details', () => {
+  it('links the creator name to their public profile', async () => {
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, user: { nickname: 'Maisie' } })
+    const { wrapper } = await setup()
+    expect(wrapper.get('a.creator').attributes('href')).toBe('/authors/7')
+    expect(wrapper.get('a.creator').text()).toContain('Maisie')
+  })
+
   it('opens the requested publishing section and follows section navigation', async () => {
     const { wrapper, router } = await setup('/faces/123?section=distribution')
     expect(wrapper.get('#detail-tab-distribution').attributes('aria-selected')).toBe('true')
@@ -375,4 +382,28 @@ it('updates detail labels immediately when switching language', async () => {
   expect(wrapper.text()).toContain('设备兼容性')
   expect(wrapper.text()).toContain('编辑描述')
   expect(wrapper.text()).not.toContain('Store listing')
+})
+
+it('switches description language immediately and preserves the mounted editor', async () => {
+  vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, description: 'Default description', descriptions: { en: 'English description', zh: '中文描述' } })
+  const { wrapper } = await setup()
+  const controller = wrapper.get('[data-testid="management"]').element
+  expect(wrapper.get('.description').text()).toBe('English description')
+  ;(useI18n().locale as { value: string }).value = 'zh'
+  await flushPromises()
+  await new Promise(resolve => setTimeout(resolve, 250))
+  expect(wrapper.get('.description').text()).toBe('中文描述')
+  ;(useI18n().locale as { value: string }).value = 'en'
+  await flushPromises()
+  await new Promise(resolve => setTimeout(resolve, 250))
+  expect(wrapper.get('.description').text()).toBe('English description')
+  expect(wrapper.get('[data-testid="management"]').element).toBe(controller)
+  expect(loadFaceDetail).toHaveBeenCalledTimes(1)
+})
+
+it.each<(Record<string, string> | null)>([null, {}, { zh: '  ' }])('falls back to the default description when translation is missing: %s', async (descriptions) => {
+  ;(useI18n().locale as { value: string }).value = 'zh'
+  vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, description: 'Default description', descriptions })
+  const { wrapper } = await setup()
+  expect(wrapper.get('.description').text()).toBe('Default description')
 })

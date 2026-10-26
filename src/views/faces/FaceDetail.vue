@@ -40,7 +40,7 @@
           <header class="app-heading">
             <div class="eyebrow">{{ t('faceDetail.garminWatchFace') }} <span v-if="face.appId">#{{ face.appId }}</span></div>
             <div class="app-title-row"><h1>{{ face.name }}</h1><button v-if="canEdit && face.designId" type="button" class="edit-app-information studio-edit-button" @click="selectSection('listing')"><Icon icon="material-symbols:edit-outline" /> {{ t('faceDetail.editAppInformation') }}</button></div>
-            <div class="byline"><span v-if="creator" class="creator"><span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>{{ t('faceDetail.by') }} <strong>{{ creator }}</strong></span><span v-if="formatDate(face.updatedAt || face.createdAt)">{{ t('faceDetail.updatedDate', { date: formatDate(face.updatedAt || face.createdAt) }) }}</span></div>
+            <div class="byline"><component :is="face.ownerId ? RouterLink : 'span'" v-if="creator" :to="face.ownerId ? `/authors/${face.ownerId}` : undefined" class="creator"><span class="creator-avatar">{{ creator.slice(0, 1).toUpperCase() }}</span>{{ t('faceDetail.by') }} <strong>{{ creator }}</strong></component><span v-if="formatDate(face.updatedAt || face.createdAt)">{{ t('faceDetail.updatedDate', { date: formatDate(face.updatedAt || face.createdAt) }) }}</span></div>
             <DesignSharingSettings v-if="canEdit && (face.designId || face.appId)" :key="`${face.designId || face.appId}-${userStore.userInfo?.id}`" class="owner-sharing-settings" compact :design-uid="face.designId || undefined" :app-id="face.appId || undefined" @saved="Object.assign(face, $event)" />
             <dl class="face-stats">
               <div><dt>{{ t('faceDetail.price') }}</dt><dd>{{ face.price === 0 ? t('faceDetail.free') : face.price == null ? '—' : `$${face.price.toFixed(2)}` }}</dd></div>
@@ -53,7 +53,7 @@
             <button v-for="(section, index) in detailSections" :id="`detail-tab-${section.id}`" :key="section.id" type="button" role="tab" :aria-selected="activeSection === section.id" :aria-controls="`detail-panel-${section.id}`" :tabindex="activeSection === section.id ? 0 : -1" @click="selectSection(section.id)" @keydown="moveTab($event, index)"><Icon :icon="section.icon" />{{ section.label }}</button>
           </div>
           <section v-show="activeSection === 'overview'" id="detail-panel-overview" class="overview-content" :role="canEdit && face.designId ? 'tabpanel' : undefined" :aria-labelledby="canEdit && face.designId ? 'detail-tab-overview' : undefined">
-            <FaceDescription v-if="face.appId" :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section overview-description" :app-id="face.appId" :description="face.description" :is-owner="canEdit" :external-editor="!!face.designId" @edit="selectSection('listing')" @saved="face.description = $event">
+            <FaceDescription v-if="face.appId" :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section overview-description" :app-id="face.appId" :description="localizedDescription" :is-owner="canEdit" :external-editor="!!face.designId" @edit="selectSection('listing')" @saved="face.description = $event">
               <div v-if="face.tags?.length" class="tags"><span v-for="tag in (showAllTags ? face.tags : face.tags.slice(0, 6))" :key="tag.id">{{ tag.name }}</span><button v-if="face.tags.length > 6" @click="showAllTags = !showAllTags">{{ showAllTags ? t('faceDetail.showLess') : t('faceDetail.moreTags', { count: face.tags.length - 6 }) }}</button></div>
             </FaceDescription>
             <div class="capability-grid">
@@ -86,7 +86,7 @@ import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { useI18n } from '@/i18n'
 const { t, locale } = useI18n()
 import { defineAsyncComponent, computed, onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { remixFace } from './permissions'
 import DesignSharingSettings from '@/components/dialogs/DesignSharingSettings.vue'
@@ -217,6 +217,7 @@ const selectImage = (url: string) => {
   selectedImage.value = url
   imageFailed.value = false
 }
+const localizedDescription = computed(() => face.value?.descriptions?.[locale.value]?.trim() ? face.value.descriptions[locale.value] : face.value?.description)
 const formatDate = (value?: string | null) => formatFaceDate(value, locale.value)
 
 async function loadCurrentFace(): Promise<FaceDetail> {
@@ -295,7 +296,7 @@ onBeforeUnmount(() => { request += 1; shareRequest += 1 })
 .eyebrow span { color: var(--studio-text-subtle); font-weight: 400; letter-spacing: .4px; border-left: 1px solid var(--studio-border-strong); padding-left: 12px; }
 h1 { margin: 12px 0; font-size: clamp(32px, 3.6vw, 48px); line-height: 1.05; font-weight: 700; letter-spacing: -1px; overflow-wrap: anywhere; }
 .byline { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; color: var(--studio-text-muted); font-size: 13px; }
-.creator { display: inline-flex; align-items: center; gap: 6px; }.creator strong { font-weight: 600; color: var(--studio-text); }
+.creator { display: inline-flex; align-items: center; gap: 6px; }.creator { text-decoration: none; }.creator:hover strong { color: var(--studio-primary); text-decoration: underline; }.creator strong { font-weight: 600; color: var(--studio-text); }
 .creator-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--studio-primary-soft); color: var(--studio-primary); font-size: 11px; margin-right: 3px; }
 .face-stats { display: flex; gap: 0; margin: 24px 0 0; padding: 18px 0 0; border-top: 1px solid var(--studio-border); }
 .face-stats > div { padding: 0 26px; border-left: 1px solid var(--studio-border); }.face-stats > div:first-child { padding-left: 0; border: 0; }

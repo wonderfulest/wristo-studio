@@ -48,6 +48,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/authors/:userId',
+    name: 'AuthorProfile',
+    component: () => import('@/views/faces/AuthorProfile.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/faces/:appId',
     name: 'FaceDetail',
     component: () => import('@/views/faces/FaceDetail.vue'),

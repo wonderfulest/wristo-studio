@@ -58,4 +58,5 @@ export const requiresStudioLogin = (path: string) => {
   return !searchPages.some(page => page.path === normalized)
     && !['/', '/tokens', '/faces', '/wiki', '/academy', '/auth/callback', '/auth/signed-out'].includes(normalized)
     && !/^\/faces\/[^/]+$/.test(normalized)
+    && !/^\/authors\/[1-9]\d*$/.test(normalized)
 }

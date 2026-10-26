@@ -30,6 +30,7 @@ export interface FaceDetail extends PublishedFace {
   configJson?: unknown
   dataFieldCatalog?: unknown
   description?: string | null
+  descriptions?: Record<string, string> | null
   user?: { nickname?: string | null; username?: string | null; avatar?: string | null } | null
   createdAt?: string | null
   updatedAt?: string | null
@@ -102,4 +103,15 @@ export function faceDownloadUrl(face: PublishedFace): string | undefined {
     /* Missing store links have no download action. */
   }
   return undefined
+}
+
+export interface AuthorProfile {
+  id: number
+  name: string
+  avatar?: string | null
+  works: FacePage
+}
+export function loadAuthorProfile(id: string, page = 1): Promise<AuthorProfile> {
+  if (!/^[1-9]\d*$/.test(id)) return Promise.reject(new Error('Author not found.'))
+  return publicGet(`authors/${id}`, { pageNum: String(page), pageSize: '24' })
 }

@@ -73,7 +73,7 @@ describe('mandatory Studio login', () => {
     expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: true, fullPath: path, redirectToLogin, rejectForbidden: vi.fn() })).toBe(false)
     expect(redirectToLogin).toHaveBeenCalledWith(path)
   })
-  it.each(['/', '/tokens', '/tokens/', '/wiki', '/wiki/', '/academy', '/academy/', '/faces', '/faces/', '/faces/123', '/faces/123/', '/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', (path) => {
+  it.each(['/', '/tokens', '/tokens/', '/wiki', '/wiki/', '/academy', '/academy/', '/faces', '/faces/', '/faces/123', '/faces/123/', '/authors/7', '/authors/7/', '/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', (path) => {
     expect(requiresStudioLogin(path)).toBe(false)
     const redirectToLogin = vi.fn()
     const rejectForbidden = vi.fn()

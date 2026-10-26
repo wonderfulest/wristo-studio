@@ -1,33 +1,5 @@
 <template>
   <div class="user-menu" v-if="userStore.isAuthenticated">
-    <div v-if="showMerchantEntrypoints && pendingCount > 0" class="ticket-reminder">
-      <button class="ticket-reminder-button" type="button" @click.stop="goTickets">
-        <Icon icon="material-symbols:confirmation-number-outline" />
-        <span class="ticket-reminder-label">{{ t('nav.tickets') }}</span>
-        <span class="ticket-reminder-count">{{ pendingCount }}</span>
-      </button>
-
-      <div v-if="ticketNudgeVisible" class="ticket-nudge" role="status">
-        <div class="ticket-nudge-copy">
-          <strong>{{ t('dialog.ticketReminder') }}</strong>
-          <span>{{ t('dialog.ticketReminderBody', { count: pendingCount }) }}</span>
-        </div>
-        <div class="ticket-nudge-actions">
-          <button class="ticket-nudge-link" type="button" @click.stop="goTickets">
-            {{ t('dialog.viewTickets') }}
-          </button>
-          <button
-            class="ticket-nudge-close"
-            type="button"
-            :aria-label="t('common.cancel')"
-            @click.stop="ticketNudgeVisible = false"
-          >
-            <Icon icon="material-symbols:close" />
-          </button>
-        </div>
-      </div>
-    </div>
-
     <button type="button" class="user-avatar-container" :aria-label="t('nav.accountMenu')" @click.stop="toggleDropdown">
       <span class="user-avatar-wrap">
         <img :src="userAvatar" class="user-avatar" alt="user avatar" />
@@ -181,7 +153,6 @@ const signIn = async () => {
 const showDropdown = ref(false)
 const designerConfigDialogRef = ref<{ show: () => void } | null>(null)
 
-const ticketNudgeVisible = ref(false)
 const pendingCount = ref<number>(0)
 const showMerchantEntrypoints = computed(() => userStore.isMerchantUser)
 const showAvatarDot = computed(() => showMerchantEntrypoints.value && pendingCount.value > 0)
@@ -230,7 +201,6 @@ const openMembership = () => {
 
 const goTickets = () => {
   showDropdown.value = false
-  ticketNudgeVisible.value = false
   router.push('/tickets')
 }
 
@@ -243,7 +213,6 @@ const fetchPendingTickets = async () => {
   try {
     if (!showMerchantEntrypoints.value) {
       pendingCount.value = 0
-      ticketNudgeVisible.value = false
       return
     }
     const assigneeId = userStore.userInfo?.id
@@ -252,7 +221,6 @@ const fetchPendingTickets = async () => {
     const cnt = res.data
     if (typeof cnt === 'number' && cnt > 0) {
       pendingCount.value = cnt
-      ticketNudgeVisible.value = true
     }
   } catch (_e) {
     // silent
@@ -264,7 +232,6 @@ onMounted(() => {
     const target = e.target as HTMLElement
     if (!target.closest('.user-menu')) {
       showDropdown.value = false
-      ticketNudgeVisible.value = false
     }
   }
   window.addEventListener('click', closeDropdown)
@@ -303,139 +270,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.ticket-reminder {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.ticket-reminder-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 0 10px;
-  color: var(--studio-primary);
-  background: var(--studio-primary-soft);
-  border: 1px solid var(--studio-primary-border);
-  border-radius: var(--studio-radius-md);
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.ticket-reminder-button:hover {
-  background: var(--studio-primary-soft-hover);
-  border-color: #7fc4b8;
-}
-
-.ticket-reminder-button svg {
-  width: 18px;
-  height: 18px;
-}
-
-.ticket-reminder-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  color: #fff;
-  background: #ff4d4f;
-  border-radius: 999px;
-  font-size: 12px;
-  line-height: 20px;
-}
-
-.ticket-nudge {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 1001;
-  width: min(360px, calc(100vw - 24px));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px;
-  color: var(--studio-text);
-  background: #fff;
-  border: 1px solid var(--studio-border);
-  border-radius: var(--studio-radius-lg);
-  box-shadow: var(--studio-shadow-lg);
-}
-
-.ticket-nudge-copy {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.ticket-nudge-copy strong {
-  font-size: 14px;
-  line-height: 1.2;
-}
-
-.ticket-nudge-copy span {
-  color: var(--studio-text-muted);
-}
-
-.ticket-nudge-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.ticket-nudge-link,
-.ticket-nudge-close {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-}
-
-.ticket-nudge-link {
-  min-height: 32px;
-  padding: 0 10px;
-  color: #fff;
-  background: var(--studio-primary);
-  border-radius: var(--studio-radius-md);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.ticket-nudge-link:hover {
-  background: var(--studio-primary-hover);
-}
-
-.ticket-nudge-close {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--studio-text-muted);
-  border-radius: var(--studio-radius-md);
-}
-
-.ticket-nudge-close:hover {
-  color: var(--studio-text);
-  background: var(--studio-surface-soft);
-}
-
-.ticket-nudge-close svg {
-  width: 18px;
-  height: 18px;
 }
 
 .user-avatar-container {
@@ -771,42 +605,6 @@ onMounted(() => {
     gap: 4px;
   }
 
-  .ticket-reminder-button {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    padding: 0;
-    gap: 0;
-    position: relative;
-  }
-
-  .ticket-reminder-label {
-    display: none;
-  }
-
-  .ticket-reminder-count {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    font-size: 11px;
-    line-height: 18px;
-  }
-
-  .ticket-nudge {
-    right: -52px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .ticket-nudge-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
   .user-avatar-container {
     width: 44px;
     height: 44px;
@@ -854,14 +652,12 @@ onMounted(() => {
   }
 }
 
-html[data-studio-theme='dark'] .ticket-nudge,
 html[data-studio-theme='dark'] .dropdown-menu {
   background-color: var(--studio-surface-raised);
   border-color: var(--studio-border);
   box-shadow: var(--studio-shadow-md);
 }
 
-html[data-studio-theme='dark'] .ticket-nudge-copy strong,
 html[data-studio-theme='dark'] .dropdown-item {
   color: var(--studio-text);
 }
@@ -879,15 +675,6 @@ html[data-studio-theme='dark'] .user-dropdown-profile {
   border-color: var(--studio-border);
 }
 
-html[data-studio-theme='dark'] .ticket-nudge-copy span {
-  color: var(--studio-text-muted);
-}
-
-html[data-studio-theme='dark'] .ticket-nudge-close {
-  color: var(--studio-text-muted);
-}
-
-html[data-studio-theme='dark'] .ticket-nudge-close:hover,
 html[data-studio-theme='dark'] .dropdown-item:hover {
   background-color: var(--studio-primary-soft);
   color: var(--studio-primary);
