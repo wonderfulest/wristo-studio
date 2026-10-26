@@ -53,6 +53,16 @@
         <el-radio-button value="eng">English</el-radio-button>
         <el-radio-button value="zhs">中文</el-radio-button>
       </el-radio-group>
+      <div class="duplicate-sharing-option">
+        <el-switch v-model="duplicatePubliclyVisible" :aria-label="t('createDesign.publiclyVisible')" />
+        <span>{{ t('createDesign.publiclyVisible') }}</span>
+        <p>{{ t('createDesign.publiclyVisibleHint') }}</p>
+      </div>
+      <div class="duplicate-sharing-option">
+        <el-switch v-model="duplicateAllowRemix" :aria-label="t('createDesign.allowRemix')" />
+        <span>{{ t('createDesign.allowRemix') }}</span>
+        <p>{{ t('createDesign.allowRemixHint') }}</p>
+      </div>
       <template #footer>
         <el-button @click="duplicateLanguageDialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="confirmDuplicateLanguage">{{ t('card.duplicate') }}</el-button>
@@ -153,7 +163,6 @@ import {
 } from '@/api/wristo/prg-installer'
 import { isStaleDynamicImportError } from '@/router/chunkLoadRecovery'
 import {
-  canChooseDuplicateLanguage,
   getDuplicateSourceLanguage,
   withDuplicateLanguage,
 } from '@/views/designs/designDuplicateLanguage'
@@ -201,6 +210,8 @@ const transferLoading = ref(false)
 const duplicateLanguageDialogVisible = ref(false)
 const duplicateSourceDesign = ref<Design | null>(null)
 const duplicateLanguage = ref<AppLanguage>('eng')
+const duplicatePubliclyVisible = ref(true)
+const duplicateAllowRemix = ref(false)
 
 // 添加加载状态
 const loadingStates = ref<LoadingStates>({
@@ -392,7 +403,7 @@ const executeDuplicateDesign = async (design: Design, targetLanguage: AppLanguag
 
   try {
     loadingStates.value.copy.add(design.id)
-    const newDesignData = { uid: design.designUid } as CreateCopyDesignParams
+    const newDesignData: CreateCopyDesignParams = { uid: design.designUid, publiclyVisible: duplicatePubliclyVisible.value, allowRemix: duplicateAllowRemix.value }
     const createResponse = await designApi.createDesignByCopy(newDesignData) as ApiResponse<Design>
 
     if (createResponse.code === 0 && createResponse.data) {
@@ -442,15 +453,11 @@ const copyDesign = async (design: DesignListItem) => {
       return
     }
 
-    if (canChooseDuplicateLanguage(detailResponse.data.configJson)) {
-      duplicateSourceDesign.value = detailResponse.data
-      duplicateLanguage.value = 'eng'
-      duplicateLanguageDialogVisible.value = true
-      return
-    }
-
-    loadingStates.value.copy.delete(design.id)
-    await executeDuplicateDesign(detailResponse.data, getDuplicateSourceLanguage(detailResponse.data.configJson))
+    duplicateSourceDesign.value = detailResponse.data
+    duplicateLanguage.value = getDuplicateSourceLanguage(detailResponse.data.configJson)
+    duplicatePubliclyVisible.value = true
+    duplicateAllowRemix.value = false
+    duplicateLanguageDialogVisible.value = true
   } catch (error) {
     console.error('加载待复制应用失败:', error)
     showErrorOnce(error, (error as any)?.response?.data?.msg || t('project.loadDesignFailed'))
@@ -758,6 +765,10 @@ onUnmounted(() => {
 })
 </script>
 <style scoped>
+.duplicate-sharing-option { margin-top: 20px; }
+.duplicate-sharing-option > span { margin-left: 10px; }
+.duplicate-sharing-option p { margin: 6px 0 0; color: var(--el-text-color-secondary); font-size: 13px; }
+
 .design-management { margin-top: 16px; }
 .management-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .management-heading > span { font-size: 9px; letter-spacing: 1.2px; color: var(--studio-text-subtle); }

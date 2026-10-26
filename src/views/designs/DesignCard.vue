@@ -216,13 +216,16 @@
               <span class="build-prg-tooltip-trigger">
                 <el-button
                   size="small"
+                  class="prg-build-action"
                   data-onboarding="build"
                   :disabled="prgCardAction !== 'build'"
                   @click="closeActions(); emit('build-prg', design)"
                   :loading="loadingStates.prgBuild.has(design.id)"
                 >
-                  <el-icon><Box /></el-icon>
-                  {{ t('card.buildPrg') }}
+                  <span class="build-action-label"><el-icon><Box /></el-icon>{{ t('card.buildPrg') }}</span>
+                  <span v-if="prgBuildOutdated" class="build-version-hint">
+                    {{ t('card.newBuildVersionHint', { version: latestBuildVersion ?? '' }) }}
+                  </span>
                 </el-button>
               </span>
             </el-tooltip>
@@ -291,9 +294,6 @@
                   @click.stop="cancelBuild(row.key)"
                 ><Icon icon="material-symbols:close-rounded" aria-hidden="true" /></button>
               </el-tooltip>
-              <span v-if="row.key === 'prg' && row.tone === 'ready' && isOlderBuildVersion(row.releaseVersion, latestBuildVersion)" class="build-version-hint">
-                {{ t('card.newBuildVersionHint', { version: latestBuildVersion ?? '' }) }}
-              </span>
             </div>
           </div>
         </section>
@@ -397,7 +397,6 @@
             <section class="action-group action-group-manage">
               <div class="action-group-title">{{ t('card.manageActions') }}</div>
               <div class="action-group-actions">
-                <el-button v-if="management && appId" size="small" @click="goToOperations">{{ t('card.openOperations') }}</el-button>
                 <el-button size="small" @click="closeActions(); emit('copy', design)" :loading="loadingStates.copy.has(design.id)">
                   <el-icon><DocumentCopy /></el-icon>
                   {{ t('card.duplicate') }}
@@ -409,6 +408,10 @@
                 <el-button v-if="canDeleteCurrentAction" class="delete-action" type="danger" plain size="small" @click="closeActions(); emit('delete', design)">
                   <el-icon><Delete /></el-icon>
                   {{ t('common.delete') }}
+                </el-button>
+                <el-button v-if="management && appId" size="small" @click="goToOperations">
+                  <el-icon><Icon icon="material-symbols:trending-up-rounded" /></el-icon>
+                  {{ t('card.openOperations') }}
                 </el-button>
               </div>
             </section>
@@ -835,6 +838,10 @@ const packageRows = computed(() => {
   return rows
 })
 
+const prgBuildOutdated = computed(() => packageRows.value.some(row =>
+  row.key === 'prg' && row.tone === 'ready' && isOlderBuildVersion(row.releaseVersion, latestBuildVersion.value),
+))
+
 const iqBuildOutdated = computed(() => packageRows.value.some(row =>
   row.key === 'iq' && row.tone === 'ready' && isOlderBuildVersion(row.releaseVersion, latestBuildVersion.value),
 ))
@@ -859,8 +866,11 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 
 <style scoped>
 .build-task-status { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--studio-border); }
+.action-group-actions :deep(.prg-build-action > span),
 .action-group-actions :deep(.iq-build-action > span) { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; width: 100%; }
+.build-action-label,
 .iq-build-label { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.prg-build-action .build-version-hint,
 .iq-build-action .iq-build-version-hint { flex: 1 1 120px; text-align: right; line-height: 1.5; font-weight: 400; }
 .build-version-hint { flex-basis: 100%; color: var(--studio-text-muted); font-size: 11px; }
 .build-task-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; }

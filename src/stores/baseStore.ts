@@ -1,3 +1,5 @@
+import { chooseDesignVisibility } from '@/views/design/chooseDesignVisibility'
+import { useI18n } from '@/i18n'
 import { defineStore } from 'pinia'
 import _ from 'lodash'
 import type { Canvas } from 'fabric'
@@ -347,7 +349,10 @@ export const useBaseStore = defineStore('baseStore', {
       if (!(await validateRuntimeConfigForExport(config))) return false
       const exportConfig = await resolvePackageAssetUrls(config)
       if (!exportConfig) return false
+      const sharing = await chooseDesignVisibility(useI18n().t)
+      if (sharing === null) return false
       const created = await designApi.createDesign({
+        ...sharing,
         name: designStore.watchFaceName,
         description: designStore.watchFaceName,
         originalType: 'original',

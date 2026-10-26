@@ -122,6 +122,7 @@ import AiWatchfaceDialog from '@/views/design/AiWatchfaceDialog.vue'
 import AiAdjustmentPanel from '@/views/design/AiAdjustmentPanel.vue'
 import { useStudioAiCapabilities } from '@/views/design/useStudioAiCapabilities'
 import { useAiAdjustmentEditor } from '@/views/design/useAiAdjustmentEditor'
+import { chooseDesignVisibility } from '@/views/design/chooseDesignVisibility'
 import { useEditorEntry } from '@/views/design/useEditorEntry'
 import {
   copySelectedElements,
@@ -446,6 +447,7 @@ const { creating: entryCreating, error: entryError, open: openEditorEntry } = us
   currentId: () => loadedDesignId,
   findUnsaved: () => readUnsavedDesigns(window.localStorage, draftOwner())[0],
   chooseUnsaved: chooseUnsavedDesign,
+  chooseVisibility: () => chooseDesignVisibility(t),
   onCreated: (id, name) => { rememberDraft(id, name); newAiProjectId = id },
   flush: async () => {
     saveDirtyDraft()

@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import DesignManagement from './DesignManagement.vue'
 import { ElMessageBox } from 'element-plus'
 const mocks = vi.hoisted(() => ({
-  cancelIq: vi.fn(), cancelPrg: vi.fn(), get: vi.fn(), remove: vi.fn(), transfer: vi.fn(), updateWeight: vi.fn(), update: vi.fn(), push: vi.fn(), publishShow: vi.fn(), submitShow: vi.fn(), error: vi.fn(), refreshUser: vi.fn(), canExport: vi.fn(), canPublish: vi.fn(), download: vi.fn(),
+  copy: vi.fn(), cancelIq: vi.fn(), cancelPrg: vi.fn(), get: vi.fn(), remove: vi.fn(), transfer: vi.fn(), updateWeight: vi.fn(), update: vi.fn(), push: vi.fn(), publishShow: vi.fn(), submitShow: vi.fn(), error: vi.fn(), refreshUser: vi.fn(), canExport: vi.fn(), canPublish: vi.fn(), download: vi.fn(),
   user: { userInfo: { id: 7, roles: [], device: { deviceId: 'venu3' } }, isAdminUser: false, isStudioConsumer: false, hasFullStudioAccess: true, canCreateDesign: true, studioMembership: { level: 'annual' } },
 }))
-vi.mock('@/api/wristo/design', () => ({ designApi: { cancelIqPackageTask: mocks.cancelIq, cancelPrgPackageTask: mocks.cancelPrg, getDesignByUid: mocks.get, deleteDesign: mocks.remove, updateDesign: mocks.update } }))
+vi.mock('@/api/wristo/design', () => ({ designApi: { createDesignByCopy: mocks.copy, cancelIqPackageTask: mocks.cancelIq, cancelPrgPackageTask: mocks.cancelPrg, getDesignByUid: mocks.get, deleteDesign: mocks.remove, updateDesign: mocks.update } }))
 vi.mock('@/api/wristo/products', () => ({ productsApi: { transferOwner: mocks.transfer, updateStoreWeight: mocks.updateWeight } }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => ({ ...mocks.user, refreshUserInfo: mocks.refreshUser }) }))
 vi.mock('@/stores/baseStore', () => ({ useBaseStore: () => ({}) }))
@@ -195,4 +195,24 @@ describe('application management', () => {
     resolve({ code: 0, data: fixture() }); await flushPromises()
     expect(mocks.publishShow).not.toHaveBeenCalled()
   })
+})
+
+it.each(['eng', 'zhs'])('asks for independent sharing settings when duplicating %s designs', async appLanguage => {
+  const source = { ...fixture(), configJson: { localization: { appLanguage } } }
+  mocks.get.mockResolvedValue({ code: 0, data: source })
+  mocks.copy.mockResolvedValue({ code: 0, data: { ...source, designUid: 'copy' } })
+  await setup()
+  const vm = wrapper!.vm as any
+  await vm.copyDesign(source)
+  expect(vm.duplicateLanguageDialogVisible).toBe(true)
+  expect(vm.duplicatePubliclyVisible).toBe(true)
+  expect(vm.duplicateAllowRemix).toBe(false)
+  expect(mocks.copy).not.toHaveBeenCalled()
+  vm.duplicatePubliclyVisible = false
+  vm.duplicateAllowRemix = true
+  await vm.confirmDuplicateLanguage()
+  expect(mocks.copy).toHaveBeenCalledWith({ uid: 'one', publiclyVisible: false, allowRemix: true })
+  await vm.copyDesign(source)
+  expect(vm.duplicatePubliclyVisible).toBe(true)
+  expect(vm.duplicateAllowRemix).toBe(false)
 })

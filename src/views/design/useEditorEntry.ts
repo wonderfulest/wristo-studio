@@ -17,6 +17,7 @@ export function useEditorEntry(options: {
   currentId: () => string
   findUnsaved?: () => UnsavedDesign | undefined
   chooseUnsaved?: (draft: UnsavedDesign) => Promise<'resume' | 'new' | 'dismiss'>
+  chooseVisibility?: () => Promise<{ publiclyVisible: boolean; allowRemix: boolean } | null>
   onCreated?: (id: string, name: string) => void
 }) {
   const user = useUserStore()
@@ -63,8 +64,14 @@ export function useEditorEntry(options: {
         await options.replace(user.isStudioConsumer ? '/designs' : '/design-slots')
         return
       }
+      const sharing = options.chooseVisibility ? await options.chooseVisibility() : { publiclyVisible: true, allowRemix: false }
+      if (!active || current !== generation || options.route.path !== '/design') return
+      if (sharing === null) {
+        await options.replace('/designs')
+        return
+      }
       const name = `App${randomNameSuffix()}`
-      const response = await designApi.createDesign({ name, description: '', originalType: 'original' })
+      const response = await designApi.createDesign({ name, description: '', originalType: 'original', ...sharing })
       if (response.code === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) throw response
       if (response.code !== 0 || !response.data?.designUid) throw new Error(response.msg || 'Unable to create a project. Please try again.')
       setOnboardingOwner(String(user.userInfo?.id || ''))

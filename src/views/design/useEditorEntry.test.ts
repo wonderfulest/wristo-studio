@@ -35,7 +35,7 @@ describe('direct Studio entry', () => {
     const s = setup()
     await Promise.all([s.open(), s.open()])
     expect(mocks.createDesign).toHaveBeenCalledTimes(1)
-    expect(mocks.createDesign).toHaveBeenCalledWith({ name: expect.stringMatching(/^App[A-Za-z]{6}$/), description: '', originalType: 'original' })
+    expect(mocks.createDesign).toHaveBeenCalledWith({ name: expect.stringMatching(/^App[A-Za-z]{6}$/), description: '', originalType: 'original', publiclyVisible: true, allowRemix: false })
     expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'created-design' } })
     s.route.query.id = 'created-design'
     await nextTick()
@@ -155,5 +155,24 @@ it('creates a separate practice design without restoring or overwriting an exist
   expect(s.flush).toHaveBeenCalledOnce()
   expect(onboarding.progress.designId).toBe('created-design')
   expect(mocks.replace).toHaveBeenCalledWith({ path: '/design', query: { id: 'created-design' } })
+  s.scope.stop()
+})
+
+it('waits for visibility choice and preserves an explicit private choice', async () => {
+  let choose!: (value: { publiclyVisible: boolean; allowRemix: boolean }) => void
+  const s = setup('', { chooseVisibility: () => new Promise<{ publiclyVisible: boolean; allowRemix: boolean }>(resolve => { choose = resolve }) })
+  const opening = s.open()
+  await vi.waitFor(() => expect(choose).toBeDefined())
+  expect(mocks.createDesign).not.toHaveBeenCalled()
+  choose({ publiclyVisible: false, allowRemix: true })
+  await opening
+  expect(mocks.createDesign).toHaveBeenCalledWith(expect.objectContaining({ publiclyVisible: false, allowRemix: true }))
+  s.scope.stop()
+})
+it('does not create when the visibility prompt is cancelled', async () => {
+  const s = setup('', { chooseVisibility: async () => null })
+  await s.open()
+  expect(mocks.createDesign).not.toHaveBeenCalled()
+  expect(mocks.replace).toHaveBeenCalledWith('/designs')
   s.scope.stop()
 })

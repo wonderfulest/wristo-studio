@@ -91,6 +91,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { useRouter } from 'vue-router'
 import { usePropertiesStore } from '@/stores/properties'
 import { useHistoryStore } from '@/stores/historyStore'
+import { chooseDesignVisibility } from '@/views/design/chooseDesignVisibility'
 import { useI18n } from '@/i18n'
 import { isDefaultBackgroundUrl } from '@/elements/decoration/background/background.constants'
 import { useStudioMembershipGate } from '@/composables/useStudioMembershipGate'
@@ -385,6 +386,8 @@ const uploadAuthenticatedApp = async () => {
     return -1
   }
   if (coverImageSaveChoice === 'abort') return -1
+  const sharing = isLocalProject(baseStore.id) ? await chooseDesignVisibility(t) : { publiclyVisible: true, allowRemix: false }
+  if (sharing === null) return -1
 
   // 开始上传，显示进度条
   uploading.value = true
@@ -417,7 +420,7 @@ const uploadAuthenticatedApp = async () => {
         localId: baseStore.id,
         storage: sessionStorage,
         create: async () => {
-          const created = await designApi.createDesign({ name: baseStore.watchFaceName, description: '', originalType: 'original' })
+          const created = await designApi.createDesign({ name: baseStore.watchFaceName, description: '', originalType: 'original', ...sharing })
           if (created.code !== 0 || !created.data?.designUid) throw new Error(created.msg || 'Failed to create design')
           return created.data.designUid
         },

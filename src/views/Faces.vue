@@ -107,7 +107,7 @@
               <RouterLink :to="faceDetailsUrl(face.appId)" class="face-name">{{ face.name }}</RouterLink>
               <div class="face-meta">
                 <span>{{ face.price === 0 ? 'Free' : face.price == null ? 'View pricing' : `$${face.price.toFixed(2)}` }}</span>
-                <span v-if="face.download != null">↓ {{ face.download.toLocaleString() }}</span>
+                <span v-if="face.download != null">↓ {{ formatDownloadCount(face.download, userStore.isAdminUser || userStore.isMerchantUser) }}</span>
                 <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
                 <span v-if="canEditFace(face)" class="face-editable" role="img" aria-label="Editable in Builder" title="Editable in Builder">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -174,6 +174,7 @@ import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
 import { useUserStore } from '@/stores/user'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
+import { formatDownloadCount } from './faces/downloadCount'
 import { faceDetailsUrl, faceImage, loadFaces, loadFaceDevices, type PublishedFace, type FaceDevice } from './faces/catalog'
 const userStore = useUserStore()
 function canEditFace(face: PublishedFace) {

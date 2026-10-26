@@ -9,6 +9,18 @@
         <el-input v-model="form.description" type="textarea" :rows="4" :placeholder="t('createDesign.enterDescription')"
           maxlength="200" show-word-limit />
       </el-form-item>
+      <el-form-item :label="t('createDesign.publiclyVisible')">
+        <div>
+          <el-switch v-model="form.publiclyVisible" :aria-label="t('createDesign.publiclyVisible')" />
+          <p>{{ t('createDesign.publiclyVisibleHint') }}</p>
+        </div>
+      </el-form-item>
+      <el-form-item :label="t('createDesign.allowRemix')">
+        <div>
+          <el-switch v-model="form.allowRemix" :aria-label="t('createDesign.allowRemix')" />
+          <p>{{ t('createDesign.allowRemixHint') }}</p>
+        </div>
+      </el-form-item>
       <el-form-item :label="t('project.appLanguage')" prop="appLanguage">
         <el-radio-group v-model="form.appLanguage">
           <el-radio-button value="eng">English</el-radio-button>
@@ -76,6 +88,8 @@ const loading = ref<boolean>(false)
 const formRef = ref<FormInstance | null>(null)
 
 interface CreateDesignForm {
+  allowRemix: boolean
+  publiclyVisible: boolean
   name: string
   description: string
   appLanguage: AppLanguage
@@ -85,6 +99,8 @@ interface CreateDesignForm {
 }
 
 const form = reactive<CreateDesignForm>({
+  allowRemix: false,
+  publiclyVisible: true,
   name: '',
   description: '',
   appLanguage: 'eng',
@@ -132,6 +148,8 @@ const handleConfirm = async (): Promise<void> => {
     const resolvedOriginalType = canSelectDesignSource.value ? form.originalType as DesignOriginalType : 'original'
 
     const response: ApiResponse<Design> = await designApi.createDesign({
+      publiclyVisible: form.publiclyVisible,
+      allowRemix: form.allowRemix,
       name: form.name,
       description: form.description,
       originalType: resolvedOriginalType,
@@ -181,6 +199,8 @@ const handleCancel = (): void => {
 
 // reset form
 const resetForm = (): void => {
+  form.publiclyVisible = true
+  form.allowRemix = false
   form.name = ''
   form.description = ''
   form.appLanguage = 'eng'

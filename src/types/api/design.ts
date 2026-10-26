@@ -9,6 +9,8 @@ import type { DesignOriginalType, DesignSourcePlatform } from '@/domain/designSo
  * 创建设计的请求参数
  */
 export interface CreateDesignParams {
+  publiclyVisible?: boolean
+  allowRemix?: boolean
   name: string
   description: string
   originalType: DesignOriginalType
@@ -20,6 +22,8 @@ export interface CreateDesignParams {
  * 创建复制的请求参数 
  */
 export interface CreateCopyDesignParams {
+  publiclyVisible?: boolean
+  allowRemix?: boolean
   uid: string
 }
 

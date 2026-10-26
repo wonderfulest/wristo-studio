@@ -90,7 +90,7 @@ export const designApi = {
   /**
    * 创建设计
    */
-  createDesignByCopy(data: { uid: string }): Promise<ApiResponse<Design>> {
+  createDesignByCopy(data: { uid: string; publiclyVisible?: boolean; allowRemix?: boolean }): Promise<ApiResponse<Design>> {
     return instance.post('/dsn/design/create-by-copy', data)
   },
  
