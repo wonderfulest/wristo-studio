@@ -94,6 +94,23 @@ describe('visual theme export persistence', () => {
     })
   })
 
+  it('preserves an empty dynamic image draft but rejects it for export', async () => {
+    const { generateConfig, validateRuntimeConfigForExport } = await import('./exportService')
+    const { registerElement } = await import('@/engine/registry/elementRegistry')
+    const { encodeDynamicImage } = await import('@/elements/decoration/dynamicImage/dynamicImage.encoder')
+    registerElement('dynamicImage', { add: vi.fn() as any, encode: encodeDynamicImage })
+    const options = {
+      canvas: { getObjects: () => [{ id: 'draft-group', eleType: 'dynamicImage', width: 100, height: 100, items: [] }] } as any,
+      properties: {}, designId: 'draft', watchFaceName: 'Draft', textCase: 0, bitmapMode: false,
+    }
+
+    const draft = generateConfig(options)
+    expect(draft?.elements).toEqual([expect.objectContaining({ id: 'draft-group', eleType: 'dynamicImage', items: [] })])
+    expect(draft?.orderIds).toContain('draft-group')
+    expect(generateConfig({ ...options, validateBindings: true })).toBeNull()
+    expect(await validateRuntimeConfigForExport(draft!)).toBe(false)
+  })
+
   it('exports validated horizontal layout groups at the top level', async () => {
     const { generateConfig } = await import('./exportService')
     const { registerElement } = await import('@/engine/registry/elementRegistry')

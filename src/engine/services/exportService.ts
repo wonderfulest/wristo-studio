@@ -490,7 +490,9 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         console.error('Export validation failed:', visibilityErrors)
         return null
       }
-      if (eleType === 'dynamicImage') {
+      // New groups are empty while the user chooses candidates. Keep them in
+      // editor/history snapshots; strict export validation still rejects them.
+      if (eleType === 'dynamicImage' && (validateBindings || (encodeConfig as any).items?.length)) {
         const errors = validateDynamicImage(encodeConfig as any, properties)
         if (errors.length) {
           if (typeof document !== 'undefined') ElMessage.error(errors.join(t('common.listSeparator')))

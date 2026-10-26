@@ -87,6 +87,7 @@ import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { useDesignStore } from '@/stores/designStore'
 import type { DateContentLanguage } from '@/utils/dateFontCompatibility'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
+import { getSavedFontFamily } from '@/utils/systemFontElement'
 import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import type { ColorSelectionPayload } from '@/components/color-picker/colorSelection'
 import { resolveDesignContentLanguage } from '@/utils/effectiveDisplayLocale'
@@ -177,7 +178,7 @@ const goalArcElement = computed(() => getElementByType('goalArc'))
 const fontSize = ref(props.elements[0].fontSize || 36)
 const textColor = ref(props.elements[0].fill || '#FFFFFF')
 const sharedFillProperty = ref('')
-const fontFamily = ref<string>(props.elements[0].fontFamily || 'roboto-condensed-regular')
+const fontFamily = ref<string>(getSavedFontFamily(props.elements[0], 'roboto-condensed-regular'))
 
 const dataProperty = ref<string>('')
 const goalProperty = ref<string>('')
@@ -467,12 +468,12 @@ const updatePrimaryColorBinding = (selection: ColorSelectionPayload) => {
   commitHistory('text-color')
 }
 
-const updateFontFamily = () => {
-  for (const element of props.elements) {
-    element.set('fontFamily', fontFamily.value)
-    if ((element as any).id) {
-      elementDataStore.patchElement(String((element as any).id), { fontFamily: fontFamily.value } as any)
-    }
+const updateFontFamily = async () => {
+  const selectedFont = fontFamily.value
+  const elements = [...props.elements]
+  for (const element of elements) {
+    // Renderers synchronize the asset font identity used by saving and history.
+    await elementManager.updateElement(element, { fontFamily: selectedFont })
   }
   baseStore.canvas?.renderAll()
   commitHistory('font-family')
