@@ -53,6 +53,7 @@
             <button v-for="(section, index) in detailSections" :id="`detail-tab-${section.id}`" :key="section.id" type="button" role="tab" :aria-selected="activeSection === section.id" :aria-controls="`detail-panel-${section.id}`" :tabindex="activeSection === section.id ? 0 : -1" @click="selectSection(section.id)" @keydown="moveTab($event, index)"><Icon :icon="section.icon" />{{ section.label }}</button>
           </div>
           <section v-show="activeSection === 'overview'" id="detail-panel-overview" class="overview-content" :role="canEdit && face.designId ? 'tabpanel' : undefined" :aria-labelledby="canEdit && face.designId ? 'detail-tab-overview' : undefined">
+            <img v-if="face.bannerImageUrl?.trim()" class="face-banner" :src="face.bannerImageUrl.trim()" :alt="face.name" />
             <FaceDescription v-if="face.appId" :key="`${face.appId}-${userStore.userInfo?.id}`" class="information-section overview-description" :app-id="face.appId" :description="localizedDescription" :is-owner="canEdit" :external-editor="!!face.designId" @edit="selectSection('listing')" @saved="face.description = $event">
               <div v-if="face.tags?.length" class="tags"><span v-for="tag in (showAllTags ? face.tags : face.tags.slice(0, 6))" :key="tag.id">{{ tag.name }}</span><button v-if="face.tags.length > 6" @click="showAllTags = !showAllTags">{{ showAllTags ? t('faceDetail.showLess') : t('faceDetail.moreTags', { count: face.tags.length - 6 }) }}</button></div>
             </FaceDescription>
@@ -272,6 +273,7 @@ onBeforeUnmount(() => { request += 1; shareRequest += 1 })
 </script>
 
 <style scoped>
+.face-banner { display: block; width: 100%; height: auto; border-radius: 14px; margin-bottom: 24px; }
 .app-title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .edit-app-information { font-size: 13px; white-space: nowrap; }
 .face-detail-page { min-height: 100vh; background: var(--studio-bg); color: var(--studio-text); font-family: 'Yantramanav', sans-serif; }

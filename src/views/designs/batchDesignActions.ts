@@ -54,15 +54,17 @@ export async function prepareBatchAction(item: DesignListItem, action: BatchActi
       const devices = await checked(designApi.getPackagingDevices(item.designUid))
       if (!devices.selectedDeviceIds?.length) return skip('submitDesign.selectDeviceRequired')
       const payment = product?.payment
+      // Trial duration belongs to the product, not its payment record.
+      const trialLasts = product?.trialLasts
       if (!payment?.paymentMethod || !d.name?.trim()) return skip('batchActions.missingConfig')
       const method = payment.paymentMethod
       if (!['free', 'wpay', 'garmin', 'kpay'].includes(method)) return skip('batchActions.missingConfig')
       if (method !== 'free' && (!Number.isFinite(payment.price) || payment.price < 1.99 || payment.price > 5.99)) return skip('submitDesign.priceRange')
-      if (method !== 'free' && (!Number.isFinite(payment.trialLasts) || payment.trialLasts < 0 || payment.trialLasts > 720)) return skip('batchActions.missingConfig')
+      if (method !== 'free' && (!Number.isFinite(trialLasts) || trialLasts < 0 || trialLasts > 720)) return skip('batchActions.missingConfig')
       if (method === 'kpay' && !payment.kpayId) return skip('submitDesign.kpayRequired')
       if (d.originalType === 'non_original' && (!d.sourcePlatform || !d.sourceId)) return skip('batchActions.missingConfig')
       if (d.sourcePlatform && d.sourceId && await checked(designApi.checkSourceDuplicate({ designUid: d.designUid, sourcePlatform: d.sourcePlatform, sourceId: d.sourceId }))) return skip('designSource.duplicate')
-      const payload: DesignSubmitDTO = { designUid: d.designUid, expectedVersion: d.version, name: d.name, originalType: d.originalType || 'original', sourcePlatform: d.sourcePlatform || undefined, sourceId: d.sourceId || undefined, paymentMethod: method, targetDeviceIds: [...devices.selectedDeviceIds], ...(method !== 'free' ? { price: payment.price, trialLasts: payment.trialLasts, kpayId: payment.kpayId } : {}) }
+      const payload: DesignSubmitDTO = { designUid: d.designUid, expectedVersion: d.version, name: d.name, originalType: d.originalType || 'original', sourcePlatform: d.sourcePlatform || undefined, sourceId: d.sourceId || undefined, paymentMethod: method, targetDeviceIds: [...devices.selectedDeviceIds], ...(method !== 'free' ? { price: payment.price, trialLasts, kpayId: payment.kpayId } : {}) }
       run = () => checked(designApi.submitDesign(payload)); break
     }
   }

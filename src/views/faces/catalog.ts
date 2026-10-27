@@ -25,6 +25,7 @@ export interface FaceDevice {
   displayName: string
 }
 export interface FaceDetail extends PublishedFace {
+  bannerImageUrl?: string | null
   publiclyVisible?: boolean
   copyEligible?: boolean
   allowRemix?: boolean
