@@ -242,14 +242,14 @@
       </section>
       <section v-show="!activeSection || activeSection === 'distribution'" class="publish-content-group" data-publish-section="distribution">
       <!-- Garmin Store URL -->
-      <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl" required>
+      <el-form-item :label="t('goLive.garminStoreUrl')" prop="garminStoreUrl">
         <el-input 
           v-model="form.garminStoreUrl" 
           :placeholder="t('goLive.enterGarminStoreUrl')"
           clearable
         />
         <div class="form-tip">
-          {{ t('goLive.garminStoreUrlTip') }}
+          {{ t('goLive.storeUrlPublishTip') }}
         </div>
       </el-form-item>
 
@@ -325,15 +325,9 @@
 
     </el-form>
     <template #footer>
-      <span class="publish-footer"><span class="publish-save-note">Changes across all sections are published together.</span>
-        <el-button 
-          type="primary" 
-          @click="handleConfirm"
-          :loading="loading"
-          :disabled="generatingBanner"
-        >
-          Save & publish
-        </el-button>
+      <span class="publish-footer">
+        <el-button data-testid="save-details" @click="handleConfirm(false)" :loading="loading" :disabled="generatingBanner">{{ t('common.save') }}</el-button>
+        <el-button data-testid="publish-details" type="primary" @click="handleConfirm(true)" :loading="loading" :disabled="generatingBanner">{{ t('goLive.publishAction') }}</el-button>
       </span>
     </template>
   </InlinePublishPanel>
@@ -509,9 +503,6 @@ const rules: FormRules = {
   ],
   description: [
     { required: true, whitespace: true, message: t('submitDesign.enterDescription'), trigger: ['blur', 'change'] },
-  ],
-  garminStoreUrl: [
-    { required: true, message: t('goLive.garminStoreUrlRequired'), trigger: ['blur', 'change'] },
   ],
   tagIds: [
     {
@@ -842,7 +833,7 @@ const loadDesign = (design: Design) => {
 }
 
 // 提交表单
-const handleConfirm = async () => {
+const handleConfirm = async (publish = true) => {
   if (!currentDesign.value || loading.value || generatingBanner.value || lifecycleBusy.value) return
   if (!membershipGate.requirePublish()) return
 
@@ -870,7 +861,7 @@ const handleConfirm = async () => {
     return
   }
   
-  if (!form.garminStoreUrl.trim()) {
+  if (publish && !form.garminStoreUrl.trim()) {
     emit('section-change', 'distribution')
     messageStore.error(t('goLive.enterGarminStoreUrlRequired'))
     return
@@ -927,7 +918,8 @@ const handleConfirm = async () => {
     if (form.productImages.length > 0) {
       data.productImages = toProductImageSelections(form.productImages)
     }
-    await productsApi.publish(data)
+    if (publish) await productsApi.publish(data)
+    else await productsApi.saveDetails(data)
     messageStore.success(t('goLive.productUpdated'))
     emit('success')
   } finally {

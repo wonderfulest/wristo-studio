@@ -195,7 +195,7 @@ describe('PublishForm product image behavior', () => {
       ...design,
       product: { ...design.product, lastGoLive: '2026-10-19T11:44:14', payment: null },
     } as unknown as Design)
-    await wrapper.findAll('button').find(button => button.text() === 'Save & publish')!.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'goLive.publishAction')!.trigger('click')
     await flushPromises()
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
       payment: { paymentMethod: 'free', price: 0, trialLasts: 0 },
@@ -327,7 +327,7 @@ describe('PublishForm product image behavior', () => {
     await showDialog(wrapper)
 
     const submitButton = wrapper.findAll('button')
-      .find((button) => button.text() === 'Save & publish')
+      .find((button) => button.text() === 'goLive.publishAction')
     expect(submitButton).toBeDefined()
     await submitButton!.trigger('click')
     await flushPromises()

@@ -61,6 +61,10 @@ export const productsApi = {
    * @param data 产品发布数据
    * @returns 是否成功
    */
+  saveDetails(data: GoToLiveDto): Promise<boolean> {
+    return instance.post('/dsn/products/saveDetails', data)
+  },
+
   publish(data: GoToLiveDto): Promise<boolean> {
     return instance.post('/dsn/products/publish', data)
   },

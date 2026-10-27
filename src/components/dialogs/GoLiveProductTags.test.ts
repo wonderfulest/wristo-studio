@@ -30,7 +30,7 @@ describe('Go Live product tags', () => {
   })
 
   it('requires one to twenty unique numeric IDs', () => {
-    expect(validatePublishedTagIds([])).toBe('required')
+    expect(validatePublishedTagIds([])).toBeNull()
     expect(validatePublishedTagIds([1, 1])).toBe('invalid')
     expect(validatePublishedTagIds(Array.from({ length: 21 }, (_, i) => i + 1))).toBe('invalid')
     expect(validatePublishedTagIds(Array.from({ length: 20 }, (_, i) => i + 1))).toBeNull()

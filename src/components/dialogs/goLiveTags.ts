@@ -14,7 +14,7 @@ export const restorePublishedTagIds = (options: ProductTag[], selectedIds: numbe
 }
 
 export const validatePublishedTagIds = (value: unknown, limit = MAX_PRODUCT_TAGS): 'required' | 'invalid' | null => {
-  if (!Array.isArray(value) || value.length === 0) return 'required'
+  if (!Array.isArray(value)) return 'invalid'
   if (value.length > limit || value.some((id) => typeof id !== 'number' || !Number.isFinite(id)) || new Set(value).size !== value.length) {
     return 'invalid'
   }

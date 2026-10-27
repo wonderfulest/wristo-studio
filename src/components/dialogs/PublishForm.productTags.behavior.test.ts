@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   generateProductTags: vi.fn(),
   getDesignByUid: vi.fn(),
   getBundles: vi.fn(),
+  saveDetails: vi.fn(),
   publish: vi.fn(),
   generateDescription: vi.fn(),
   messageError: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProduc
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
+    saveDetails: mocks.saveDetails,
     publish: mocks.publish,
     updateAppUuid: mocks.updateAppUuid,
     unpublish: mocks.unpublish,
@@ -438,13 +440,28 @@ describe('PublishForm product tag behavior', () => {
     expect(mocks.publish).not.toHaveBeenCalled()
   })
 
-  it('blocks publishing without tags', async () => {
+  it('saves without a store URL but blocks publishing', async () => {
+    const wrapper = mountDialog()
+    const value = structuredClone(design)
+    value.product.garminStoreUrl = ''
+    ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(value)
+    await flushPromises()
+    await wrapper.get('[data-testid="save-details"]').trigger('click')
+    await flushPromises()
+    expect(mocks.saveDetails).toHaveBeenCalledWith(expect.objectContaining({ garminStoreUrl: '' }))
+    expect(mocks.publish).not.toHaveBeenCalled()
+    await wrapper.get('[data-testid="publish-details"]').trigger('click')
+    await flushPromises()
+    expect(mocks.publish).not.toHaveBeenCalled()
+  })
+
+  it('allows publishing without tags', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
     wrapper.getComponent(ProductTagSelectorStub).vm.$emit('update:tagIds', [])
     await flushPromises()
     await confirm(wrapper)
-    expect(mocks.publish).not.toHaveBeenCalled()
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [] }))
   })
 
   it('synchronizes changed tags without duplicating the description suffix', async () => {
