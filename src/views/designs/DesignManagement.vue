@@ -583,7 +583,12 @@ const downloadPackage = async (design: DesignListItem) => {
   }
 }
 
-// 运行 PRG：跳转下载 prgUrl
+const currentDevicePrg = (item: DesignListItem) => {
+  const release = item.product?.prgRelease
+  return currentDeviceId.value && release?.deviceId === currentDeviceId.value ? release : undefined
+}
+
+// 运行 PRG：只使用当前选择设备的发行文件
 const runPrg = async (design: DesignListItem) => {
   if (userStore.isStudioConsumer) {
     try {
@@ -591,10 +596,11 @@ const runPrg = async (design: DesignListItem) => {
       if (!response.data?.canInstall) { await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`); return }
     } catch (error) { showErrorOnce(error, 'Unable to check design access'); return }
   } else if (design.canInstall !== true && !membershipGate.requireExport()) return
-  const url = (design.product as any)?.prgRelease?.prgUrl
+  const release = currentDevicePrg(design)
+  const url = release?.prgUrl
   if (url) {
     await downloadPackageFile(url, design.product?.name || design.name, 'prg', design.product?.id)
-    downloadedOnboardingPrg(design.designUid, design.product!.prgRelease!.id)
+    downloadedOnboardingPrg(design.designUid, release!.id)
   } else {
     messageStore.error(t('project.prgUnavailable'))
   }
@@ -618,7 +624,7 @@ const showPrgInstallerGuideNotification = (message: string) => {
 }
 
 const preparePreviewPrg = async (design: DesignListItem) => {
-  const releaseId = design.product?.prgRelease?.id
+  const releaseId = currentDevicePrg(design)?.id
   if (!releaseId || loadingStates.value.previewPrg.has(design.id)) return
 
   loadingStates.value.previewPrg.add(design.id)
@@ -635,8 +641,8 @@ const preparePreviewPrg = async (design: DesignListItem) => {
 const previewPrg = (design: DesignListItem) => {
   if (loadingStates.value.previewPrg.has(design.id)) return
 
-  const releaseId = design.product?.prgRelease?.id
-  const prgUrl = design.product?.prgRelease?.prgUrl
+  const releaseId = currentDevicePrg(design)?.id
+  const prgUrl = currentDevicePrg(design)?.prgUrl
   if (!releaseId || !prgUrl) {
     messageStore.error(t('project.prgUnavailable'))
     return

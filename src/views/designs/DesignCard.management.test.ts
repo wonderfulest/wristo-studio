@@ -23,6 +23,18 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it('shows a missing-device PRG state without download when only another device has a release', async () => {
+    const { wrapper } = await setup({ management: true, design: { ...design, product: { ...design.product,
+      prgRelease: { id: 42, deviceId: 'fenix847mm', prgUrl: 'https://example.com/other.prg' },
+    } } })
+    const row = wrapper.findAll('.build-task-row').find(row => row.text().includes('PRG'))!
+    expect(row).toBeDefined()
+    expect(row.text()).toContain('card.devicePrgMissing')
+    expect(row.find('.build-task-download').exists()).toBe(false)
+    expect(row.find('.build-task-preview').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it.each(['grid', 'list'])('shows summary AppId only to administrators in %s view', async viewMode => {
     const { wrapper } = await setup({ summaryOnly: true, viewMode })
     expect(wrapper.get('.summary-meta .app-id').text()).toBe('card.appId: 211889')
@@ -215,7 +227,7 @@ describe('design card management placement', () => {
         packagingLog: { id: 12, packagingStatus: status, rank: 5, createdAt: 1000000 - age },
       },
     } })
-    const row = wrapper.get('.permanent-build-actions .build-task-row')
+    const row = wrapper.findAll('.permanent-build-actions .build-task-row').find(row => row.text().includes('IQ'))!
     expect(row.text()).toContain('IQ')
     const cancel = row.find('.build-task-cancel')
     expect(cancel.exists()).toBe(canCancel)

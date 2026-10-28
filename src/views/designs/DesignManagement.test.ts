@@ -2,21 +2,22 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import DesignManagement from './DesignManagement.vue'
+import { reactive, nextTick } from 'vue'
 import { ElMessageBox } from 'element-plus'
 const mocks = vi.hoisted(() => ({
-  copy: vi.fn(), cancelIq: vi.fn(), cancelPrg: vi.fn(), get: vi.fn(), remove: vi.fn(), transfer: vi.fn(), updateWeight: vi.fn(), update: vi.fn(), push: vi.fn(), publishShow: vi.fn(), submitShow: vi.fn(), error: vi.fn(), refreshUser: vi.fn(), canExport: vi.fn(), canPublish: vi.fn(), download: vi.fn(),
+  prepareTicket: vi.fn(), takeTicket: vi.fn(), copy: vi.fn(), cancelIq: vi.fn(), cancelPrg: vi.fn(), get: vi.fn(), remove: vi.fn(), transfer: vi.fn(), updateWeight: vi.fn(), update: vi.fn(), push: vi.fn(), publishShow: vi.fn(), submitShow: vi.fn(), error: vi.fn(), refreshUser: vi.fn(), canExport: vi.fn(), canPublish: vi.fn(), download: vi.fn(),
   user: { userInfo: { id: 7, roles: [], device: { deviceId: 'venu3' } }, isAdminUser: false, isStudioConsumer: false, hasFullStudioAccess: true, canCreateDesign: true, studioMembership: { level: 'annual' } },
 }))
 vi.mock('@/api/wristo/design', () => ({ designApi: { createDesignByCopy: mocks.copy, cancelIqPackageTask: mocks.cancelIq, cancelPrgPackageTask: mocks.cancelPrg, getDesignByUid: mocks.get, deleteDesign: mocks.remove, updateDesign: mocks.update } }))
 vi.mock('@/api/wristo/products', () => ({ productsApi: { transferOwner: mocks.transfer, updateStoreWeight: mocks.updateWeight } }))
-vi.mock('@/stores/user', () => ({ useUserStore: () => ({ ...mocks.user, refreshUserInfo: mocks.refreshUser }) }))
+vi.mock('@/stores/user', () => ({ useUserStore: () => reactive({ ...mocks.user, refreshUserInfo: mocks.refreshUser }) }))
 vi.mock('@/stores/baseStore', () => ({ useBaseStore: () => ({}) }))
 vi.mock('@/stores/message', () => ({ useMessageStore: () => ({ error: mocks.error, success: vi.fn(), warning: vi.fn(), info: vi.fn() }) }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: mocks.push }) }))
 vi.mock('@/composables/useStudioMembershipGate', () => ({ useStudioMembershipGate: () => ({ requireExport: mocks.canExport, requirePublish: mocks.canPublish }) }))
 vi.mock('@/utils/packageDownload', () => ({ downloadPackageFile: mocks.download }))
-vi.mock('@/api/wristo/prg-installer', () => ({ createPrgInstallerTicketCache: () => ({ prepare: vi.fn(), take: vi.fn() }), buildPrgInstallerDeepLink: vi.fn() }))
+vi.mock('@/api/wristo/prg-installer', () => ({ createPrgInstallerTicketCache: () => ({ prepare: mocks.prepareTicket, take: mocks.takeTicket }), buildPrgInstallerDeepLink: vi.fn() }))
 vi.mock('@/components/dialogs/PublishForm.vue', () => ({ default: { props: ['inline'], setup: (_: unknown, { expose }: any) => { expose({ show: mocks.publishShow }) }, template: '<div class="publish-test" />' } }))
 vi.mock('@/components/dialogs/SubmitDesignDialog.vue', () => ({ default: { setup: (_: unknown, { expose }: any) => { expose({ show: mocks.submitShow }) }, template: '<div />' } }))
 vi.mock('@/components/common/DeviceDisplay.vue', () => ({ default: { template: '<div />' } }))
@@ -25,7 +26,7 @@ vi.mock('./DesignCard.vue', () => ({ default: { name: 'DesignCard', props: ['des
 const fixture = () => ({ id: 1, designUid: 'one', name: 'Face', user: { id: 7 }, product: { appId: 211889, id: 10, release: { packageUrl: 'https://example.com/test.iq' } } })
 let wrapper: ReturnType<typeof mount> | undefined
 let target: HTMLElement
-beforeEach(() => { vi.clearAllMocks(); mocks.user.isAdminUser = false; mocks.user.isStudioConsumer = false; mocks.get.mockResolvedValue({ code: 0, data: fixture() }); mocks.canExport.mockReturnValue(true); mocks.canPublish.mockReturnValue(true); target = document.createElement('div'); document.body.append(target) })
+beforeEach(() => { vi.clearAllMocks(); mocks.user.userInfo.device.deviceId = 'venu3'; mocks.user.isAdminUser = false; mocks.user.isStudioConsumer = false; mocks.get.mockResolvedValue({ code: 0, data: fixture() }); mocks.canExport.mockReturnValue(true); mocks.canPublish.mockReturnValue(true); target = document.createElement('div'); document.body.append(target) })
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; target.remove(); vi.useRealTimers(); vi.restoreAllMocks() })
 async function setup() {
   wrapper = mount(DesignManagement, { props: { designUid: 'one', informationTarget: target }, global: { stubs: { ElDialog: true, ElRadioGroup: true, ElRadioButton: true, ElButton: true } } })
@@ -33,6 +34,66 @@ async function setup() {
   return wrapper
 }
 describe('application management', () => {
+  it('rejects simulator preparation and launch for another device', async () => {
+    await setup()
+    const item = { ...fixture(), product: { ...fixture().product,
+      prgRelease: { id: 42, deviceId: 'fenix847mm', prgUrl: 'https://example.com/other.prg' },
+    } }
+    await (wrapper!.vm as any).preparePreviewPrg(item)
+    ;(wrapper!.vm as any).previewPrg(item)
+    expect(mocks.prepareTicket).not.toHaveBeenCalled()
+    expect(mocks.takeTicket).not.toHaveBeenCalled()
+    expect(mocks.download).not.toHaveBeenCalled()
+  })
+
+  it('queries each selected device and ignores an older response arriving last', async () => {
+    await setup()
+    let resolveOld!: (value: unknown) => void
+    mocks.get.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve }))
+    reactive(mocks.user.userInfo).device.deviceId = 'fenix847mm'
+    await nextTick()
+    expect(mocks.get).toHaveBeenLastCalledWith('one', { device: 'fenix847mm' })
+    const latest = { ...fixture(), product: { ...fixture().product,
+      prgRelease: { id: 45, deviceId: 'venu3', prgUrl: 'https://example.com/latest.prg' },
+    } }
+    mocks.get.mockResolvedValueOnce({ code: 0, data: latest })
+    reactive(mocks.user.userInfo).device.deviceId = 'venu3'
+    await flushPromises()
+    resolveOld({ code: 0, data: { ...fixture(), product: { ...fixture().product,
+      prgRelease: { id: 44, deviceId: 'fenix847mm', prgUrl: 'https://example.com/stale.prg' },
+    } } })
+    await flushPromises()
+    expect(wrapper!.findComponent({ name: 'DesignCard' }).props('design').product.prgRelease.id).toBe(45)
+  })
+  it('blocks the old device download while the newly selected device is loading', async () => {
+    await setup()
+    mocks.get.mockImplementationOnce(() => new Promise(() => {}))
+    reactive(mocks.user.userInfo).device.deviceId = 'fenix847mm'
+    await nextTick()
+    await (wrapper!.vm as any).runPrg({ ...fixture(), product: { ...fixture().product,
+      prgRelease: { id: 42, deviceId: 'venu3', prgUrl: 'https://example.com/old.prg' },
+    } })
+    expect(mocks.download).not.toHaveBeenCalled()
+  })
+
+  it.each(['fenix847mm', undefined])('rejects PRG downloads for mismatched or missing device %s', async deviceId => {
+    await setup()
+    const item = { ...fixture(), product: { ...fixture().product,
+      prgRelease: { id: 42, deviceId, prgUrl: 'https://example.com/wrong.prg' },
+    } }
+    await (wrapper!.vm as any).runPrg(item)
+    expect(mocks.download).not.toHaveBeenCalled()
+    expect(mocks.error).toHaveBeenCalledWith('project.prgUnavailable')
+  })
+  it('downloads a PRG matching the selected device', async () => {
+    await setup()
+    const item = { ...fixture(), product: { ...fixture().product,
+      prgRelease: { id: 42, deviceId: 'venu3', prgUrl: 'https://example.com/venu3.prg' },
+    } }
+    await (wrapper!.vm as any).runPrg(item)
+    expect(mocks.download).toHaveBeenCalledWith('https://example.com/venu3.prg', 'Face', 'prg', 10)
+  })
+
   it('loads the selected device and mounts publishing inline in the information column', async () => {
     await setup()
     expect(mocks.get).toHaveBeenCalledWith('one', { device: 'venu3' })

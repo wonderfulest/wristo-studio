@@ -831,6 +831,14 @@ const packageRows = computed(() => {
     })
   }
 
+  if (props.management && currentDeviceId.value && !currentPrgLog && !currentPrgRelease?.prgUrl) {
+    rows.push({
+      key: 'prg', label: 'PRG', value: t('card.devicePrgMissing'),
+      tone: 'neutral', isPackaging: false, timing: '',
+      canViewBuildLog: false, canDownload: false,
+    })
+  }
+
   const iqLog = product.packagingLog
   const iqReleaseUpdatedAt = product.release?.updatedAt
   if (iqLog || product.release?.packageUrl) {
