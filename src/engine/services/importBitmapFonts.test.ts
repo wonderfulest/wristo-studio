@@ -1,7 +1,7 @@
 vi.mock('element-plus', () => ({ ElMessageBox: { confirm: vi.fn(), prompt: vi.fn() } }))
 vi.mock('@/stores/locale', () => ({ useLocaleStore: () => ({ currentLocale: 'en' }) }))
 import { ElMessageBox } from 'element-plus'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 vi.mock('@/api/wristo/bitmapFont', () => ({ getBitmapFontDetail: vi.fn(), listBitmapFontChars: vi.fn(), createBitmapFont: vi.fn(), bindBitmapFontAsset: vi.fn() }))
 vi.mock('./bitmapFontColon', () => ({ createBitmapFontColon: vi.fn(async () => new Blob(['colon'], { type: 'image/png' })) }))
 import { getBitmapFontDetail, listBitmapFontChars, createBitmapFont, bindBitmapFontAsset } from '@/api/wristo/bitmapFont'
@@ -12,11 +12,13 @@ const glyphs = (colon = true) => Array.from(colon ? '0123456789:' : '0123456789'
 const config = () => ({ name: 'Example', elements: [9, 10, 11, 12].map((formatter) => ({ eleType: 'time', fontRenderType: 'bitmap', bitmapFontId: 900, formatter })) })
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(new Blob(['glyph'], { type: 'image/png' }))))
   vi.mocked(createBitmapFontColon).mockResolvedValue(new Blob(['colon'], { type: 'image/png' }))
   packageBitmapChars.clear()
   vi.mocked(createBitmapFont).mockResolvedValue({ data: { id: 42 } } as any)
   vi.mocked(bindBitmapFontAsset).mockResolvedValue({ data: true } as any)
 })
+afterEach(() => { vi.unstubAllGlobals(); packageBitmapChars.clear() })
 it('uploads missing packaged font including colon and remaps every time slot', async () => {
   packageBitmapChars.set(900, glyphs(false))
   vi.mocked(getBitmapFontDetail).mockResolvedValue({ data: undefined } as any)
@@ -152,4 +154,15 @@ it('asks again if the replacement name is also taken', async () => {
   await importBitmapFonts(config())
   expect(createBitmapFont).toHaveBeenCalledTimes(3)
   expect(createBitmapFont).toHaveBeenLastCalledWith({ fontName: 'Available' }, true)
+})
+
+it('does not create or rebind a font when glyph download fails', async () => {
+  packageBitmapChars.set(900, glyphs())
+  vi.mocked(getBitmapFontDetail).mockResolvedValue({ data: null } as any)
+  vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status: 403 }))
+  const design = config()
+  await expect(importBitmapFonts(design)).rejects.toThrow('Unable to read bitmap glyph 900/0')
+  expect(design.elements.map(e => e.bitmapFontId)).toEqual([900, 900, 900, 900])
+  expect(createBitmapFont).not.toHaveBeenCalled()
+  expect(bindBitmapFontAsset).not.toHaveBeenCalled()
 })

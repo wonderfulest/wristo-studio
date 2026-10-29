@@ -1,10 +1,19 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mount as mountComponent, type VueWrapper } from '@vue/test-utils'
 import LiveGlyphRasterPreview from './LiveGlyphRasterPreview.vue'
 
 const putImageData = vi.fn()
 const createImageData = vi.fn((width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }))
+
+const wrappers: VueWrapper[] = []
+const mount = ((...args: Parameters<typeof mountComponent>) => {
+  const wrapper = mountComponent(...args)
+  wrappers.push(wrapper)
+  return wrapper
+}) as typeof mountComponent
+afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
+afterEach(() => { vi.restoreAllMocks() })
 
 describe('LiveGlyphRasterPreview', () => {
   beforeEach(() => {

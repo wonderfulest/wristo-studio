@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { applyFabricBitmapFontPreview } from './fabricBitmapFontPreview'
 import type { BmFontDescriptor } from './bmFontTextParser'
+
+afterEach(() => { vi.restoreAllMocks() })
 
 describe('Fabric BMFont preview', () => {
   it('uses the font baseline slope for glyph positions and selection height', async () => {

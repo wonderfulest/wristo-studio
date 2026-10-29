@@ -4,7 +4,10 @@ import { createTokenCatalogPageModel } from './tokenCatalogPageModel'
 describe('token catalog page model', () => {
   it('reports totals and category counts from the formal catalog', () => {
     const model = createTokenCatalogPageModel()
-    expect(model.total).toBe(178)
+    expect(model.total).toBe(180)
+    // Recovery time and its unit were added to the formal catalog together.
+    expect(model.filter({ category: 'sensor', query: 'ds332' }).map(({ code }) => code))
+      .toEqual(['ds332', 'ds332u'])
     expect(model.filter({ category: 'all', query: 'cn' })).toHaveLength(31)
     expect(model.categories.find(({ value }) => value === 'weather')?.count).toBe(22)
     expect(model.categories.find(({ value }) => value === 'astronomy')?.count).toBe(24)

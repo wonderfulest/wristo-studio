@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   getSimulatedClockSnapshot,
@@ -10,6 +10,11 @@ import {
 } from './simulatedClock'
 
 describe('simulatedClock fixed and running modes', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    resetSimulatedClock()
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-11T08:00:00.000Z'))

@@ -1,8 +1,8 @@
 import Schema from 'async-validator'
 // @vitest-environment jsdom
 import { defineComponent, h, nextTick } from 'vue'
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount as mountComponent, type VueWrapper } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Design } from '@/types/api/design'
 import type { ProductTag } from '@/types/api/productTag'
 
@@ -164,6 +164,14 @@ const stubs = {
   DesignerDefaultConfigDialog: true
 }
 
+const wrappers: VueWrapper[] = []
+const mount = ((...args: Parameters<typeof mountComponent>) => {
+  const wrapper = mountComponent(...args)
+  wrappers.push(wrapper)
+  return wrapper
+}) as typeof mountComponent
+afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
+
 const mountDialog = () => mount(PublishForm, { global: { stubs } })
 
 const showDialog = async (wrapper: ReturnType<typeof mountDialog>) => {
@@ -178,12 +186,9 @@ const confirm = async (wrapper: ReturnType<typeof mountDialog>) => {
 }
 
 beforeEach(() => {
-  mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: { descriptionTemplate: '[[${app_ai_description}]]' } })
-})
-
-describe('PublishForm product tag behavior', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: { descriptionTemplate: '[[${app_ai_description}]]' } })
+    mocks.confirmCost.mockResolvedValue('confirm')
     mocks.isAdmin = false
     mocks.updateAppUuid.mockResolvedValue({ code: 0, data: true })
     mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 7 } })
@@ -192,8 +197,9 @@ describe('PublishForm product tag behavior', () => {
     mocks.getProductTagGeneration.mockResolvedValue({ code: 0, data: { status: 'existing', canGenerate: false, tags: design.product.tags } })
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.publish.mockResolvedValue({ code: 0, data: true })
-  })
+})
 
+describe('PublishForm product tag behavior', () => {
   it('shows the application UUID as read-only for non-admin users', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)

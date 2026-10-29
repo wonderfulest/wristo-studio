@@ -200,6 +200,8 @@ describe('DesignCard responsive actions panel', () => {
     expect(source).toContain("emit('build-prg', design)")
     expect(source).toContain("emit('preview-prg', design)")
     expect(source).toContain("emit('submit', design)")
-    expect(source).toContain("emit('go-live', design)")
+    // Publish now navigates to the application distribution section (behavior tested in management).
+    expect(source).not.toContain("emit('go-live', design)")
+    expect(source).toContain("section: 'distribution'")
   })
 })

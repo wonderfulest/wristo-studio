@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mount as mountComponent, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
@@ -9,6 +9,14 @@ import FontPicker from './font-picker.vue'
 import { getFontBySlug } from '@/api/wristo/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
+
+const wrappers: VueWrapper[] = []
+const mount = ((...args: Parameters<typeof mountComponent>) => {
+  const wrapper = mountComponent(...args)
+  wrappers.push(wrapper)
+  return wrapper
+}) as typeof mountComponent
+afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 
 vi.mock('opentype.js', () => ({ default: {}, parse: vi.fn() }))
 vi.mock('@/api/wristo/fonts', () => ({

@@ -1,10 +1,11 @@
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 const { update, upload, chars } = vi.hoisted(() => ({ update: vi.fn(), upload: vi.fn(), chars: vi.fn() }))
 vi.mock('@/api/wristo/bitmapFont', () => ({ listBitmapFontChars: chars }))
 vi.mock('@/api/wristo/design', () => ({ designApi: { updateDesign: update } }))
 vi.mock('@/api/wristo/upload', () => ({ uploadPersistentDesignAsset: upload }))
 import { saveJsonProject, restoreJsonProject, hydrateJsonProjectFiles, clearJsonProjectFiles } from './jsonProject'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from './packageAssetRegistry'
+afterEach(() => { vi.unstubAllGlobals() })
 const config = () => ({ designId: 'source', name: 'Face', elements: [], properties: {} } as any)
 beforeEach(() => {
   chars.mockReset().mockResolvedValue({ code: 0, data: [] })

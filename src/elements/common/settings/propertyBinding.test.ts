@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { activeObjects, addProperty, getMetricByOptions, registerDataOptions, saveState } = vi.hoisted(() => ({
   activeObjects: [] as any[],
@@ -53,6 +53,11 @@ vi.mock('@/stores/designStore', () => ({ useDesignStore: () => ({ appLanguage: '
 import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection, createQuickMetricProperty, isMetricBindableElement } from './propertyBinding'
 
 describe('metric property binding support', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    activeObjects.splice(0)
+  })
+
   it('checks element structure without resolving a metric property', () => {
     expect(isMetricBindableElement('data', 'label')).toBe(true)
     expect(isMetricBindableElement('goal', 'goalBar')).toBe(true)

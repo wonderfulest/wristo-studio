@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { renderSearchPage, searchPages, studioOrigin } from './searchPages'
 import { requiresStudioLogin } from '@/auth/studioAccess'
 
-describe('public search entry points', () => {
-  it.each(searchPages)('$path is available to visitors and contains useful HTML', page => {
-    expect(requiresStudioLogin(page.path)).toBe(false)
+describe('static search content and authenticated Studio entry', () => {
+  it.each(searchPages)('$path renders useful HTML without bypassing Studio login', page => {
+    // Static SEO content is generated without a session; opening the SPA still requires login.
+    expect(requiresStudioLogin(page.path)).toBe(true)
     const html = renderSearchPage(page)
     expect(html).toContain('<h1>')
     expect(html).toContain('href="/create-watch-face"')

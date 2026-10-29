@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mount as mountComponent, type VueWrapper } from '@vue/test-utils'
 
 const mocks = vi.hoisted(() => ({ requirePremium: vi.fn(), push: vi.fn() }))
 vi.mock('@/composables/useStudioMembershipGate', () => ({ useStudioMembershipGate: () => ({ requirePremium: mocks.requirePremium }) }))
@@ -9,7 +9,16 @@ vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key === 'bitmap
 
 import BitmapFontMakerEntry from './BitmapFontMakerEntry.vue'
 
+const wrappers: VueWrapper[] = []
+const mount = ((...args: Parameters<typeof mountComponent>) => {
+  const wrapper = mountComponent(...args)
+  wrappers.push(wrapper)
+  return wrapper
+}) as typeof mountComponent
+afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
+
 describe('BitmapFontMakerEntry', () => {
+  beforeEach(() => { vi.clearAllMocks() })
   it('blocks non-Premium navigation through the existing membership gate', async () => {
     mocks.requirePremium.mockReturnValue(false)
     const wrapper = mount(BitmapFontMakerEntry)

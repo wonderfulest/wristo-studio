@@ -1,26 +1,11 @@
+// @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { decodeLabel, encodeLabel } from './label.encoder'
 import { getDataTypePropertyOptions, useDataCatalogStore, validateDataCatalog } from '@/stores/dataCatalogStore'
 import { usePropertiesStore } from '@/stores/properties'
-
-vi.hoisted(() => {
-  const storage = new Map<string, string>()
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => storage.set(key, value),
-    removeItem: (key: string) => storage.delete(key),
-    clear: () => storage.clear(),
-    key: (index: number) => Array.from(storage.keys())[index] ?? null,
-    get length() {
-      return storage.size
-    },
-    },
-  })
-})
 
 describe('label color property binding', () => {
   it('round-trips fillProperty through encode and decode', () => {
@@ -65,7 +50,7 @@ describe('label color property binding', () => {
   })
 
   it('uses the property-change event in the panel', () => {
-    const source = readFileSync(new URL('./label.panel.vue', import.meta.url), 'utf8')
+    const source = readFileSync(resolve(__dirname, './label.panel.vue'), 'utf8')
 
     expect(source).toContain(':property-key="currentModel.fillProperty"')
     expect(source).toContain('@property-change="handleColorSelection"')
@@ -73,7 +58,7 @@ describe('label color property binding', () => {
   })
 
   it('propagates fillProperty through every renderer boundary', () => {
-    const source = readFileSync(new URL('./label.renderer.ts', import.meta.url), 'utf8')
+    const source = readFileSync(resolve(__dirname, './label.renderer.ts'), 'utf8')
 
     expect(source).toContain('fillProperty: config.fillProperty')
     expect(source).toContain('(element as any).fillProperty ?? config.fillProperty')

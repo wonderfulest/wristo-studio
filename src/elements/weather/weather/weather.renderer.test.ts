@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { canvas, applyCurrentElementPreviewFont } = vi.hoisted(() => ({
   canvas: { getObjects: vi.fn(), requestRenderAll: vi.fn(), renderAll: vi.fn() },
@@ -57,6 +57,12 @@ import { Group, Image, Rect, Text } from 'fabric'
 import { updateWeather } from './weather.renderer'
 
 describe('weather font canvas layout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    applyCurrentElementPreviewFont.mockReset()
+    applyCurrentElementPreviewFont.mockReturnValue({ bitmapPreviewAssets: undefined })
+  })
+
   it('uses the published BMFont glyph instead of an SVG source preview', async () => {
     applyCurrentElementPreviewFont.mockReturnValueOnce({
       bitmapPreviewAssets: {
