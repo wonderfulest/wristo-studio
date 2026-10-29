@@ -7,7 +7,7 @@ import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { redirectToSsoLogin } from '@/utils/ssoRedirect'
-import { guardStudioRoute, hasWristoMembership, MEMBERSHIP_URL, requiresStudioLogin } from '@/auth/studioAccess'
+import { guardStudioRoute, canEnterStudio, MEMBERSHIP_URL, requiresStudioLogin } from '@/auth/studioAccess'
 import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
 import { initializeEditorRuntime } from '@/startup/editorRuntime'
 import { shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
@@ -279,7 +279,7 @@ router.beforeEach(async (to) => {
   const accessResult = guardStudioRoute({
     requiresAuth,
     isAuthenticated: userStore.isAuthenticated,
-    hasAccess: hasWristoMembership(userStore.userInfo),
+    hasAccess: canEnterStudio(userStore.userInfo),
     fullPath: to.fullPath,
     redirectToLogin: (fullPath) => { void redirectToSsoLogin('studio', 0, fullPath).catch(error => console.error('Sign in failed', error)) },
     redirectToMembership: () => window.location.replace(MEMBERSHIP_URL),

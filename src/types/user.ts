@@ -61,7 +61,14 @@ export interface UserProfileVO {
   updatedAt: string | null
 }
 
+export interface PremiumEntitlement {
+  active: boolean
+  lifetime: boolean
+  expiresAt: string | null
+}
+
 export interface UserInfo {
+  premium?: PremiumEntitlement | null
   hasPassword?: boolean
   googleBound?: boolean
   id: number

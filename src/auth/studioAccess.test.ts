@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { guardStudioRoute, hasStudioAccess, rejectStudioSession, requiresStudioLogin, hasWristoMembership, MEMBERSHIP_URL } from './studioAccess'
+import { guardStudioRoute, canEnterStudio, hasStudioAccess, rejectStudioSession, requiresStudioLogin, hasPremiumEntitlement } from './studioAccess'
 
 describe('Studio access policy', () => {
   it.each([
@@ -83,21 +83,23 @@ describe('mandatory Studio login', () => {
   })
 })
 
-describe('ordinary Wristo membership', () => {
-  const now = Date.parse('2026-10-29T00:00:00Z')
-  it('uses the ordinary membership checkout', () => {
-    expect(MEMBERSHIP_URL).toBe('https://wristo.io/membership')
+describe('unified Premium entry', () => {
+  const active = { active: true, lifetime: true, expiresAt: null }
+  it.each(['ROLE_ADMIN', 'ROLE_MERCHANT'])('allows %s without Premium', roleCode => {
+    expect(canEnterStudio({ roles: [{ roleCode }], premium: { ...active, active: false } })).toBe(true)
   })
-  it('allows lifetime and unexpired subscriptions', () => {
-    expect(hasWristoMembership({ subscription: { planCode: 'lifetime', endTime: null } }, now)).toBe(true)
-    expect(hasWristoMembership({ subscription: { endTime: '2026-10-30T00:00:00Z' } }, now)).toBe(true)
+  it('allows Premium from the API without a subscription or bundle profile', () => {
+    expect(hasPremiumEntitlement({ premium: active })).toBe(true)
+    expect(canEnterStudio({ premium: active })).toBe(true)
+    expect(canEnterStudio({ premium: { ...active, lifetime: false, expiresAt: '2026-11-30T00:00:00Z' } })).toBe(true)
   })
-  it.each([null, {}, { subscription: {} }, { subscription: { endTime: null } }, { subscription: { endTime: 'invalid' } }, { subscription: { endTime: '2026-10-29T00:00:00Z' } }])('rejects missing or expired membership: %j', user => {
-    expect(hasWristoMembership(user, now)).toBe(false)
+  it('denies missing, expired or revoked rights', () => {
+    expect(canEnterStudio(null)).toBe(false)
+    expect(canEnterStudio({})).toBe(false)
+    expect(canEnterStudio({ premium: { ...active, active: false } })).toBe(false)
   })
-  it('allows authenticated members through', () => {
-    const redirectToMembership = vi.fn()
-    expect(guardStudioRoute({ requiresAuth: true, isAuthenticated: true, hasAccess: true, fullPath: '/design', redirectToLogin: vi.fn(), redirectToMembership })).toBeUndefined()
-    expect(redirectToMembership).not.toHaveBeenCalled()
+  it('does not infer Premium from legacy bundle or subscription fields', () => {
+    const user = { premium: { ...active, active: false }, subscription: { planCode: 'lifetime', endTime: null }, userProfile: { hasBundle: 1 } }
+    expect(canEnterStudio(user)).toBe(false)
   })
 })

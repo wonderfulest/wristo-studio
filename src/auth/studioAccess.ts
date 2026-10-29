@@ -3,6 +3,7 @@ const STUDIO_ROLE_CODES = new Set(['ROLE_ADMIN', 'ROLE_MERCHANT'])
 type StudioUser =
   | {
       roles?: Array<{ roleCode: string }>
+      premium?: { active: boolean; lifetime: boolean; expiresAt: string | null } | null
     }
   | null
   | undefined
@@ -55,13 +56,12 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
 
 export const MEMBERSHIP_URL = 'https://wristo.io/membership'
 
-// Keep ordinary Wristo membership separate from Studio roles and plans.
-export function hasWristoMembership(user: { subscription?: { planCode?: string; endTime?: string | null } | null } | null | undefined, now = Date.now()) {
-  const subscription = user?.subscription
-  if (subscription?.endTime === null && subscription.planCode) return true
-  if (!subscription?.endTime) return false
-  const expiresAt = new Date(subscription.endTime).getTime()
-  return Number.isFinite(expiresAt) && expiresAt > now
+export function hasPremiumEntitlement(user: StudioUser) {
+  return user?.premium?.active === true
+}
+
+export function canEnterStudio(user: StudioUser) {
+  return hasStudioAccess(user) || hasPremiumEntitlement(user)
 }
 
 export const requiresStudioLogin = (path: string) => {
