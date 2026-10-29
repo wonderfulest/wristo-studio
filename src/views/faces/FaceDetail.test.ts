@@ -13,7 +13,7 @@ import { remixFace, updateFaceSharing } from './permissions'
 import { getDesignSharing, updateDesignSharing } from '@/api/wristo/designSharing'
 vi.mock('@/api/wristo/designSharing', () => ({ getDesignSharing: vi.fn(), updateDesignSharing: vi.fn() }))
 vi.mock('@/i18n', async () => { const actual = await vi.importActual<typeof import('@/i18n')>('@/i18n'); const { ref } = await import('vue'); const locale = ref('en'); return { ...actual, useI18n: () => ({ locale, t: (key: string, params?: Record<string, string | number>) => key.startsWith('faceDetail.') ? actual.translate(key, locale.value as 'en' | 'zh', params) : key }) } })
-const auth = vi.hoisted(() => ({ isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
+const auth = vi.hoisted(() => ({ isStudioConsumer: true, isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
@@ -24,7 +24,7 @@ vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
-beforeEach(() => { (useI18n().locale as { value: string }).value = 'en'; auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
+beforeEach(() => { (useI18n().locale as { value: string }).value = 'en'; auth.isStudioConsumer = true; auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 async function setup(path = '/faces/123') {
   const router = createRouter({ history: createMemoryHistory(), routes: [
@@ -40,6 +40,22 @@ async function setup(path = '/faces/123') {
   return { wrapper, router }
 }
 describe('watch face details', () => {
+  it('offers consumers lifetime membership through the public membership page', async () => {
+    auth.userInfo = null
+    const { wrapper } = await setup()
+    const link = wrapper.get('.membership-promotion a')
+    expect(link.attributes('href')).toBe('https://www.wristo.io/membership')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+    expect(wrapper.get('.membership-promotion').text()).toContain('Unlock all watch faces forever')
+  })
+
+  it('hides the consumer membership promotion for non-consumers', async () => {
+    auth.isStudioConsumer = false
+    const { wrapper } = await setup()
+    expect(wrapper.find('.membership-promotion').exists()).toBe(false)
+  })
+
   it('links the creator name to their public profile', async () => {
     vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, user: { nickname: 'Maisie' } })
     const { wrapper } = await setup()
@@ -156,7 +172,7 @@ describe('watch face details', () => {
   it('does not allow a signed-in non-owner to edit', async () => {
     auth.userInfo = { id: 8 }
     const { wrapper } = await setup()
-    expect(wrapper.find('.primary-button').exists()).toBe(false)
+    expect(wrapper.find('.primary-actions .primary-button').exists()).toBe(false)
     expect(wrapper.find('[role="switch"]').exists()).toBe(false)
     expect(wrapper.find('input[type=file]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Edit description')
@@ -183,7 +199,7 @@ describe('watch face details', () => {
     auth.userInfo = null
     const { wrapper } = await setup()
     expect(wrapper.find('[role="switch"]').exists()).toBe(false)
-    expect(wrapper.find('.primary-button').exists()).toBe(false)
+    expect(wrapper.find('.primary-actions .primary-button').exists()).toBe(false)
     expect(wrapper.find('input[type=file]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Edit description')
   })
@@ -229,7 +245,7 @@ describe('watch face details', () => {
   it('does not offer an editor link when there is no design source', async () => {
     vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, designId: null })
     const { wrapper } = await setup()
-    expect(wrapper.find('a.primary-button').exists()).toBe(false)
+    expect(wrapper.find('.primary-actions a.primary-button').exists()).toBe(false)
     expect(wrapper.text()).toContain('not available in the builder')
   })
   it('offers guided sharing for every platform and resets on navigation', async () => {

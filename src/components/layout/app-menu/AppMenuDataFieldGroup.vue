@@ -9,6 +9,10 @@
         <el-icon><DataLine /></el-icon>
         <span>{{ t('editor.dataField') }}</span>
       </div>
+      <el-menu-item index="datafield/battery" @click="onAddDataField(':FIELD_TYPE_BATTERY')">
+        <el-icon><DataBoard /></el-icon>
+        <span>{{ t('editor.batteryLevel') }}</span>
+      </el-menu-item>
       <el-menu-item index="health/heart-rate" @click="onAddDataField(':FIELD_TYPE_HEART_RATE')">
         <el-icon><Monitor /></el-icon>
         <span>{{ t('editor.heartRate') }}</span>
@@ -53,7 +57,7 @@
 </template>
 
 <script setup>
-import { DataLine, TrendCharts, Aim, Monitor } from '@element-plus/icons-vue'
+import { DataBoard, DataLine, TrendCharts, Aim, Monitor } from '@element-plus/icons-vue'
 import AppMenuGoalGroup from '@/components/layout/app-menu/AppMenuGoalGroup.vue'
 import { useI18n } from '@/i18n'
 

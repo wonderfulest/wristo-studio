@@ -20,6 +20,12 @@
           </div>
           <FaceImageUpload v-if="canEdit && face.appId && !face.designId" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @uploaded="onImagesUploaded" />
           <DesignManagement v-if="canEdit && face.designId && informationTarget" :key="`${face.designId}-${userStore.userInfo?.id}`" :design-uid="face.designId" :information-target="informationTarget" :active-section="activeSection" @select-section="selectSection" @updated="refreshManagedFace" />
+          <div v-if="userStore.isStudioConsumer" class="membership-promotion">
+            <div class="membership-eyebrow"><span class="membership-crown" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m3 6 4.5 4L12 4l4.5 6L21 6l-2 12H5L3 6Z" fill="currentColor"/><path d="M6 21h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>WRISTO LIFETIME</span></div>
+            <strong>{{ t('faceDetail.membershipTitle') }}</strong>
+            <p>{{ t('faceDetail.membershipDescription') }}</p>
+            <a class="membership-button" href="https://www.wristo.io/membership" target="_blank" rel="noopener noreferrer">{{ t('faceDetail.joinMembership') }} <Icon icon="material-symbols:arrow-forward-rounded" /></a>
+          </div>
           <div class="primary-actions">
             <RouterLink v-if="canEdit && face.designId && !informationTarget" class="studio-edit-button" :to="{ path: '/design', query: { id: face.designId } }"><Icon icon="material-symbols:edit-outline" /> {{ t('faceDetail.editInBuilder') }}</RouterLink>
             <button v-else-if="!canEdit && face.designId && face.allowRemix" class="primary-button" :disabled="remixing" @click="remix">{{ remixing ? t('faceDetail.creatingYourCopy') : t('faceDetail.remixInBuilder') }}</button>
@@ -273,6 +279,15 @@ onBeforeUnmount(() => { request += 1; shareRequest += 1 })
 </script>
 
 <style scoped>
+.membership-promotion { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 22px; padding: 20px; border: 1px solid #e6ddcc; border-radius: 14px; background: #fffdfa; box-shadow: 0 4px 14px #65512c08; }
+.membership-eyebrow { display: flex; align-items: center; gap: 9px; margin-bottom: 5px; color: #b69a60; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; }
+.membership-crown { display: inline-flex; align-items: center; }
+.membership-crown svg { width: 27px; height: 27px; }
+.membership-promotion strong { font-size: 21px; line-height: 1.25; color: #19212e; }
+.membership-promotion p { margin: 0; font-size: 14px; line-height: 1.5; color: #7b8088; }
+.membership-button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 12px 16px; border: 1px solid #dfcca2; border-radius: 9px; background: linear-gradient(110deg, #d5be8e, #eadbb8); color: #302c23; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 2px 4px #65512c0c; transition: filter .18s, box-shadow .18s; }
+.membership-button:hover { filter: brightness(1.04); box-shadow: 0 3px 9px #65512c18; }
+.membership-button:focus-visible { outline: 3px solid #886f3e; outline-offset: 3px; }
 .face-banner { display: block; width: 100%; height: auto; border-radius: 14px; margin-bottom: 24px; }
 .app-title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .edit-app-information { font-size: 13px; white-space: nowrap; }
