@@ -2,9 +2,10 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ prepare: vi.fn() }))
-vi.mock('./batchDesignActions', () => ({ batchActions: ['transfer', 'delete'], prepareBatchAction: mocks.prepare }))
+vi.mock('./batchDesignActions', () => ({ batchActions: ['transfer', 'delete', 'submit'], prepareBatchAction: mocks.prepare }))
 vi.mock('@/i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/components/users/DesignerSelect.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('./BatchSubmitConfig.vue', () => ({ default: { name: 'BatchSubmitConfigForm', emits: ['update', 'ready'], template: '<div />' } }))
 import BatchDesignActions from './BatchDesignActions.vue'
 let wrapper: ReturnType<typeof mount>
 afterEach(() => { wrapper?.unmount(); vi.resetAllMocks() })
@@ -42,4 +43,22 @@ describe('batch action workflow', () => {
   resolve(); await pending
   expect(vm.results.map((r: any) => r.status)).toEqual(['success', 'skipped'])
  })
+})
+
+it('waits for shared settings and passes only the selected overrides to every preparation', async () => {
+ const run = vi.fn().mockResolvedValue(true)
+ mocks.prepare.mockImplementation(async (design: any) => ({ design, run }))
+ const vm = setup(); vm.action = 'submit'; vm.open()
+ await flushPromises()
+ await vm.preview()
+ expect(mocks.prepare).not.toHaveBeenCalled()
+ const form = wrapper.findComponent({ name: 'BatchSubmitConfigForm' })
+ form.vm.$emit('update', { paymentMethod: 'wpay', price: 2.39, trialLasts: 0.25 })
+ form.vm.$emit('ready', true)
+ await vm.preview()
+ expect(mocks.prepare).toHaveBeenCalledTimes(2)
+ for (const call of mocks.prepare.mock.calls) expect(call[2].submitConfig).toEqual({ paymentMethod: 'wpay', price: 2.39, trialLasts: 0.25 })
+ expect(run).not.toHaveBeenCalled()
+ await vm.execute()
+ expect(run).toHaveBeenCalledTimes(2)
 })

@@ -41,6 +41,6 @@ it('starts a fresh guide after completion', () => {
 it('preserves the guide entry and language through the login redirect', () => {
   let redirect = ''
   expect(requiresStudioLogin('/create-watch-face')).toBe(true)
-  expect(guardStudioRoute({ requiresAuth: true, isAuthenticated: false, hasAccess: true, fullPath: '/create-watch-face?lang=zh', redirectToLogin: path => { redirect = path }, rejectForbidden: () => '/forbidden' })).toBe(false)
+  expect(guardStudioRoute({ requiresAuth: true, isAuthenticated: false, hasAccess: true, fullPath: '/create-watch-face?lang=zh', redirectToLogin: path => { redirect = path }, redirectToMembership: () => {} })).toBe(false)
   expect(redirect).toBe('/create-watch-face?lang=zh')
 })

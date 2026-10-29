@@ -54,3 +54,40 @@ it.each([undefined, null, -1, 721])('does not invent missing or invalid saved tr
  expect((await prepare('submit')).reason).toBe('batchActions.missingConfig')
  expect(api.submitDesign).not.toHaveBeenCalled()
 })
+
+it('fills missing shared configuration once while retaining identity and version', async () => {
+ detail.product.payment = undefined
+ detail.product.trialLasts = undefined
+ api.getPackagingDevices.mockResolvedValue({ code: 0, data: { devices: [{ deviceId: 'venu3' }], selectedDeviceIds: [] } })
+ const ready = await prepareBatchAction(item, 'submit', { device: '', enabled: false, weight: 0, submitConfig: { paymentMethod: 'wpay', price: 2.39, trialLasts: 0.25, targetDeviceIds: ['venu3'] } }, k => k)
+ expect(ready.reason).toBeUndefined()
+ expect(api.submitDesign).not.toHaveBeenCalled()
+ await ready.run!()
+ expect(api.submitDesign).toHaveBeenCalledWith(expect.objectContaining({ designUid: 'one', name: 'Face', expectedVersion: 12, paymentMethod: 'wpay', price: 2.39, trialLasts: 0.25, targetDeviceIds: ['venu3'] }))
+})
+it('a price-only edit preserves the saved method, trial and devices', async () => {
+ const ready = await prepareBatchAction(item, 'submit', { device: '', enabled: false, weight: 0, submitConfig: { price: 4.99 } }, k => k)
+ await ready.run!()
+ expect(api.submitDesign).toHaveBeenCalledWith(expect.objectContaining({ price: 4.99, paymentMethod: 'wpay', trialLasts: 4, targetDeviceIds: ['venu3'] }))
+})
+it('validates empty and unsupported shared devices', async () => {
+ for (const targetDeviceIds of [[], ['unknown']]) {
+  const ready = await prepareBatchAction(item, 'submit', { device: '', enabled: false, weight: 0, submitConfig: { targetDeviceIds } }, k => k)
+  expect(ready.run).toBeUndefined()
+ }
+ expect(api.submitDesign).not.toHaveBeenCalled()
+})
+it('does not change a published payment method through a shared edit', async () => {
+ detail.product.lastGoLive = 123
+ const ready = await prepareBatchAction(item, 'submit', { device: '', enabled: false, weight: 0, submitConfig: { paymentMethod: 'free' } }, k => k)
+ expect(ready.reason).toBe('payment.methodLockedAfterPublish')
+ expect(ready.run).toBeUndefined()
+})
+it('free submissions omit paid fields even with shared paid values', async () => {
+ const ready = await prepareBatchAction(item, 'submit', { device: '', enabled: false, weight: 0, submitConfig: { paymentMethod: 'free', price: 4.99, trialLasts: 1 } }, k => k)
+ await ready.run!()
+ const payload = api.submitDesign.mock.calls[0][0]
+ expect(payload.paymentMethod).toBe('free')
+ expect(payload).not.toHaveProperty('price')
+ expect(payload).not.toHaveProperty('trialLasts')
+})

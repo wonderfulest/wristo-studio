@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { guardStudioRoute, hasStudioAccess, rejectStudioSession, requiresStudioLogin } from './studioAccess'
+import { guardStudioRoute, hasStudioAccess, rejectStudioSession, requiresStudioLogin, hasWristoMembership, MEMBERSHIP_URL } from './studioAccess'
 
 describe('Studio access policy', () => {
   it.each([
@@ -36,7 +36,7 @@ describe('Studio access policy', () => {
 
   it('redirects an authenticated but unauthorized user away from a protected route', () => {
     const redirectToLogin = vi.fn()
-    const rejectForbidden = vi.fn(() => '/auth/signed-out?reason=forbidden')
+    const redirectToMembership = vi.fn()
 
     expect(
       guardStudioRoute({
@@ -45,11 +45,11 @@ describe('Studio access policy', () => {
         hasAccess: false,
         fullPath: '/designs',
         redirectToLogin,
-        rejectForbidden
+        redirectToMembership
       })
-    ).toBe('/auth/signed-out?reason=forbidden')
+    ).toBe(false)
     expect(redirectToLogin).not.toHaveBeenCalled()
-    expect(rejectForbidden).toHaveBeenCalledOnce()
+    expect(redirectToMembership).toHaveBeenCalledOnce()
   })
 
   it('leaves public routes available without Studio roles', () => {
@@ -60,25 +60,44 @@ describe('Studio access policy', () => {
         hasAccess: false,
         fullPath: '/prg-installer',
         redirectToLogin: vi.fn(),
-        rejectForbidden: vi.fn()
+        redirectToMembership: vi.fn()
       })
     ).toBeUndefined()
   })
 })
 
 describe('mandatory Studio login', () => {
-  it.each(['/designs/new-projects', '/design', '/designs', '/tokens/private', '/moon', '/prg-installer', '/data-catalog-unavailable'])('requires authentication for %s', (path) => {
+  it.each(['/designs/new-projects', '/design', '/designs', '/tokens/private', '/moon', '/prg-installer', '/data-catalog-unavailable', '/', '/faces', '/faces/123', '/authors/7', '/wiki', '/academy', '/tokens', '/pricing', '/create-watch-face'])('requires authentication for %s', (path) => {
     const redirectToLogin = vi.fn()
     expect(requiresStudioLogin(path)).toBe(true)
-    expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: true, fullPath: path, redirectToLogin, rejectForbidden: vi.fn() })).toBe(false)
+    expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: true, fullPath: path, redirectToLogin, redirectToMembership: vi.fn() })).toBe(false)
     expect(redirectToLogin).toHaveBeenCalledWith(path)
   })
-  it.each(['/', '/tokens', '/tokens/', '/wiki', '/wiki/', '/academy', '/academy/', '/faces', '/faces/', '/faces/123', '/faces/123/', '/authors/7', '/authors/7/', '/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', (path) => {
+  it.each(['/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', (path) => {
     expect(requiresStudioLogin(path)).toBe(false)
     const redirectToLogin = vi.fn()
-    const rejectForbidden = vi.fn()
-    expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: false, fullPath: path, redirectToLogin, rejectForbidden })).toBeUndefined()
+    const redirectToMembership = vi.fn()
+    expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: false, fullPath: path, redirectToLogin, redirectToMembership })).toBeUndefined()
     expect(redirectToLogin).not.toHaveBeenCalled()
-    expect(rejectForbidden).not.toHaveBeenCalled()
+    expect(redirectToMembership).not.toHaveBeenCalled()
+  })
+})
+
+describe('ordinary Wristo membership', () => {
+  const now = Date.parse('2026-10-29T00:00:00Z')
+  it('uses the ordinary membership checkout', () => {
+    expect(MEMBERSHIP_URL).toBe('https://wristo.io/membership')
+  })
+  it('allows lifetime and unexpired subscriptions', () => {
+    expect(hasWristoMembership({ subscription: { planCode: 'lifetime', endTime: null } }, now)).toBe(true)
+    expect(hasWristoMembership({ subscription: { endTime: '2026-10-30T00:00:00Z' } }, now)).toBe(true)
+  })
+  it.each([null, {}, { subscription: {} }, { subscription: { endTime: null } }, { subscription: { endTime: 'invalid' } }, { subscription: { endTime: '2026-10-29T00:00:00Z' } }])('rejects missing or expired membership: %j', user => {
+    expect(hasWristoMembership(user, now)).toBe(false)
+  })
+  it('allows authenticated members through', () => {
+    const redirectToMembership = vi.fn()
+    expect(guardStudioRoute({ requiresAuth: true, isAuthenticated: true, hasAccess: true, fullPath: '/design', redirectToLogin: vi.fn(), redirectToMembership })).toBeUndefined()
+    expect(redirectToMembership).not.toHaveBeenCalled()
   })
 })

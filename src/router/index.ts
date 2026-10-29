@@ -6,13 +6,8 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
-import {
-  cancelPendingSsoRedirect,
-  clearLocalAuthState,
-  clearPendingStudioPath,
-  redirectToSsoLogin,
-} from '@/utils/ssoRedirect'
-import { guardStudioRoute, rejectStudioSession, requiresStudioLogin } from '@/auth/studioAccess'
+import { redirectToSsoLogin } from '@/utils/ssoRedirect'
+import { guardStudioRoute, hasWristoMembership, MEMBERSHIP_URL, requiresStudioLogin } from '@/auth/studioAccess'
 import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
 import { initializeEditorRuntime } from '@/startup/editorRuntime'
 import { shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
@@ -274,27 +269,27 @@ router.onError((error, to) => {
 router.beforeEach(async (to) => {
   const userStore = useUserStore()
   if (!to.path.startsWith('/auth/')) trackConversion('studio_enter', userStore.token || '')
-  if (userStore.isAuthenticated && userStore.isStudioConsumer && ['/credits', '/design-slots', '/pricing'].includes(to.path)) {
-    return '/designs'
-  }
-  // 检查路由是否需要认证
   const requiresAuth = requiresStudioLogin(to.path)
+  if (requiresAuth && userStore.isAuthenticated) {
+    // Refresh persisted membership so purchases and expiry take effect on entry.
+    const response = await userStore.refreshUserInfo()
+    if (response.code !== 0 || !response.data) return false
+  }
 
   const accessResult = guardStudioRoute({
     requiresAuth,
     isAuthenticated: userStore.isAuthenticated,
-    hasAccess: userStore.hasFullStudioAccess || to.matched.some(record => record.meta.allowsAllUsers) || ['/data-catalog-unavailable', '/design', '/designs', '/profile', '/pricing', '/packaging-logs'].some(path => to.path === path || to.path.startsWith(path + '/')),
+    hasAccess: hasWristoMembership(userStore.userInfo),
     fullPath: to.fullPath,
     redirectToLogin: (fullPath) => { void redirectToSsoLogin('studio', 0, fullPath).catch(error => console.error('Sign in failed', error)) },
-    rejectForbidden: () => rejectStudioSession({
-      cancelPendingRedirect: cancelPendingSsoRedirect,
-      clearStoreAuth: () => userStore.clearAuth(),
-      clearLocalAuth: clearLocalAuthState,
-      clearPendingPath: clearPendingStudioPath,
-    }),
+    redirectToMembership: () => window.location.replace(MEMBERSHIP_URL),
   })
   if (accessResult !== undefined) {
     return accessResult
+  }
+
+  if (userStore.isAuthenticated && userStore.isStudioConsumer && ['/credits', '/design-slots', '/pricing'].includes(to.path)) {
+    return '/designs'
   }
 
   if ((to.meta as any).hideForMerchant && userStore.isMerchantUser) {

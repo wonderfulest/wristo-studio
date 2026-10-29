@@ -12,6 +12,7 @@
       <DesignerSelect v-if="action === 'transfer'" v-model="target" :disabled="busy || phase !== 'configure'" :placeholder="t('card.transferOwner.placeholder')" />
       <p v-if="['prg', 'cancelPrg'].includes(action)">{{ t('batchActions.device') }}: {{ deviceId || t('project.selectDeviceFirst') }}</p>
       <p v-if="action === 'submit'">{{ t('batchActions.submitHint') }}</p>
+      <BatchSubmitConfigForm v-if="visible && action === 'submit' && phase !== 'done'" :designs="batch" :device-id="deviceId" :disabled="busy || phase !== 'configure'" @update="submitConfig = $event" @ready="submitReady = $event" />
       <el-switch v-if="action === 'public' || action === 'remix'" v-model="enabled" :disabled="busy || phase !== 'configure'" :active-text="t('batchActions.enable')" :inactive-text="t('batchActions.disable')" />
       <el-input-number v-if="action === 'weight'" v-model="weight" :disabled="busy || phase !== 'configure'" :min="0" :max="99" :precision="0" :aria-label="t('batchActions.weight')" />
       <p v-if="phase === 'review'">{{ t('batchActions.review', { count: prepared.filter(item => item.run).length, skipped: prepared.filter(item => !item.run).length }) }}</p>
@@ -36,6 +37,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useI18n } from '@/i18n'
+import BatchSubmitConfigForm from './BatchSubmitConfig.vue'
+import type { BatchSubmitConfig } from './batchSubmitConfig'
 import DesignerSelect from '@/components/users/DesignerSelect.vue'
 import type { DesignListItem } from '@/types/api/design'
 import { batchActions, prepareBatchAction, type BatchAction, type PreparedAction } from './batchDesignActions'
@@ -49,6 +52,8 @@ const phase = ref<'configure' | 'review' | 'done'>('configure')
 const target = ref<number>()
 const enabled = ref(false)
 const weight = ref<number>(0)
+const submitConfig = ref<BatchSubmitConfig>({})
+const submitReady = ref(false)
 const batch = ref<DesignListItem[]>([])
 const prepared = ref<PreparedAction[]>([])
 const results = ref<Array<{ design: DesignListItem; status: 'success' | 'failed' | 'skipped'; reason?: string }>>([])
@@ -57,18 +62,19 @@ let context = ''
 let disposed = false
 onBeforeUnmount(() => { disposed = true })
 const selected = computed(() => props.designs.filter(item => props.modelValue.includes(item.id)))
-const valid = computed(() => action.value === 'transfer' ? !!target.value : ['prg', 'cancelPrg'].includes(action.value) ? !!props.deviceId : action.value === 'weight' ? Number.isInteger(weight.value) && weight.value >= 0 && weight.value <= 99 : true)
+const valid = computed(() => action.value === 'submit' ? submitReady.value : action.value === 'transfer' ? !!target.value : ['prg', 'cancelPrg'].includes(action.value) ? !!props.deviceId : action.value === 'weight' ? Number.isInteger(weight.value) && weight.value >= 0 && weight.value <= 99 : true)
 const setBusy = (value: boolean) => { busy.value = value; emit('busy', value) }
 const selectAll = (value: unknown) => { if (props.isAdmin && !busy.value && !props.loading) emit('update:modelValue', value ? props.designs.map(d => d.id) : []) }
 const open = () => {
   if (!props.isAdmin || busy.value || props.loading || !selected.value.length) return
+  submitConfig.value = {}; submitReady.value = false
   batch.value = [...selected.value]; context = props.contextKey; prepared.value = []; results.value = []; phase.value = 'configure'; visible.value = true
 }
 const reason = (error: any) => error?.response?.data?.msg || error?.msg || error?.message || t('batchActions.failed')
 const preview = async () => {
   if (!props.isAdmin || busy.value || !valid.value) return
   setBusy(true); completed.value = 0; prepared.value = []
-  const options = { target: target.value, device: props.deviceId, enabled: enabled.value, weight: weight.value }
+  const options = { target: target.value, device: props.deviceId, enabled: enabled.value, weight: weight.value, submitConfig: { ...submitConfig.value } }
   try {
     for (const design of batch.value) {
       if (disposed || !props.isAdmin) break

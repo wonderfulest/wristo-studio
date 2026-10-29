@@ -1,3 +1,5 @@
+import { isPaymentMethodLocked } from '@/utils/paymentMethod'
+import type { BatchSubmitConfig } from './batchSubmitConfig'
 import { getIqCancellationAction, getPrgCardAction, getPrgBuildDisabledReason } from './designCardActions'
 import { designApi } from '@/api/wristo/design'
 import { productsApi } from '@/api/wristo/products'
@@ -6,7 +8,7 @@ import type { DesignListItem, DesignSubmitDTO } from '@/types/api/design'
 
 export const batchActions = ['transfer', 'submit', 'prg', 'cancelIq', 'cancelPrg', 'public', 'remix', 'weight', 'delete'] as const
 export type BatchAction = typeof batchActions[number]
-export interface BatchOptions { target?: number; device: string; enabled: boolean; weight: number }
+export interface BatchOptions { target?: number; device: string; enabled: boolean; weight: number; submitConfig?: BatchSubmitConfig }
 export interface PreparedAction { design: DesignListItem; reason?: string; run?: () => Promise<unknown> }
 const active = (status?: string) => ['init', 'pending', 'processing', 'queued', 'running', 'cancel_requested'].includes(status || '')
 const checked = async (promise: Promise<any>) => {
@@ -52,19 +54,23 @@ export async function prepareBatchAction(item: DesignListItem, action: BatchActi
     case 'submit': {
       if (active(product?.packagingLog?.packagingStatus)) return skip('batchActions.active')
       const devices = await checked(designApi.getPackagingDevices(item.designUid))
-      if (!devices.selectedDeviceIds?.length) return skip('submitDesign.selectDeviceRequired')
-      const payment = product?.payment
+      const config = options.submitConfig || {}
+      const targetDeviceIds = config.targetDeviceIds ?? devices.selectedDeviceIds
+      if (config.targetDeviceIds && targetDeviceIds.some((id: string) => !devices.devices?.some((device: { deviceId: string }) => device.deviceId === id))) return skip('batchActions.unsupportedDevices')
+      if (!targetDeviceIds?.length) return skip('submitDesign.selectDeviceRequired')
+      const payment = { ...product?.payment, ...config }
       // Trial duration belongs to the product, not its payment record.
-      const trialLasts = product?.trialLasts
+      const trialLasts = config.trialLasts ?? product?.trialLasts
       if (!payment?.paymentMethod || !d.name?.trim()) return skip('batchActions.missingConfig')
       const method = payment.paymentMethod
+      if (isPaymentMethodLocked(product?.lastGoLive) && method !== product?.payment?.paymentMethod) return skip('payment.methodLockedAfterPublish')
       if (!['free', 'wpay', 'garmin', 'kpay'].includes(method)) return skip('batchActions.missingConfig')
       if (method !== 'free' && (!Number.isFinite(payment.price) || payment.price < 1.99 || payment.price > 5.99)) return skip('submitDesign.priceRange')
       if (method !== 'free' && (!Number.isFinite(trialLasts) || trialLasts < 0 || trialLasts > 720)) return skip('batchActions.missingConfig')
       if (method === 'kpay' && !payment.kpayId) return skip('submitDesign.kpayRequired')
       if (d.originalType === 'non_original' && (!d.sourcePlatform || !d.sourceId)) return skip('batchActions.missingConfig')
       if (d.sourcePlatform && d.sourceId && await checked(designApi.checkSourceDuplicate({ designUid: d.designUid, sourcePlatform: d.sourcePlatform, sourceId: d.sourceId }))) return skip('designSource.duplicate')
-      const payload: DesignSubmitDTO = { designUid: d.designUid, expectedVersion: d.version, name: d.name, originalType: d.originalType || 'original', sourcePlatform: d.sourcePlatform || undefined, sourceId: d.sourceId || undefined, paymentMethod: method, targetDeviceIds: [...devices.selectedDeviceIds], ...(method !== 'free' ? { price: payment.price, trialLasts, kpayId: payment.kpayId } : {}) }
+      const payload: DesignSubmitDTO = { designUid: d.designUid, expectedVersion: d.version, name: d.name, originalType: d.originalType || 'original', sourcePlatform: d.sourcePlatform || undefined, sourceId: d.sourceId || undefined, paymentMethod: method, targetDeviceIds: [...targetDeviceIds], ...(method !== 'free' ? { price: payment.price, trialLasts, kpayId: payment.kpayId } : {}) }
       run = () => checked(designApi.submitDesign(payload)); break
     }
   }

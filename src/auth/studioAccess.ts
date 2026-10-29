@@ -1,4 +1,3 @@
-import { searchPages } from '@/content/searchPages'
 const STUDIO_ROLE_CODES = new Set(['ROLE_ADMIN', 'ROLE_MERCHANT'])
 
 type StudioUser =
@@ -21,7 +20,7 @@ type StudioRouteGuardOptions = {
   hasAccess: boolean
   fullPath: string
   redirectToLogin: (fullPath: string) => void
-  rejectForbidden: () => string
+  redirectToMembership: () => void
 }
 
 export const FORBIDDEN_STUDIO_PATH = '/auth/signed-out?reason=forbidden'
@@ -47,16 +46,25 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
   }
 
   if (!options.hasAccess) {
-    return options.rejectForbidden()
+    options.redirectToMembership()
+    return false
   }
 
   return undefined
 }
 
+export const MEMBERSHIP_URL = 'https://wristo.io/membership'
+
+// Keep ordinary Wristo membership separate from Studio roles and plans.
+export function hasWristoMembership(user: { subscription?: { planCode?: string; endTime?: string | null } | null } | null | undefined, now = Date.now()) {
+  const subscription = user?.subscription
+  if (subscription?.endTime === null && subscription.planCode) return true
+  if (!subscription?.endTime) return false
+  const expiresAt = new Date(subscription.endTime).getTime()
+  return Number.isFinite(expiresAt) && expiresAt > now
+}
+
 export const requiresStudioLogin = (path: string) => {
   const normalized = path.replace(/\/$/, '') || '/'
-  return !searchPages.some(page => page.path === normalized)
-    && !['/', '/tokens', '/faces', '/wiki', '/academy', '/auth/callback', '/auth/signed-out'].includes(normalized)
-    && !/^\/faces\/[^/]+$/.test(normalized)
-    && !/^\/authors\/[1-9]\d*$/.test(normalized)
+  return !['/auth/callback', '/auth/signed-out'].includes(normalized)
 }
