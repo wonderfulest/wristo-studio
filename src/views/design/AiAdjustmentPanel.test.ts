@@ -78,3 +78,8 @@ it('refreshes a changed price without a retry loop', async () => {
   const s = setup(); await s.send()
   expect(s.wrapper.text()).toContain('AI credit price changed'); expect(s.wrapper.text()).not.toContain('Recover request'); expect(mocks.start).toHaveBeenCalledOnce()
 })
+it('defaults to whole face despite selection and explicitly opts into selection', async () => {
+  const s = setup(); await s.send()
+  expect(s.capture).toHaveBeenCalledWith('all')
+  expect(mocks.start.mock.calls[0][1].protocolVersion).toBe(2)
+})

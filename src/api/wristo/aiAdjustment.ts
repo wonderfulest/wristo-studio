@@ -3,8 +3,18 @@ import type { ApiResponse } from '@/types/api/api'
 
 export type AdjustmentFields = Record<string, string | number>
 export interface AdjustmentElement { id: string; eleType: string; fields: AdjustmentFields; context: Record<string, string | number | boolean | null> }
-export interface AdjustmentResult { summary: string; changes: { id: string; patch: AdjustmentFields }[] }
+export type AdjustmentWeather = 'always' | 'clear' | 'cloudy' | 'rain' | 'snow' | 'storm' | 'fog' | 'night'
+export interface AdjustmentAddition {
+  id: string; eleType: 'circle' | 'rectangle' | 'triangle' | 'line' | 'text'
+  fields: AdjustmentFields; weather?: AdjustmentWeather; layerName?: string
+}
+export interface AdjustmentResult {
+  summary: string; changes: { id: string; patch: AdjustmentFields }[]
+  additions?: AdjustmentAddition[]; removals?: string[]
+  weatherRules?: { id: string; weather: AdjustmentWeather }[]
+}
 export interface AdjustmentRequest {
+  protocolVersion?: number
   projectId: string; prompt: string; width: number; height: number; expectedCreditCost: number
   elements: AdjustmentElement[]; selectedIds: string[]; history: { prompt: string; summary: string }[]
 }

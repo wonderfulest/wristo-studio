@@ -2,15 +2,18 @@
   <section class="ai-adjust" aria-label="AI design adjustment" @keydown.stop>
     <header><div><span class="eyebrow">DESIGN ASSISTANT</span><h2>AI Adjust</h2></div><button class="text-button" aria-label="Close AI adjustment" :disabled="applying" @click="$emit('close')">✕</button></header>
     <p class="intro">Refine your design, one detail at a time.</p>
-    <div class="scope"><span class="scope-dot" />{{ selectedCount ? `${selectedCount} selected · changes stay in this selection` : 'No selection · describe what you want to change' }}</div>
-    <p class="hint">Move or resize elements, adjust colors, or edit static text. Bound colors and automatic layout geometry stay in their existing controls.</p>
+    <div class="scope"><span class="scope-dot" /><label for="ai-adjust-scope">Adjustment scope</label><select id="ai-adjust-scope" v-model="scope" :disabled="busy"><option value="all">Whole watch face</option><option value="selected" :disabled="!selectedCount">{{ selectedCount }} selected · only these elements</option></select></div>
+    <p class="hint">Adjust existing elements, add editable shapes and text, remove elements, or switch scenery with the weather. Select “Whole watch face” to add elements. Bound colors and automatic layout geometry stay in their existing controls.</p>
     <div ref="conversation" class="conversation" aria-live="polite">
-      <div v-if="!turns.length && !pending" class="empty"><strong>What would you like to change?</strong><p>Select an element for a focused adjustment.</p><button @click="prompt = 'Make the time larger and keep it centered.'">Make the time larger ↗</button><button @click="prompt = 'Move the date slightly lower.'">Move the date lower ↗</button></div>
+      <div v-if="!turns.length && !pending" class="empty"><strong>What would you like to change?</strong><p>Describe changes to the whole watch face, or choose selected elements for a focused adjustment.</p><button @click="prompt = 'Make the time larger and keep it centered.'">Make the time larger ↗</button><button @click="prompt = 'Move the date slightly lower.'">Move the date lower ↗</button></div>
       <article v-for="(turn, index) in turns" :key="index"><p class="user-message">{{ turn.prompt }}</p><p>{{ turn.summary }}</p><small>{{ turn.applied ? 'Applied · undo with the editor controls' : 'Not applied' }}</small></article>
       <article v-if="pending"><p class="user-message">{{ pending.request.prompt }}</p><p role="status">{{ statusText }}</p>
         <template v-if="pending.job?.status === 'succeeded' && pending.job.result">
           <p>{{ pending.job.result.summary }}</p>
           <div class="changes" aria-label="Adjustment preview"><div v-for="change in pending.job.result.changes" :key="change.id"><strong>{{ elementName(change.id) }}</strong><dl><template v-for="(value, key) in change.patch" :key="key"><dt>{{ fieldLabel(String(key)) }}</dt><dd><span>{{ oldValue(change.id, String(key)) }}</span> → <b>{{ value }}</b></dd></template></dl></div></div>
+          <div v-for="addition in pending.job.result.additions || []" :key="addition.id" class="operation-preview"><strong>Add {{ addition.layerName || addition.eleType }}</strong><span>{{ addition.eleType }} · {{ weatherLabels[addition.weather || 'always'] }}</span><dl><template v-for="(value, key) in addition.fields" :key="key"><dt>{{ fieldLabel(String(key)) }}</dt><dd>{{ value }}</dd></template></dl></div>
+          <div v-for="id in pending.job.result.removals || []" :key="id" class="operation-preview">Remove {{ elementName(id) }}</div>
+          <div v-for="rule in pending.job.result.weatherRules || []" :key="rule.id" class="operation-preview">{{ elementName(rule.id) }} · Show: {{ weatherLabels[rule.weather] }}</div>
           <p class="hint">Review these changes before applying. Applying does not cost extra.</p>
           <div class="actions"><el-button type="primary" :loading="applying" @click="apply">Apply</el-button><el-button :disabled="applying" @click="discard">Discard</el-button></div>
         </template>
@@ -39,14 +42,16 @@ import { getAiCapabilities, getAiPrices } from '@/api/wristo/studioAi'
 import { useCreditBalanceRefresh } from '@/composables/useCreditBalanceRefresh'
 import { studioCreditsApi } from '@/api/wristo/studioCredits'
 import { useUserStore } from '@/stores/user'
+import { weatherLabels } from './aiAdjustmentOperations'
 import { validateAdjustment } from './aiAdjustmentPatch'
 export interface AdjustmentSnapshot { projectId: string; width: number; height: number; fingerprint: string; elements: AdjustmentElement[]; selectedIds: string[] }
 interface Pending { id: string; fingerprint: string; request: AdjustmentRequest; job?: AdjustmentJob }
 interface Turn { prompt: string; summary: string; applied: boolean }
-const props = defineProps<{ projectId: string; selectedCount: number; capture: () => Promise<AdjustmentSnapshot>; applyResult: (snapshot: Pending, result: AdjustmentResult) => Promise<void> }>()
+const props = defineProps<{ projectId: string; selectedCount: number; capture: (scope: 'all' | 'selected') => Promise<AdjustmentSnapshot>; applyResult: (snapshot: Pending, result: AdjustmentResult) => Promise<void> }>()
 defineEmits<{ (e: 'close'): void }>()
 const user = useUserStore()
 const prompt = ref(''), error = ref('')
+const scope = ref<'all' | 'selected'>('all')
 const conversation = ref<HTMLElement>()
 const price = ref<number>(), balance = ref<number>()
 useCreditBalanceRefresh(balance)
@@ -129,11 +134,11 @@ async function send() {
   const current = generation
   submitting.value = true; error.value = ''
   try {
-    const snapshot = await props.capture()
+    const snapshot = await props.capture(scope.value)
     if (current !== generation) return
-    if (!snapshot.elements.length || !snapshot.elements.some(e => (!snapshot.selectedIds.length || snapshot.selectedIds.includes(e.id)) && Object.keys(e.fields).length)) throw Error('Select an element with supported editable properties.')
+    if (scope.value === 'selected' && !snapshot.selectedIds.length) throw Error('Select an element or switch to the whole watch face.')
     const { fingerprint, ...design } = snapshot
-    pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
+    pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, protocolVersion: 2, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
     persist(); await dispatch(current)
   } catch (cause) { if (current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to prepare the current design.' }
   finally { if (current === generation) submitting.value = false }
@@ -171,6 +176,7 @@ header { display: flex; align-items: center; justify-content: space-between; } h
 .eyebrow { color: var(--studio-primary); font-size: 10px; font-weight: 700; letter-spacing: 1.6px; }
 .intro { margin: 12px 0; font-size: 13px; }.hint { font-size: 12px; color: var(--studio-text-secondary, #8792a5); line-height: 1.6; }
 .scope { padding: 10px; background: var(--studio-bg); border: 1px solid var(--studio-border); border-radius: 8px; font-size: 12px; }
+.scope select { flex: 1; min-width: 0; padding: 5px; color: inherit; background: var(--studio-bg); border: 0; } .scope { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .scope label { margin: 0; } .operation-preview { border: 1px solid var(--studio-border); border-radius: 8px; padding: 10px; margin-top: 8px; } .operation-preview > span { display: block; color: var(--studio-text-secondary); }
 .scope-dot { display: inline-block; width: 6px; height: 6px; background: var(--studio-primary); border-radius: 50%; margin-right: 7px; }
 .conversation { flex: 1; min-height: 90px; overflow-y: auto; padding: 8px 0 16px; }
 .empty { padding: 24px 4px; font-size: 13px; }.empty p { color: var(--studio-text-secondary, #8792a5); }.empty button { display: block; padding: 10px 12px; margin-top: 10px; border: 1px solid var(--studio-border); border-radius: 8px; background: var(--studio-bg); color: inherit; text-align: left; cursor: pointer; }

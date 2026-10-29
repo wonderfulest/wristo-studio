@@ -13,6 +13,7 @@ vi.mock('@/stores/layoutGroupStore', () => ({ useLayoutGroupStore: () => mocks.g
 vi.mock('@/stores/designStore', () => ({ useDesignStore: () => mocks.design }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 vi.mock('@/stores/historyStore', () => ({ useHistoryStore: () => mocks.history }))
+vi.mock('@/engine/registry/elementRegistry', () => ({ encodeElementByRegistry: (element: { id: string }) => mocks.data.elements.find(e => e.config.id === element.id)?.config ?? null }))
 vi.mock('@/engine/managers/elementManager', () => ({ updateElementById: mocks.update }))
 vi.mock('./aiAdjustmentPatch', async () => ({ ...await vi.importActual<any>('./aiAdjustmentPatch'), fingerprintDesign: async (state: unknown) => JSON.stringify(state) }))
 import { useAiAdjustmentEditor } from './useAiAdjustmentEditor'
