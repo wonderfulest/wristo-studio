@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// @vitest-environment-options {"resources":"usable"}
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { webcrypto } from 'node:crypto'
 import { createPinia, setActivePinia } from 'pinia'

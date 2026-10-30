@@ -1,3 +1,4 @@
+import { updateStudioRecord } from './studioStorage'
 /** Browser drafts store bytes in IndexedDB, never session-bound object URLs. */
 export interface ProjectSnapshot<T = any, F = any> {
   config: T
@@ -49,29 +50,24 @@ export function restoreProjectSnapshot<T, F>(snapshot: ProjectSnapshot<T, F>): {
 }
 
 export interface StoredProjectDraft extends ProjectSnapshot {
+  revision?: string
   savedAt: number
   fontBuildFiles?: Map<string, Map<string, Blob>>
   archiveExtras?: typeof import('./packageAssetRegistry').packageArchiveExtras
 }
-const openDraftDatabase = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
-  const request = indexedDB.open('wristo-project-drafts', 1)
-  request.onupgradeneeded = () => request.result.createObjectStore('drafts')
-  request.onerror = () => reject(request.error)
-  request.onsuccess = () => resolve(request.result)
-})
-
 export async function accessProjectDraft(key: string, action: 'read' | 'write' | 'delete', draft?: StoredProjectDraft): Promise<StoredProjectDraft | undefined> {
-  const db = await openDraftDatabase()
-  try {
-    return await new Promise((resolve, reject) => {
-      const transaction = db.transaction('drafts', action === 'read' ? 'readonly' : 'readwrite')
-      const store = transaction.objectStore('drafts')
-      const request = action === 'read' ? store.get(key) : action === 'write' ? store.put(draft, key) : store.delete(key)
-      transaction.oncomplete = () => resolve(action === 'read' ? request.result : undefined)
-      transaction.onerror = () => reject(transaction.error)
-      transaction.onabort = () => reject(transaction.error || new Error('Local draft transaction aborted'))
-    })
-  } finally {
-    db.close()
-  }
+  return updateStudioRecord<StoredProjectDraft>('drafts', key, action === 'read' ? undefined : old => {
+    if (action === 'delete') return undefined
+    return old && old.savedAt > draft!.savedAt ? old : draft
+  })
+}
+
+/** A cloud save can only remove the exact local snapshot it acknowledged. */
+export async function removeSavedProjectDraft(key: string, savedAt: number, revision?: string): Promise<boolean> {
+  let removed = false
+  await updateStudioRecord<StoredProjectDraft>('drafts', key, old => {
+    if (old?.savedAt === savedAt && old.revision === revision) { removed = true; return undefined }
+    return old
+  })
+  return removed
 }

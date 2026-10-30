@@ -1,5 +1,10 @@
 <template>
   <div class="design-layout">
+    <div v-if="draftStorageError" class="draft-storage-error" role="alert">
+      <span>{{ draftStorageError }}</span>
+      <el-button size="small" @click="saveDirtyDraft">Retry local save</el-button>
+      <el-button size="small" @click="exportStore.downloadConfig()">Export current design</el-button>
+    </div>
     <div v-if="aiAdjustment.applying.value" class="ai-applying-overlay" role="status" aria-live="polite">Applying adjustment…</div>
     <div v-if="entryCreating || entryError" class="editor-entry-state" :role="entryError ? 'alert' : 'status'">
       <template v-if="entryError">
@@ -94,7 +99,7 @@
 import { onboarding } from '@/features/onboarding/progress'
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { ElMessageBox } from 'element-plus'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import emitter from '@/utils/eventBus'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useCanvas } from '@/composables/useCanvas'
@@ -137,7 +142,6 @@ import {
 import type { ElementActionAvailability } from '@/engine/managers/elementContextActionModel'
 import {
   createLocalDesignDraftAutosave,
-  removeLocalDesignDraft,
   resolveLocalDesignDraft,
   buildLocalDesignDraftKey,
 } from '@/engine/services/localDesignDraft'
@@ -145,7 +149,9 @@ import { readUnsavedDesigns, rememberUnsavedDesign, forgetUnsavedDesign, type Un
 import { isLocalProject } from '@/auth/guestProject'
 import { writeLocalProject, readLocalProject } from '@/engine/services/guestProjectDraft'
 import { registerBeforeStudioLogin } from '@/utils/studioLoginPreparation'
-import { accessProjectDraft, captureProjectSnapshot, restoreProjectSnapshot } from '@/engine/services/localProjectSnapshot'
+import { migrateStudioStorage } from '@/engine/services/migrateStudioStorage'
+import { localStorageError } from '@/engine/services/studioStorage'
+import { removeSavedProjectDraft, accessProjectDraft, captureProjectSnapshot, restoreProjectSnapshot } from '@/engine/services/localProjectSnapshot'
 import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from '@/engine/services/packageAssetRegistry'
 import { useFontStore } from '@/stores/fontStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -202,6 +208,10 @@ const getDraftDeviceKey = (): string => String(
   || `${designStore.designSpec.width}x${designStore.designSpec.height}`,
 )
 let draftWriteQueue: Promise<unknown> = Promise.resolve()
+const draftStorageError = ref('')
+let draftSaving = 0
+let latestDraftSavedAt = 0
+let latestDraftRevision: string | undefined
 let draftChangeTimer: ReturnType<typeof setTimeout> | undefined
 const persistLocalDraft = (): void => {
   if (!loadedDesignId || baseStore.designLoading) return
@@ -211,16 +221,22 @@ const persistLocalDraft = (): void => {
     const id = loadedDesignId
     const owner = draftOwner()
     const name = designStore.watchFaceName
-    draftWriteQueue = writeLocalProject(id, config)
-      .then(() => rememberDraft(id, name, Date.now(), owner))
-      .catch(error => { draftAutosave.markDirty(); console.error(error) })
+    draftSaving += 1
+    draftWriteQueue = Promise.all([draftWriteQueue.catch(() => undefined), writeLocalProject(id, config)])
+      .then(() => { rememberDraft(id, name, Date.now(), owner); draftStorageError.value = '' })
+      .catch(error => { draftAutosave.markDirty(); draftStorageError.value = localStorageError(error); console.error(error) })
+      .finally(() => { draftSaving -= 1 })
     return
   }
   const id = loadedDesignId
   const owner = draftOwner()
   const name = designStore.watchFaceName
   const key = buildLocalDesignDraftKey(id, getDraftDeviceKey())
-  const savedAt = Date.now()
+  const savedAt = Math.max(Date.now(), latestDraftSavedAt + 1)
+  latestDraftSavedAt = savedAt
+  const revision = crypto.randomUUID()
+  latestDraftRevision = revision
+  draftSaving += 1
   // Capture while object URLs are still valid; serialize writes to prevent stale completion.
   const serializedConfig = JSON.stringify(config)
   const fonts = Array.from(new Map([...useFontStore().serverFonts, ...packageFonts]).values())
@@ -233,12 +249,14 @@ const persistLocalDraft = (): void => {
   draftWriteQueue = draftWriteQueue.catch(() => undefined).then(async () => {
     const result = await captured
     if ('error' in result) throw result.error
-    await accessProjectDraft(key, 'write', { ...result.value, savedAt, fontBuildFiles, archiveExtras })
+    await accessProjectDraft(key, 'write', { ...result.value, savedAt, revision, fontBuildFiles, archiveExtras })
     rememberDraft(id, name, savedAt, owner)
+    draftStorageError.value = ''
   }).catch((error) => {
     draftAutosave.markDirty()
+    draftStorageError.value = localStorageError(error)
     console.error('Failed to save local project assets:', error)
-  })
+  }).finally(() => { draftSaving -= 1 })
 }
 const draftAutosave = createLocalDesignDraftAutosave(persistLocalDraft)
 const saveDirtyDraft = (): void => {
@@ -246,9 +264,19 @@ const saveDirtyDraft = (): void => {
   try {
     draftAutosave.saveIfDirty()
   } catch (error) {
+    draftStorageError.value = localStorageError(error)
     console.error('Failed to save local design draft:', error)
   }
 }
+// Do not tear down object URLs or the canvas until the latest draft has committed.
+const flushBeforeNavigation = async (): Promise<boolean> => {
+  if (aiAdjustment.applying.value) return false
+  saveDirtyDraft()
+  await draftWriteQueue
+  return !draftAutosave.isDirty() && !draftStorageError.value
+}
+onBeforeRouteLeave(flushBeforeNavigation)
+onBeforeRouteUpdate(flushBeforeNavigation)
 const startDraftTracking = (designId: string): void => {
   loadedDesignId = designId
   stopElementDataSubscription?.()
@@ -270,7 +298,7 @@ const confirmDraftRestore = async (): Promise<boolean> => {
       distinguishCancelAndClose: true, closeOnClickModal: false, closeOnPressEscape: false, type: 'warning',
     })
     return true
-  } catch { return false }
+  } catch (action) { return action !== 'cancel' }
 }
 const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<any> => {
   // A login snapshot is explicit and restored without the server-draft choice.
@@ -283,12 +311,15 @@ const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<
   }
   const key = buildLocalDesignDraftKey(designId, getDraftDeviceKey())
   await draftWriteQueue
+  await migrateStudioStorage(window.localStorage)
   const draft = await accessProjectDraft(key, 'read')
   if (draft) {
     rememberDraft(designId, draft.config?.config?.name || designStore.watchFaceName, draft.savedAt)
     const resume = resumeDraftId === designId
     resumeDraftId = ''
     if (resume || await confirmDraftRestore()) {
+      latestDraftSavedAt = draft.savedAt
+      latestDraftRevision = draft.revision
       const restored = restoreProjectSnapshot(draft)
       packageFonts.clear()
       restored.fonts.forEach((font) => useFontStore().registerServerFont(font))
@@ -301,9 +332,9 @@ const resolveLoadedDraft = async (designId: string, serverConfig: any): Promise<
       restored.config.bitmapChars.forEach(([id, chars]: any) => packageBitmapChars.set(id, chars))
       return restored.config.config
     }
-    await accessProjectDraft(key, 'delete')
-    forgetUnsavedDesign(window.localStorage, draftOwner(), designId)
-    removeLocalDesignDraft(window.localStorage, designId, getDraftDeviceKey())
+    if (await removeSavedProjectDraft(key, draft.savedAt, draft.revision)) {
+      forgetUnsavedDesign(window.localStorage, draftOwner(), designId)
+    }
     return serverConfig
   }
   return resolveLocalDesignDraft({ storage: window.localStorage, designId,
@@ -484,7 +515,11 @@ const unregisterBeforeLogin = registerBeforeStudioLogin(async () => {
   await writeLocalProject(loadedDesignId, config)
   sessionStorage.setItem('studio-login-draft', loadedDesignId)
 })
-const handleBeforeUnload = (): void => saveDirtyDraft()
+const handleBeforeUnload = (event: BeforeUnloadEvent): void => {
+  const dirty = draftAutosave.isDirty()
+  saveDirtyDraft()
+  if (dirty || draftSaving) { event.preventDefault(); event.returnValue = '' }
+}
 const handleDesignSaveStarted = (input: any): void => {
   if (input?.designId !== loadedDesignId) return
   saveRevisions.set(input.saveToken, draftRevision)
@@ -503,12 +538,13 @@ const handleDesignSaved = (input: any): void => {
   const key = buildLocalDesignDraftKey(loadedDesignId, getDraftDeviceKey())
   const owner = draftOwner()
   const id = loadedDesignId
+  const savedAt = latestDraftSavedAt
+  const revision = latestDraftRevision
   draftWriteQueue = draftWriteQueue.then(async () => {
-    await accessProjectDraft(key, 'delete')
-    forgetUnsavedDesign(window.localStorage, owner, id)
+    if (await removeSavedProjectDraft(key, savedAt, revision)) forgetUnsavedDesign(window.localStorage, owner, id)
   }).catch(console.error)
-  removeLocalDesignDraft(window.localStorage, loadedDesignId, getDraftDeviceKey())
 }
+
 
 const handleLocalDesignPromoted = ({ designId }: { designId: string }) => {
   startDraftTracking(designId)
@@ -594,6 +630,7 @@ defineExpose({
 </script>
 
 <style scoped>
+.draft-storage-error { display: flex; gap: 8px; align-items: center; padding: 10px; background: var(--el-color-warning-light-9); color: var(--el-color-warning-dark-2); }
 .ai-applying-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: rgba(15,23,42,.35); color: white; cursor: wait; }
 .editor-panel-tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--studio-border); padding-bottom: 10px; flex-shrink: 0; }
 .editor-panel-tabs button { border: 0; border-radius: 6px; padding: 8px 14px; background: transparent; color: var(--studio-text); cursor: pointer; font-size: 13px; }
@@ -636,6 +673,7 @@ defineExpose({
 }
 </style>
 <style scoped>
+.draft-storage-error { display: flex; gap: 8px; align-items: center; padding: 10px; background: var(--el-color-warning-light-9); color: var(--el-color-warning-dark-2); }
 .left-panel {
   --studio-left-panel-width: 312px;
   width: var(--studio-left-panel-width);

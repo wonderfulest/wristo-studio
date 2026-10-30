@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises as flushVue, mount } from '@vue/test-utils'
+import { IDBFactory } from 'fake-indexeddb'
+import * as storage from './aiConversationStorage'
 import { reactive } from 'vue'
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ start: vi.fn(), status: vi.fn(), capabilities: vi.fn(), prices: vi.fn(), balance: vi.fn(), user: null as any }))
@@ -8,6 +10,7 @@ vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.capabilities,
 vi.mock('@/api/wristo/studioCredits', () => ({ studioCreditsApi: mocks }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 import AiAdjustmentPanel from './AiAdjustmentPanel.vue'
+async function flushPromises() { for (let i = 0; i < 40; i++) await flushVue() }
 const wrappers: any[] = []
 const result = { summary: 'Larger time', changes: [{ id: 'time', patch: { fontSize: 72 } }] }
 const snapshot = { projectId: 'local:test', width: 454, height: 454, fingerprint: 'original', elements: [{ id: 'time', eleType: 'time', fields: { fontSize: 60 }, context: {} }], selectedIds: ['time'] }
@@ -23,7 +26,7 @@ function setup(selectedCount = 1) {
   return { wrapper, capture, applyResult, button, send }
 }
 beforeEach(() => {
-  vi.clearAllMocks(); vi.useFakeTimers(); sessionStorage.clear(); localStorage.clear()
+  vi.clearAllMocks(); vi.stubGlobal('indexedDB', new IDBFactory()); vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] }); sessionStorage.clear(); localStorage.clear()
   Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: () => 'id-' + Math.random() })
   mocks.user = reactive({ isAuthenticated: true, userInfo: { id: 7 } })
   mocks.capabilities.mockResolvedValue({ data: { WATCHFACE_ADJUST: true } }); mocks.prices.mockResolvedValue({ data: { WATCHFACE_ADJUST: 5 } }); mocks.balance.mockResolvedValue({ data: { balance: 100 } })
@@ -127,7 +130,7 @@ it('keeps accepted jobs recoverable without persisting the large preview image',
   const s = setup()
   s.capture.mockResolvedValue({ ...snapshot, referenceImage: 'data:image/png;base64,large-preview' } as any)
   await s.send()
-  const saved = JSON.parse(localStorage.getItem('studio-ai-adjust:7:local:test')!)
+  const saved = (await storage.readConversation('studio-ai-adjust:7:local:test'))!
   expect(saved.pending.id).toBe(mocks.start.mock.calls[0][0])
   expect(saved.pending.request.referenceImage).toBeUndefined()
   s.wrapper.unmount()
@@ -137,11 +140,11 @@ it('keeps accepted jobs recoverable without persisting the large preview image',
 })
 it('does not charge when the frozen request cannot be saved locally', async () => {
   const s = setup(); await flushPromises()
-  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Quota exceeded', 'QuotaExceededError') })
+  const write = vi.spyOn(storage, 'saveConversation').mockImplementation(() => { throw new DOMException('Quota exceeded', 'QuotaExceededError') })
   try {
     await s.send()
     expect(mocks.start).not.toHaveBeenCalled()
-    expect(s.wrapper.text()).toContain('could not save')
+    expect(s.wrapper.text()).toContain('Device storage is full')
   } finally { write.mockRestore() }
 })
 
@@ -165,4 +168,48 @@ it('allows explicitly choosing the whole face while elements are selected', asyn
   await s.wrapper.find('select').setValue('all')
   await s.send()
   expect(s.capture).toHaveBeenCalledWith('all')
+})
+
+it('recovers the identical frozen request after a network failure and a full panel reload', async () => {
+  mocks.start.mockRejectedValueOnce(Error('connection lost after acceptance'))
+  const s = setup(); await s.send()
+  const original = mocks.start.mock.calls[0]
+  s.wrapper.unmount()
+  mocks.status.mockRejectedValueOnce(Error('status unavailable'))
+  const next = setup(); await flushPromises()
+  await next.button('Recover request').trigger('click'); await flushPromises()
+  expect(mocks.start.mock.calls[1]).toEqual(original)
+})
+it('blocks sending when storage cannot be read, rather than forgetting a potentially paid request', async () => {
+  const read = vi.spyOn(storage, 'restoreConversation').mockRejectedValue(new DOMException('disabled', 'SecurityError'))
+  try {
+    const s = setup(); await flushPromises()
+    expect(s.button('Send ·').attributes('disabled')).toBeDefined()
+    expect(s.wrapper.text()).toContain('Retry local save')
+    expect(mocks.start).not.toHaveBeenCalled()
+  } finally { read.mockRestore() }
+})
+it('prevents a stale second panel from submitting a different request for the same conversation', async () => {
+  const first = setup(), second = setup(); await flushPromises()
+  await first.send(); await second.send()
+  expect(mocks.start).toHaveBeenCalledOnce()
+  expect(second.wrapper.text()).toContain('another tab')
+})
+it('can persist a large frozen request even when localStorage writes are full', async () => {
+  const s = setup(); await flushPromises()
+  s.capture.mockResolvedValue({ ...snapshot, referenceImage: 'data:image/png;base64,' + 'A'.repeat(6_000_000) } as any)
+  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError') })
+  try { await s.send(); expect(mocks.start).toHaveBeenCalledOnce() } finally { write.mockRestore() }
+})
+it('waits for the frozen request commit before issuing the paid request', async () => {
+  const s = setup(); await flushPromises()
+  await s.wrapper.find('textarea').setValue('Make time larger'); await flushPromises()
+  let commit!: (value: string) => void
+  const write = vi.spyOn(storage, 'saveConversation').mockImplementationOnce(() => new Promise<string>(resolve => { commit = resolve }))
+  try {
+    await s.button('Send ·').trigger('click'); await flushPromises()
+    expect(mocks.start).not.toHaveBeenCalled()
+    commit('committed'); await flushPromises()
+    expect(mocks.start).toHaveBeenCalledOnce()
+  } finally { write.mockRestore() }
 })

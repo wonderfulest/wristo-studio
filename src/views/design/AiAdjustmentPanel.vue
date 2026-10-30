@@ -1,8 +1,8 @@
 <template>
   <section class="ai-adjust" aria-label="AI design adjustment" @keydown.stop>
     <header><div><span class="eyebrow">DESIGN ASSISTANT</span><h2>AI Adjust</h2></div><button class="text-button" aria-label="Close AI adjustment" :disabled="applying" @click="$emit('close')">✕</button></header>
-    <button class="text-button" :disabled="submitting || applying || unresolved" @click="clearConversation">Clear conversation</button>
-    <p class="intro">Refine your design, one detail at a time.</p>
+    <button class="text-button" :disabled="restoring || submitting || applying || unresolved" @click="clearConversation">Clear conversation</button>
+    <p class="intro">Refine your design, one detail at a time. The latest 100 completed turns are kept on this device.</p>
     <div class="scope"><span class="scope-dot" /><label for="ai-adjust-scope">Adjustment scope</label><select id="ai-adjust-scope" v-model="scope" :disabled="busy"><option value="all">Whole watch face</option><option value="selected" :disabled="!selectedCount">{{ selectedCount }} selected · only these elements</option></select></div>
     <p class="hint">Rename the watch face, adjust existing elements, add editable shapes and text, remove elements, or switch scenery with the weather. Select “Whole watch face” to rename the watch face or add elements. Bound colors and automatic layout geometry stay in their existing controls.</p>
     <div ref="conversation" class="conversation" aria-live="polite">
@@ -25,6 +25,7 @@
     </div>
     <div class="composer">
       <p v-if="error" class="error" role="alert">{{ error }}</p>
+      <el-button v-if="storageFailure" size="small" @click="retryStorage">Retry local save</el-button>
       <el-button v-if="uncertain" size="small" :loading="submitting" @click="recoverRequest">Recover request · no extra charge</el-button>
       <p v-if="!user.isAuthenticated" class="hint">Sign in to use AI adjustments.</p>
       <p v-else-if="!available && !loading" class="hint">AI adjustments are currently unavailable.</p>
@@ -38,6 +39,8 @@
   </section>
 </template>
 <script setup lang="ts">
+import { restoreConversation, saveConversation } from './aiConversationStorage'
+import { localStorageError } from '@/engine/services/studioStorage'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { aiAdjustmentApi, type AdjustmentElement, type AdjustmentJob, type AdjustmentRequest, type AdjustmentResult } from '@/api/wristo/aiAdjustment'
 import { getAiCapabilities, getAiPrices } from '@/api/wristo/studioAi'
@@ -63,44 +66,56 @@ const pending = ref<Pending>(), turns = ref<Turn[]>([])
 let generation = 0, timer: ReturnType<typeof setTimeout> | undefined
 const active = computed(() => !!pending.value && (!pending.value.job || ['queued', 'running', 'refund_pending', 'succeeded'].includes(pending.value.job.status)))
 const unresolved = computed(() => !!pending.value && (!pending.value.job || ['queued', 'running', 'refund_pending'].includes(pending.value.job.status)))
-const busy = computed(() => active.value || submitting.value || applying.value)
+const busy = computed(() => restoring.value || active.value || submitting.value || applying.value)
 const uncertain = computed(() => !!pending.value && (!pending.value.job || (!!error.value && ['queued', 'running', 'refund_pending'].includes(pending.value.job.status))))
 const canSend = computed(() => !!user.isAuthenticated && !!props.projectId && available.value && !loading.value && !busy.value && !!prompt.value.trim() && price.value != null && balance.value != null && balance.value >= price.value)
 const statusText = computed(() => pending.value?.job ? ({ queued: 'Queued…', running: 'Preparing your adjustment…', succeeded: 'Ready to review', failed: 'Adjustment failed', refund_pending: 'Returning credits…' })[pending.value.job.status] : 'Confirming request…')
 const storageKey = () => `studio-ai-adjust:${user.userInfo?.id}:${props.projectId}`
 const changed = () => window.dispatchEvent(new Event('studio-credits-changed'))
-let restoring = false
-function persist() {
-  if (restoring) return false
-  // Once accepted, recovery only polls the server; the image is no longer needed locally.
+const restoring = ref(true)
+const storageFailure = ref(false)
+let revision: { value?: string } = {}
+let writes: Promise<unknown> = Promise.resolve()
+async function persist() {
+  if (restoring.value) return false
+  const current = generation, key = storageKey(), savedRevision = revision
   const savedPending = pending.value?.job
     ? { ...pending.value, request: { ...pending.value.request, referenceImage: undefined } }
     : pending.value
-  try {
-    localStorage.setItem(storageKey(), JSON.stringify({ pending: savedPending, turns: turns.value, prompt: prompt.value, scope: scope.value }))
+  const value = JSON.parse(JSON.stringify({ pending: savedPending, turns: turns.value.slice(-100), prompt: prompt.value, scope: scope.value }))
+  const write = writes.catch(() => undefined).then(async () => {
+    savedRevision.value = await saveConversation(key, value, savedRevision.value)
+    if (current === generation) storageFailure.value = false
     return true
-  } catch {
-    error.value = 'This browser could not save the conversation. No new request will be sent until local storage is available.'
+  })
+  writes = write
+  try { return await write } catch (cause) {
+    if (current === generation) {
+      storageFailure.value = true
+      error.value = cause instanceof Error && cause.message.includes('another tab') ? cause.message : localStorageError(cause)
+    }
     return false
   }
 }
-function restore() {
-  restoring = true
-  let restored = false
+async function restore() {
+  restoring.value = true
+  const current = generation, key = storageKey()
   pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = defaultScope(); error.value = ''
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey()) ?? sessionStorage.getItem(storageKey()) ?? 'null')
-    if (saved) {
-      restored = true
-      pending.value = saved.pending; turns.value = saved.turns || []
-      prompt.value = saved.prompt || ''
-    }
-  } catch { error.value = 'Unable to read the saved conversation.' }
-  finally { restoring = false }
-  if (restored) persist()
+    await writes.catch(() => undefined)
+    const saved = await restoreConversation(key)
+    if (current !== generation) return
+    revision = { value: saved?.revision }
+    if (saved) { pending.value = saved.pending; turns.value = saved.turns || []; prompt.value = saved.prompt || '' }
+    storageFailure.value = false
+    restoring.value = false
+  } catch (cause) {
+    if (current === generation) { storageFailure.value = true; error.value = localStorageError(cause) }
+    // Never enable Send after a failed read: an existing charged request may be hidden.
+  }
 }
 function clearConversation() {
-  if (submitting.value || applying.value || unresolved.value) return
+  if (restoring.value || submitting.value || applying.value || unresolved.value) return
   pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = defaultScope(); error.value = ''
   persist()
 }
@@ -117,10 +132,10 @@ async function refresh() {
   finally { if (current === generation) loading.value = false }
 }
 function schedule(current: number) { clearTimeout(timer); timer = setTimeout(() => void poll(current), 2000) }
-function accept(job: AdjustmentJob) {
+async function accept(job: AdjustmentJob) {
   if (!pending.value || job.id !== pending.value.id || job.projectId !== pending.value.request.projectId) throw Error('Unexpected adjustment result.')
   if (job.status === 'succeeded') validateAdjustment(pending.value.request.elements, pending.value.request.selectedIds, job.result!, Math.max(pending.value.request.width, pending.value.request.height))
-  pending.value.job = job; persist()
+  pending.value.job = job; return persist()
 }
 async function poll(current: number) {
   const id = pending.value?.id
@@ -129,11 +144,12 @@ async function poll(current: number) {
     const response = await aiAdjustmentApi.status(id)
     if (current !== generation) return
     if (!response.data) throw Error('Missing task')
-    try { accept(response.data) } catch (cause) {
+    try { await accept(response.data) } catch (cause) {
       error.value = cause instanceof Error ? `Unable to read adjustment result: ${cause.message}` : 'Unable to read adjustment result.'
       return
     }
-    error.value = ''
+    if (current !== generation) return
+    if (!storageFailure.value) error.value = ''
     if (['queued', 'running', 'refund_pending'].includes(response.data.status)) schedule(current)
     else { changed(); const credits = await studioCreditsApi.balance(); if (current === generation) balance.value = credits.data?.balance }
   } catch { if (current === generation) error.value = 'Connection interrupted. Recover this request before sending another.' }
@@ -146,7 +162,9 @@ async function dispatch(current: number) {
     const response = await aiAdjustmentApi.start(item.id, item.request)
     if (current !== generation) return
     if (!response.data) throw Error('Missing task')
-    accept(response.data); changed()
+    await accept(response.data)
+    if (current !== generation) return
+    changed()
     if (['queued', 'running', 'refund_pending'].includes(response.data.status)) schedule(current)
     else { const credits = await studioCreditsApi.balance(); if (current === generation) balance.value = credits.data?.balance }
   } catch (cause: any) {
@@ -159,10 +177,14 @@ async function dispatch(current: number) {
     } else error.value = 'Unable to confirm the request. Recover it to avoid paying twice.'
   } finally { if (current === generation) submitting.value = false }
 }
+async function retryStorage() {
+  if (restoring.value) { await restore(); if (!restoring.value) await refresh() }
+  else if (await persist()) error.value = ''
+}
 async function recoverRequest() {
-  if (submitting.value || !pending.value) return
+  if (submitting.value || restoring.value || !pending.value) return
   if (pending.value.job) await poll(generation)
-  else if (persist()) await dispatch(generation) // Same ID and frozen payload, even after an uncertain POST.
+  else { const current = generation; if (await persist() && current === generation) await dispatch(current) } // Same ID and frozen payload, even after an uncertain POST.
 }
 async function send() {
   if (!canSend.value) return
@@ -177,7 +199,7 @@ async function send() {
       turns.value.push({ prompt: pending.value.request.prompt, summary: 'Adjustment failed.', applied: false })
     }
     pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, protocolVersion: 3, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
-    if (!persist()) { pending.value = undefined; return }
+    if (!await persist() || current !== generation) return
     await dispatch(current)
   } catch (cause) { if (current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to prepare the current design.' }
   finally { if (current === generation) submitting.value = false }
@@ -202,8 +224,8 @@ function discard() { finish(false) }
 const elementName = (id: string) => pending.value?.request.elements.find(e => e.id === id)?.context.layerName || pending.value?.request.elements.find(e => e.id === id)?.eleType || id
 const oldValue = (id: string, key: string) => pending.value?.request.elements.find(e => e.id === id)?.fields[key]
 const fieldLabel = (key: string) => key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
-watch([prompt, scope], persist, { flush: 'sync' })
-watch(() => [props.projectId, user.userInfo?.id], () => { generation++; clearTimeout(timer); submitting.value = false; restore(); void refresh() }, { immediate: true })
+watch([prompt, scope], () => { void persist() }, { flush: 'sync' })
+watch(() => [props.projectId, user.userInfo?.id], () => { generation++; clearTimeout(timer); submitting.value = false; void restore().then(() => { if (!restoring.value) void refresh() }) }, { immediate: true })
 watch(() => [turns.value.length, pending.value?.id, pending.value?.job?.status], async () => {
   await nextTick()
   if (conversation.value) conversation.value.scrollTop = conversation.value.scrollHeight

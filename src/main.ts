@@ -1,3 +1,4 @@
+import { migrateStudioStorage } from '@/engine/services/migrateStudioStorage'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
@@ -39,3 +40,6 @@ app.config.globalProperties.$emitter = emitter as any
 const appRoot = document.querySelector('#app')
 if (!appRoot) throw new Error('Studio root element #app is required')
 app.mount(appRoot)
+
+// Migrate every legacy draft, including designs that are not opened this session.
+void migrateStudioStorage(localStorage).catch(error => console.error('Local draft migration will retry on next load:', error))
