@@ -35,7 +35,6 @@
       <el-form-item v-if="fontRenderType === 'bitmap'" :label="t('elementSettings.fontGap')">
         <el-input-number
           v-model.number="currentModel.fontGap"
-          :min="0"
           :max="100"
           @change="(v: number) => applyUpdate({ fontGap: v })"
         />
