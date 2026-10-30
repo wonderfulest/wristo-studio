@@ -130,6 +130,7 @@ import { useRouter } from 'vue-router'
 import StudioCredits from './StudioCredits.vue'
 import { usePendingGoLiveStore } from '@/stores/pendingGoLive'
 import { useUserStore } from '@/stores/user'
+import { hasPremiumEntitlement } from '@/auth/studioAccess'
 import { ticketsApi } from '@/api/wristo/tickets'
 import { useI18n } from '@/i18n'
 import { showErrorOnce } from '@/utils/errorMessage'
@@ -160,7 +161,7 @@ const userAvatar = computed(() => userStore.userInfo?.avatar || 'https://cdn.wri
 const userDisplayName = computed(() => userStore.userInfo?.nickname || userStore.userInfo?.username || t('common.unknownUser'))
 const userEmail = computed(() => userStore.userInfo?.email || t('profile.noEmail'))
 const isPremiumMember = computed(() => {
-  if (userStore.isMerchantUser || userStore.isAdminUser) return true
+  if (hasPremiumEntitlement(userStore.userInfo) || userStore.isMerchantUser || userStore.isAdminUser) return true
   const membership = userStore.studioMembership
   if (!membership || membership.level === 'free') return false
   return membership.status == null || membership.status === '1' || membership.status === '5'

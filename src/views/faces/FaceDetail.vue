@@ -20,7 +20,7 @@
           </div>
           <FaceImageUpload v-if="canEdit && face.appId && !face.designId" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @uploaded="onImagesUploaded" />
           <DesignManagement v-if="canEdit && face.designId && informationTarget" :key="`${face.designId}-${userStore.userInfo?.id}`" :design-uid="face.designId" :information-target="informationTarget" :active-section="activeSection" @select-section="selectSection" @updated="refreshManagedFace" />
-          <div v-if="userStore.isStudioConsumer" class="membership-promotion">
+          <div v-if="userStore.isStudioConsumer && !hasPremiumEntitlement(userStore.userInfo)" class="membership-promotion">
             <div class="membership-eyebrow"><span class="membership-crown" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m3 6 4.5 4L12 4l4.5 6L21 6l-2 12H5L3 6Z" fill="currentColor"/><path d="M6 21h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span>WRISTO LIFETIME</span></div>
             <strong>{{ t('faceDetail.membershipTitle') }}</strong>
             <p>{{ t('faceDetail.membershipDescription') }}</p>
@@ -95,6 +95,7 @@ const { t, locale } = useI18n()
 import { defineAsyncComponent, computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { hasPremiumEntitlement } from '@/auth/studioAccess'
 import { remixFace } from './permissions'
 import DesignSharingSettings from '@/components/dialogs/DesignSharingSettings.vue'
 import { Icon } from '@iconify/vue'

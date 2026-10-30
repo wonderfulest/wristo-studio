@@ -13,7 +13,7 @@ import { remixFace, updateFaceSharing } from './permissions'
 import { getDesignSharing, updateDesignSharing } from '@/api/wristo/designSharing'
 vi.mock('@/api/wristo/designSharing', () => ({ getDesignSharing: vi.fn(), updateDesignSharing: vi.fn() }))
 vi.mock('@/i18n', async () => { const actual = await vi.importActual<typeof import('@/i18n')>('@/i18n'); const { ref } = await import('vue'); const locale = ref('en'); return { ...actual, useI18n: () => ({ locale, t: (key: string, params?: Record<string, string | number>) => key.startsWith('faceDetail.') ? actual.translate(key, locale.value as 'en' | 'zh', params) : key }) } })
-const auth = vi.hoisted(() => ({ isStudioConsumer: true, isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number } | null }))
+const auth = vi.hoisted(() => ({ isStudioConsumer: true, isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number; premium?: { active: boolean; lifetime: boolean; expiresAt: string | null } } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
@@ -48,6 +48,18 @@ describe('watch face details', () => {
     expect(link.attributes('target')).toBe('_blank')
     expect(link.attributes('rel')).toBe('noopener noreferrer')
     expect(wrapper.get('.membership-promotion').text()).toContain('Unlock all watch faces forever')
+  })
+
+  it.each([true, false])('hides the promotion for active Premium members (lifetime: %s)', async (lifetime) => {
+    auth.userInfo = { id: 7, premium: { active: true, lifetime, expiresAt: null } }
+    const { wrapper } = await setup()
+    expect(wrapper.find('.membership-promotion').exists()).toBe(false)
+  })
+
+  it('offers membership when Premium is inactive', async () => {
+    auth.userInfo = { id: 7, premium: { active: false, lifetime: true, expiresAt: null } }
+    const { wrapper } = await setup()
+    expect(wrapper.find('.membership-promotion').exists()).toBe(true)
   })
 
   it('hides the consumer membership promotion for non-consumers', async () => {
