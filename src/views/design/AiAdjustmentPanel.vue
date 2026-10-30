@@ -69,9 +69,18 @@ const storageKey = () => `studio-ai-adjust:${user.userInfo?.id}:${props.projectI
 const changed = () => window.dispatchEvent(new Event('studio-credits-changed'))
 let restoring = false
 function persist() {
-  if (restoring) return
-  try { localStorage.setItem(storageKey(), JSON.stringify({ pending: pending.value, turns: turns.value, prompt: prompt.value, scope: scope.value })) }
-  catch { error.value = 'This browser could not save the conversation. Keep this panel open until your task finishes.' }
+  if (restoring) return false
+  // Once accepted, recovery only polls the server; the image is no longer needed locally.
+  const savedPending = pending.value?.job
+    ? { ...pending.value, request: { ...pending.value.request, referenceImage: undefined } }
+    : pending.value
+  try {
+    localStorage.setItem(storageKey(), JSON.stringify({ pending: savedPending, turns: turns.value, prompt: prompt.value, scope: scope.value }))
+    return true
+  } catch {
+    error.value = 'This browser could not save the conversation. No new request will be sent until local storage is available.'
+    return false
+  }
 }
 function restore() {
   restoring = true
@@ -151,7 +160,7 @@ async function dispatch(current: number) {
 async function recoverRequest() {
   if (submitting.value || !pending.value) return
   if (pending.value.job) await poll(generation)
-  else await dispatch(generation) // Same ID and frozen payload, even after an uncertain POST.
+  else if (persist()) await dispatch(generation) // Same ID and frozen payload, even after an uncertain POST.
 }
 async function send() {
   if (!canSend.value) return
@@ -166,7 +175,8 @@ async function send() {
       turns.value.push({ prompt: pending.value.request.prompt, summary: 'Adjustment failed.', applied: false })
     }
     pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, protocolVersion: 2, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
-    persist(); await dispatch(current)
+    if (!persist()) { pending.value = undefined; return }
+    await dispatch(current)
   } catch (cause) { if (current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to prepare the current design.' }
   finally { if (current === generation) submitting.value = false }
 }

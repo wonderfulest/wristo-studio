@@ -122,3 +122,25 @@ it('accepts successful production results carrying published rule identity', asy
   await s.button('Apply').trigger('click'); await flushPromises()
   expect(s.applyResult).toHaveBeenCalledOnce()
 })
+
+it('keeps accepted jobs recoverable without persisting the large preview image', async () => {
+  const s = setup()
+  s.capture.mockResolvedValue({ ...snapshot, referenceImage: 'data:image/png;base64,large-preview' } as any)
+  await s.send()
+  const saved = JSON.parse(localStorage.getItem('studio-ai-adjust:7:local:test')!)
+  expect(saved.pending.id).toBe(mocks.start.mock.calls[0][0])
+  expect(saved.pending.request.referenceImage).toBeUndefined()
+  s.wrapper.unmount()
+  const next = setup(); await flushPromises()
+  expect(next.wrapper.text()).toContain('Ready to review')
+  expect(mocks.start).toHaveBeenCalledOnce()
+})
+it('does not charge when the frozen request cannot be saved locally', async () => {
+  const s = setup(); await flushPromises()
+  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Quota exceeded', 'QuotaExceededError') })
+  try {
+    await s.send()
+    expect(mocks.start).not.toHaveBeenCalled()
+    expect(s.wrapper.text()).toContain('could not save')
+  } finally { write.mockRestore() }
+})
