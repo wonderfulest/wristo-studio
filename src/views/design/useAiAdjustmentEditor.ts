@@ -46,9 +46,11 @@ export function useAiAdjustmentEditor() {
     const elements = adjustmentElements(configs, groupedIds, Math.max(width, height))
     if (elements.length > 200) throw Error('AI adjustments support up to 200 design elements.')
     if (selected.some(id => !elements.some(e => e.id === id))) throw Error('Select editable elements; backgrounds use their own controls.')
+    const referenceImage = await base.captureScreenshot({ includeDeviceFrame: false })
+    if (!referenceImage) throw Error('Unable to capture the current design. Please try again before sending an adjustment.')
     const fingerprint = await fingerprintDesign(state)
     if (serializedState() !== state) throw Error('The design changed. Try again using the current design.')
-    return { projectId, width, height, elements, selectedIds: selected, fingerprint }
+    return { projectId, width, height, elements, selectedIds: selected, fingerprint, referenceImage }
   }
   async function applyResult(snapshot: { fingerprint: string; request: AdjustmentRequest }, result: AdjustmentResult) {
     if (applying.value || snapshot.request.projectId !== String(base.id)) throw Error('Open the original design to apply this adjustment.')

@@ -40,7 +40,13 @@ export function adjustmentElements(configs: readonly Record<string, any>[], grou
   })
 }
 export function validateAdjustment(elements: AdjustmentElement[], selected: string[], result: AdjustmentResult, size = 1024) {
-  if (!isRecord(result) || Object.keys(result).some(k => !['summary', 'changes', 'additions', 'removals', 'weatherRules'].includes(k)) || typeof result.summary !== 'string' || !result.summary.trim() || result.summary.length > 1000 || !Array.isArray(result.changes) || result.changes.length > 200) throw Error('Invalid adjustment result.')
+  if (!isRecord(result) || Object.keys(result).some(k => !['summary', 'changes', 'additions', 'removals', 'weatherRules', 'systemRules'].includes(k)) || typeof result.summary !== 'string' || !result.summary.trim() || result.summary.length > 1000 || !Array.isArray(result.changes) || result.changes.length > 200) throw Error('Invalid adjustment result.')
+  if (result.systemRules !== undefined) {
+    const rules = result.systemRules
+    if (!isRecord(rules) || Object.keys(rules).some(k => !['id', 'version', 'sha256'].includes(k)) ||
+      typeof rules.id !== 'string' || !rules.id || typeof rules.version !== 'string' || !rules.version ||
+      typeof rules.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(rules.sha256)) throw Error('Invalid adjustment rule identity.')
+  }
   const operationCount = validateSceneOperations(elements, selected, result, size, validAdjustmentValue)
   if (!result.changes.length && !operationCount) throw Error('No changes were returned.')
   const seen = new Set<string>()

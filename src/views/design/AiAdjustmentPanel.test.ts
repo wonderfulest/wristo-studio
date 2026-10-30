@@ -23,7 +23,7 @@ function setup() {
   return { wrapper, capture, applyResult, button, send }
 }
 beforeEach(() => {
-  vi.clearAllMocks(); vi.useFakeTimers(); sessionStorage.clear()
+  vi.clearAllMocks(); vi.useFakeTimers(); sessionStorage.clear(); localStorage.clear()
   Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: () => 'id-' + Math.random() })
   mocks.user = reactive({ isAuthenticated: true, userInfo: { id: 7 } })
   mocks.capabilities.mockResolvedValue({ data: { WATCHFACE_ADJUST: true } }); mocks.prices.mockResolvedValue({ data: { WATCHFACE_ADJUST: 5 } }); mocks.balance.mockResolvedValue({ data: { balance: 100 } })
@@ -82,4 +82,43 @@ it('defaults to whole face despite selection and explicitly opts into selection'
   const s = setup(); await s.send()
   expect(s.capture).toHaveBeenCalledWith('all')
   expect(mocks.start.mock.calls[0][1].protocolVersion).toBe(2)
+})
+
+it('retains draft and scope after remount and a fresh browser session', async () => {
+  const s = setup(); await flushPromises()
+  await s.wrapper.find('textarea').setValue('My unfinished adjustment')
+  await s.wrapper.find('select').setValue('selected')
+  s.wrapper.unmount(); sessionStorage.clear()
+  const next = setup(); await flushPromises()
+  expect((next.wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('My unfinished adjustment')
+  expect((next.wrapper.find('select').element as HTMLSelectElement).value).toBe('selected')
+})
+it('retains all history until manually cleared', async () => {
+  const turns = Array.from({ length: 25 }, (_, i) => ({ prompt: `Request ${i}`, summary: `Result ${i}`, applied: true }))
+  localStorage.setItem('studio-ai-adjust:7:local:test', JSON.stringify({ turns, prompt: 'Draft', scope: 'all' }))
+  const s = setup(); await flushPromises()
+  expect(s.wrapper.text()).toContain('Request 0')
+  await s.button('Clear conversation').trigger('click'); await flushPromises()
+  s.wrapper.unmount()
+  const next = setup(); await flushPromises()
+  expect(next.wrapper.text()).not.toContain('Request 0')
+  expect((next.wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('')
+})
+it('isolates drafts by project and restores them when returning', async () => {
+  const s = setup(); await flushPromises()
+  await s.wrapper.find('textarea').setValue('First project draft')
+  await s.wrapper.setProps({ projectId: 'another-design' }); await flushPromises()
+  expect((s.wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('')
+  await s.wrapper.find('textarea').setValue('Other draft')
+  await s.wrapper.setProps({ projectId: 'local:test' }); await flushPromises()
+  expect((s.wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('First project draft')
+})
+
+it('accepts successful production results carrying published rule identity', async () => {
+  mocks.status.mockImplementation(async id => ({ data: { ...job(id, 'succeeded'), result: { ...result, systemRules: { id: 'wristo-watchface', version: '1.0.0', sha256: 'a'.repeat(64) } } } }))
+  const s = setup(); await s.send(); await vi.advanceTimersByTimeAsync(2000); await flushPromises()
+  expect(s.wrapper.text()).toContain('Ready to review')
+  expect(s.wrapper.text()).not.toContain('Connection interrupted')
+  await s.button('Apply').trigger('click'); await flushPromises()
+  expect(s.applyResult).toHaveBeenCalledOnce()
 })

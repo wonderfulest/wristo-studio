@@ -1,6 +1,7 @@
 <template>
   <section class="ai-adjust" aria-label="AI design adjustment" @keydown.stop>
     <header><div><span class="eyebrow">DESIGN ASSISTANT</span><h2>AI Adjust</h2></div><button class="text-button" aria-label="Close AI adjustment" :disabled="applying" @click="$emit('close')">✕</button></header>
+    <button class="text-button" :disabled="submitting || applying || unresolved" @click="clearConversation">Clear conversation</button>
     <p class="intro">Refine your design, one detail at a time.</p>
     <div class="scope"><span class="scope-dot" /><label for="ai-adjust-scope">Adjustment scope</label><select id="ai-adjust-scope" v-model="scope" :disabled="busy"><option value="all">Whole watch face</option><option value="selected" :disabled="!selectedCount">{{ selectedCount }} selected · only these elements</option></select></div>
     <p class="hint">Adjust existing elements, add editable shapes and text, remove elements, or switch scenery with the weather. Select “Whole watch face” to add elements. Bound colors and automatic layout geometry stay in their existing controls.</p>
@@ -44,7 +45,7 @@ import { studioCreditsApi } from '@/api/wristo/studioCredits'
 import { useUserStore } from '@/stores/user'
 import { weatherLabels } from './aiAdjustmentOperations'
 import { validateAdjustment } from './aiAdjustmentPatch'
-export interface AdjustmentSnapshot { projectId: string; width: number; height: number; fingerprint: string; elements: AdjustmentElement[]; selectedIds: string[] }
+export interface AdjustmentSnapshot { referenceImage?: string; projectId: string; width: number; height: number; fingerprint: string; elements: AdjustmentElement[]; selectedIds: string[] }
 interface Pending { id: string; fingerprint: string; request: AdjustmentRequest; job?: AdjustmentJob }
 interface Turn { prompt: string; summary: string; applied: boolean }
 const props = defineProps<{ projectId: string; selectedCount: number; capture: (scope: 'all' | 'selected') => Promise<AdjustmentSnapshot>; applyResult: (snapshot: Pending, result: AdjustmentResult) => Promise<void> }>()
@@ -59,19 +60,38 @@ const available = ref(false), loading = ref(false), submitting = ref(false), app
 const pending = ref<Pending>(), turns = ref<Turn[]>([])
 let generation = 0, timer: ReturnType<typeof setTimeout> | undefined
 const active = computed(() => !!pending.value && (!pending.value.job || ['queued', 'running', 'refund_pending', 'succeeded'].includes(pending.value.job.status)))
+const unresolved = computed(() => !!pending.value && (!pending.value.job || ['queued', 'running', 'refund_pending'].includes(pending.value.job.status)))
 const busy = computed(() => active.value || submitting.value || applying.value)
 const uncertain = computed(() => !!pending.value && (!pending.value.job || (!!error.value && ['queued', 'running', 'refund_pending'].includes(pending.value.job.status))))
 const canSend = computed(() => !!user.isAuthenticated && !!props.projectId && available.value && !loading.value && !busy.value && !!prompt.value.trim() && price.value != null && balance.value != null && balance.value >= price.value)
 const statusText = computed(() => pending.value?.job ? ({ queued: 'Queued…', running: 'Preparing your adjustment…', succeeded: 'Ready to review', failed: 'Adjustment failed', refund_pending: 'Returning credits…' })[pending.value.job.status] : 'Confirming request…')
 const storageKey = () => `studio-ai-adjust:${user.userInfo?.id}:${props.projectId}`
 const changed = () => window.dispatchEvent(new Event('studio-credits-changed'))
+let restoring = false
 function persist() {
-  try { sessionStorage.setItem(storageKey(), JSON.stringify({ pending: pending.value, turns: turns.value.slice(-20) })) }
+  if (restoring) return
+  try { localStorage.setItem(storageKey(), JSON.stringify({ pending: pending.value, turns: turns.value, prompt: prompt.value, scope: scope.value })) }
   catch { error.value = 'This browser could not save the conversation. Keep this panel open until your task finishes.' }
 }
 function restore() {
-  pending.value = undefined; turns.value = []; prompt.value = ''; error.value = ''
-  try { const saved = JSON.parse(sessionStorage.getItem(storageKey()) || 'null'); if (saved) { pending.value = saved.pending; turns.value = saved.turns || [] } } catch { /* A corrupt local conversation cannot be applied. */ }
+  restoring = true
+  let restored = false
+  pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = 'all'; error.value = ''
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey()) ?? sessionStorage.getItem(storageKey()) ?? 'null')
+    if (saved) {
+      restored = true
+      pending.value = saved.pending; turns.value = saved.turns || []
+      prompt.value = saved.prompt || ''; scope.value = saved.scope === 'selected' ? 'selected' : 'all'
+    }
+  } catch { error.value = 'Unable to read the saved conversation.' }
+  finally { restoring = false }
+  if (restored) persist()
+}
+function clearConversation() {
+  if (submitting.value || applying.value || unresolved.value) return
+  pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = 'all'; error.value = ''
+  persist()
 }
 async function refresh() {
   const current = generation
@@ -98,7 +118,11 @@ async function poll(current: number) {
     const response = await aiAdjustmentApi.status(id)
     if (current !== generation) return
     if (!response.data) throw Error('Missing task')
-    accept(response.data); error.value = ''
+    try { accept(response.data) } catch (cause) {
+      error.value = cause instanceof Error ? `Unable to read adjustment result: ${cause.message}` : 'Unable to read adjustment result.'
+      return
+    }
+    error.value = ''
     if (['queued', 'running', 'refund_pending'].includes(response.data.status)) schedule(current)
     else { changed(); const credits = await studioCreditsApi.balance(); if (current === generation) balance.value = credits.data?.balance }
   } catch { if (current === generation) error.value = 'Connection interrupted. Recover this request before sending another.' }
@@ -138,6 +162,9 @@ async function send() {
     if (current !== generation) return
     if (scope.value === 'selected' && !snapshot.selectedIds.length) throw Error('Select an element or switch to the whole watch face.')
     const { fingerprint, ...design } = snapshot
+    if (pending.value?.job?.status === 'failed') {
+      turns.value.push({ prompt: pending.value.request.prompt, summary: 'Adjustment failed.', applied: false })
+    }
     pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, protocolVersion: 2, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
     persist(); await dispatch(current)
   } catch (cause) { if (current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to prepare the current design.' }
@@ -157,12 +184,13 @@ async function apply() {
 function finish(applied: boolean) {
   if (!pending.value) return
   turns.value.push({ prompt: pending.value.request.prompt, summary: pending.value.job?.result?.summary || 'Adjustment failed.', applied })
-  turns.value = turns.value.slice(-20); pending.value = undefined; prompt.value = ''; error.value = ''; persist()
+  pending.value = undefined; prompt.value = ''; error.value = ''; persist()
 }
 function discard() { finish(false) }
 const elementName = (id: string) => pending.value?.request.elements.find(e => e.id === id)?.context.layerName || pending.value?.request.elements.find(e => e.id === id)?.eleType || id
 const oldValue = (id: string, key: string) => pending.value?.request.elements.find(e => e.id === id)?.fields[key]
 const fieldLabel = (key: string) => key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
+watch([prompt, scope], persist, { flush: 'sync' })
 watch(() => [props.projectId, user.userInfo?.id], () => { generation++; clearTimeout(timer); submitting.value = false; restore(); void refresh() }, { immediate: true })
 watch(() => [turns.value.length, pending.value?.id, pending.value?.job?.status], async () => {
   await nextTick()

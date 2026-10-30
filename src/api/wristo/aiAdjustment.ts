@@ -9,11 +9,13 @@ export interface AdjustmentAddition {
   fields: AdjustmentFields; weather?: AdjustmentWeather; layerName?: string
 }
 export interface AdjustmentResult {
+  systemRules?: { id: string; version: string; sha256: string }
   summary: string; changes: { id: string; patch: AdjustmentFields }[]
   additions?: AdjustmentAddition[]; removals?: string[]
   weatherRules?: { id: string; weather: AdjustmentWeather }[]
 }
 export interface AdjustmentRequest {
+  referenceImage?: string
   protocolVersion?: number
   projectId: string; prompt: string; width: number; height: number; expectedCreditCost: number
   elements: AdjustmentElement[]; selectedIds: string[]; history: { prompt: string; summary: string }[]

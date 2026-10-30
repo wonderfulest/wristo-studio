@@ -33,3 +33,11 @@ describe('AI adjustment patch boundary', () => {
     expect(events).toEqual(['rollback'])
   })
 })
+
+it('accepts rule provenance without weakening operation validation', () => {
+  const elements = adjustmentElements(configs)
+  const withRules = { ...result, systemRules: { id: 'wristo', version: '1.0.0', sha256: 'a'.repeat(64) } }
+  expect(() => validateAdjustment(elements, [], withRules)).not.toThrow()
+  expect(() => validateAdjustment(elements, [], { ...withRules, systemRules: { ...withRules.systemRules, sha256: 'invalid' } })).toThrow()
+  expect(() => validateAdjustment(elements, [], { ...withRules, changes: [{ id: 'missing', patch: { left: 100 } }] })).toThrow()
+})
