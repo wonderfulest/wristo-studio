@@ -1,3 +1,6 @@
+import { ElMessageBox } from 'element-plus'
+import { useI18n } from '@/i18n'
+import { promptStudioMembership } from '@/auth/promptStudioMembership'
 import { searchPages } from '@/content/searchPages'
 import { applySearchSeo } from '@/content/searchSeo'
 import { trackConversion } from '@/utils/studioConversion'
@@ -7,7 +10,7 @@ import Layout from '@/components/layout/Layout.vue'
 import { useUserStore } from '@/stores/user'
 import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { redirectToSsoLogin } from '@/utils/ssoRedirect'
-import { guardStudioRoute, canEnterStudio, MEMBERSHIP_URL, requiresStudioLogin } from '@/auth/studioAccess'
+import { guardStudioRoute, canEnterStudio, requiresStudioLogin } from '@/auth/studioAccess'
 import { attemptChunkLoadRecovery } from './chunkLoadRecovery'
 import { initializeEditorRuntime } from '@/startup/editorRuntime'
 import { shouldLoadDataCatalog } from '@/startup/dataCatalogStartup'
@@ -266,7 +269,7 @@ router.onError((error, to) => {
 })
 
 // 导航守卫
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
   const userStore = useUserStore()
   if (!to.path.startsWith('/auth/')) trackConversion('studio_enter', userStore.token || '')
   const requiresAuth = requiresStudioLogin(to.path)
@@ -282,7 +285,21 @@ router.beforeEach(async (to) => {
     hasAccess: canEnterStudio(userStore.userInfo),
     fullPath: to.fullPath,
     redirectToLogin: (fullPath) => { void redirectToSsoLogin('studio', 0, fullPath).catch(error => console.error('Sign in failed', error)) },
-    redirectToMembership: () => window.location.replace(MEMBERSHIP_URL),
+    redirectToMembership: () => {
+      const { t } = useI18n()
+      void promptStudioMembership({
+        confirm: () => ElMessageBox.confirm(t('membership.designToolsRequired'), t('membership.title'), {
+          type: 'warning',
+          confirmButtonText: t('membership.upgradeMembership'),
+          cancelButtonText: t('common.cancel'),
+        }),
+        navigate: (url) => window.location.assign(url),
+        onCancel: () => {
+          // Direct links have no previous Studio page to return to.
+          if (from.matched.length === 0) window.location.replace('https://www.wristo.io/')
+        },
+      })
+    },
   })
   if (accessResult !== undefined) {
     return accessResult

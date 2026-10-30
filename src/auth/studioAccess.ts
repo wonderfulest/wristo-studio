@@ -54,7 +54,7 @@ export function guardStudioRoute(options: StudioRouteGuardOptions) {
   return undefined
 }
 
-export const MEMBERSHIP_URL = 'https://wristo.io/membership'
+export const MEMBERSHIP_URL = 'https://www.wristo.io/membership'
 
 export function hasPremiumEntitlement(user: StudioUser) {
   return user?.premium?.active === true
