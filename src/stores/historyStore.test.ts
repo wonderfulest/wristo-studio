@@ -210,6 +210,16 @@ describe('history saveState result', () => {
     await historyStore.redo()
     expect(layoutStore.groups[0].members.map((member) => member.elementId)).toEqual(['unit-1', 'data-1'])
   })
+  it('undoes and redoes a name-only edit when the canvas is unchanged', async () => {
+    const history = useHistoryStore()
+    const namedBase = { ...baseStore, watchFaceName: 'Before', setWatchFaceName(name: string) { this.watchFaceName = name } }
+    history.attachCanvas({ ...createCanvas(), loadFromJSON: async () => undefined } as any, namedBase as any)
+    history.saveInitial()
+    namedBase.setWatchFaceName('童年阳光')
+    expect(history.saveState('ai:adjust')).toBe(true)
+    await history.undo(); expect(namedBase.watchFaceName).toBe('Before')
+    await history.redo(); expect(namedBase.watchFaceName).toBe('童年阳光')
+  })
   it('restores second timezone settings through undo and redo', async () => {
     const history = useHistoryStore()
     history.attachCanvas({ ...createCanvas(), loadFromJSON: async () => undefined } as any, baseStore as any)

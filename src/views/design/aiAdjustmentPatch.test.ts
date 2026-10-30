@@ -41,3 +41,12 @@ it('accepts rule provenance without weakening operation validation', () => {
   expect(() => validateAdjustment(elements, [], { ...withRules, systemRules: { ...withRules.systemRules, sha256: 'invalid' } })).toThrow()
   expect(() => validateAdjustment(elements, [], { ...withRules, changes: [{ id: 'missing', patch: { left: 100 } }] })).toThrow()
 })
+
+it('accepts a name-only adjustment and rejects invalid names or selected scope', () => {
+  const rename = { summary: 'Renamed', changes: [], designName: '童年阳光' }
+  expect(() => validateAdjustment([], [], rename)).not.toThrow()
+  for (const designName of ['', ' ', 'x'.repeat(51), 'Hello\nWorld']) {
+    expect(() => validateAdjustment([], [], { ...rename, designName })).toThrow()
+  }
+  expect(() => validateAdjustment(adjustmentElements(configs), ['time'], rename)).toThrow()
+})

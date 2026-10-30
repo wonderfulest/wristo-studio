@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
-  base: { captureScreenshot: vi.fn().mockResolvedValue('data:image/png;base64,cHJldmlldw=='), id: 'project', canvas: { getObjects: () => [{ id: 'box' }], discardActiveObject: vi.fn(), requestRenderAll: vi.fn() }, designLoading: false, generateConfig: () => ({ elements: [{ id: 'box', left: 227 }] }) },
+  base: { watchFaceName: 'Before', setWatchFaceName: vi.fn(), captureScreenshot: vi.fn().mockResolvedValue('data:image/png;base64,cHJldmlldw=='), id: 'project', canvas: { getObjects: () => [{ id: 'box' }], discardActiveObject: vi.fn(), requestRenderAll: vi.fn() }, designLoading: false, generateConfig: () => ({ elements: [{ id: 'box', left: 227 }] }) },
   canvas: { activeIds: ['box'], activeLayoutGroupIds: [] }, data: { elements: [{ config: { id: 'box', eleType: 'rectangle', left: 227, top: 227, width: 30, height: 30 } }] },
   groups: { groups: [] }, design: { designSpec: { width: 454, height: 454 } }, user: { userInfo: { id: 7 } },
   history: { isRestoring: false, runAtomicMutation: vi.fn(async (_: string, task: () => Promise<void>) => task()), saveState: vi.fn() }, update: vi.fn(),
@@ -34,4 +34,21 @@ it('captures the current design without a device frame for visual targeting', as
 it('does not send a blind adjustment when the current screenshot cannot be captured', async () => {
   mocks.base.captureScreenshot.mockResolvedValueOnce(null)
   await expect(useAiAdjustmentEditor().capture()).rejects.toThrow('Unable to capture')
+})
+
+it('applies a name-only result through the existing title setter without touching elements', async () => {
+  const editor = useAiAdjustmentEditor(), snapshot = await editor.capture()
+  expect(snapshot.designName).toBe('Before')
+  await editor.applyResult({ fingerprint: snapshot.fingerprint, request: { ...snapshot, prompt: 'Rename', expectedCreditCost: 5, history: [] } }, { summary: 'Renamed', changes: [], designName: '童年阳光' })
+  expect(mocks.base.setWatchFaceName).toHaveBeenCalledWith('童年阳光')
+  expect(mocks.update).not.toHaveBeenCalled()
+  expect(mocks.history.saveState).toHaveBeenCalledWith('ai:adjust')
+})
+it('rejects a rename when the user edited the title while AI was working', async () => {
+  const editor = useAiAdjustmentEditor(), snapshot = await editor.capture()
+  mocks.base.watchFaceName = 'Manually changed'
+  try {
+    await expect(editor.applyResult({ fingerprint: snapshot.fingerprint, request: { ...snapshot, prompt: 'Rename', expectedCreditCost: 5, history: [] } }, { summary: 'Renamed', changes: [], designName: '童年阳光' })).rejects.toThrow('changed')
+    expect(mocks.base.setWatchFaceName).not.toHaveBeenCalled()
+  } finally { mocks.base.watchFaceName = 'Before' }
 })

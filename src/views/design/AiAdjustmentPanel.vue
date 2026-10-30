@@ -4,13 +4,14 @@
     <button class="text-button" :disabled="submitting || applying || unresolved" @click="clearConversation">Clear conversation</button>
     <p class="intro">Refine your design, one detail at a time.</p>
     <div class="scope"><span class="scope-dot" /><label for="ai-adjust-scope">Adjustment scope</label><select id="ai-adjust-scope" v-model="scope" :disabled="busy"><option value="all">Whole watch face</option><option value="selected" :disabled="!selectedCount">{{ selectedCount }} selected · only these elements</option></select></div>
-    <p class="hint">Adjust existing elements, add editable shapes and text, remove elements, or switch scenery with the weather. Select “Whole watch face” to add elements. Bound colors and automatic layout geometry stay in their existing controls.</p>
+    <p class="hint">Rename the watch face, adjust existing elements, add editable shapes and text, remove elements, or switch scenery with the weather. Select “Whole watch face” to rename the watch face or add elements. Bound colors and automatic layout geometry stay in their existing controls.</p>
     <div ref="conversation" class="conversation" aria-live="polite">
       <div v-if="!turns.length && !pending" class="empty"><strong>What would you like to change?</strong><p>Describe changes to the whole watch face, or choose selected elements for a focused adjustment.</p><button @click="prompt = 'Make the time larger and keep it centered.'">Make the time larger ↗</button><button @click="prompt = 'Move the date slightly lower.'">Move the date lower ↗</button></div>
       <article v-for="(turn, index) in turns" :key="index"><p class="user-message">{{ turn.prompt }}</p><p>{{ turn.summary }}</p><small>{{ turn.applied ? 'Applied · undo with the editor controls' : 'Not applied' }}</small></article>
       <article v-if="pending"><p class="user-message">{{ pending.request.prompt }}</p><p role="status">{{ statusText }}</p>
         <template v-if="pending.job?.status === 'succeeded' && pending.job.result">
           <p>{{ pending.job.result.summary }}</p>
+          <div v-if="pending.job.result.designName !== undefined" class="operation-preview" aria-label="Watch face name preview"><strong>Watch face name</strong><span>{{ pending.request.designName || 'Untitled' }} → {{ pending.job.result.designName }}</span></div>
           <div class="changes" aria-label="Adjustment preview"><div v-for="change in pending.job.result.changes" :key="change.id"><strong>{{ elementName(change.id) }}</strong><dl><template v-for="(value, key) in change.patch" :key="key"><dt>{{ fieldLabel(String(key)) }}</dt><dd><span>{{ oldValue(change.id, String(key)) }}</span> → <b>{{ value }}</b></dd></template></dl></div></div>
           <div v-for="addition in pending.job.result.additions || []" :key="addition.id" class="operation-preview"><strong>Add {{ addition.layerName || addition.eleType }}</strong><span>{{ addition.eleType }} · {{ weatherLabels[addition.weather || 'always'] }}</span><dl><template v-for="(value, key) in addition.fields" :key="key"><dt>{{ fieldLabel(String(key)) }}</dt><dd>{{ value }}</dd></template></dl></div>
           <div v-for="id in pending.job.result.removals || []" :key="id" class="operation-preview">Remove {{ elementName(id) }}</div>
@@ -45,14 +46,15 @@ import { studioCreditsApi } from '@/api/wristo/studioCredits'
 import { useUserStore } from '@/stores/user'
 import { weatherLabels } from './aiAdjustmentOperations'
 import { validateAdjustment } from './aiAdjustmentPatch'
-export interface AdjustmentSnapshot { referenceImage?: string; projectId: string; width: number; height: number; fingerprint: string; elements: AdjustmentElement[]; selectedIds: string[] }
+export interface AdjustmentSnapshot { designName?: string; referenceImage?: string; projectId: string; width: number; height: number; fingerprint: string; elements: AdjustmentElement[]; selectedIds: string[] }
 interface Pending { id: string; fingerprint: string; request: AdjustmentRequest; job?: AdjustmentJob }
 interface Turn { prompt: string; summary: string; applied: boolean }
 const props = defineProps<{ projectId: string; selectedCount: number; capture: (scope: 'all' | 'selected') => Promise<AdjustmentSnapshot>; applyResult: (snapshot: Pending, result: AdjustmentResult) => Promise<void> }>()
 defineEmits<{ (e: 'close'): void }>()
 const user = useUserStore()
 const prompt = ref(''), error = ref('')
-const scope = ref<'all' | 'selected'>('all')
+const defaultScope = () => props.selectedCount > 0 ? 'selected' : 'all'
+const scope = ref<'all' | 'selected'>(defaultScope())
 const conversation = ref<HTMLElement>()
 const price = ref<number>(), balance = ref<number>()
 useCreditBalanceRefresh(balance)
@@ -85,13 +87,13 @@ function persist() {
 function restore() {
   restoring = true
   let restored = false
-  pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = 'all'; error.value = ''
+  pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = defaultScope(); error.value = ''
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey()) ?? sessionStorage.getItem(storageKey()) ?? 'null')
     if (saved) {
       restored = true
       pending.value = saved.pending; turns.value = saved.turns || []
-      prompt.value = saved.prompt || ''; scope.value = saved.scope === 'selected' ? 'selected' : 'all'
+      prompt.value = saved.prompt || ''
     }
   } catch { error.value = 'Unable to read the saved conversation.' }
   finally { restoring = false }
@@ -99,7 +101,7 @@ function restore() {
 }
 function clearConversation() {
   if (submitting.value || applying.value || unresolved.value) return
-  pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = 'all'; error.value = ''
+  pending.value = undefined; turns.value = []; prompt.value = ''; scope.value = defaultScope(); error.value = ''
   persist()
 }
 async function refresh() {
@@ -174,7 +176,7 @@ async function send() {
     if (pending.value?.job?.status === 'failed') {
       turns.value.push({ prompt: pending.value.request.prompt, summary: 'Adjustment failed.', applied: false })
     }
-    pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, protocolVersion: 2, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
+    pending.value = { id: crypto.randomUUID(), fingerprint, request: { ...design, protocolVersion: 3, prompt: prompt.value.trim(), expectedCreditCost: price.value!, history: turns.value.filter(t => t.applied).slice(-10).map(({ prompt, summary }) => ({ prompt, summary })) } }
     if (!persist()) { pending.value = undefined; return }
     await dispatch(current)
   } catch (cause) { if (current === generation) error.value = cause instanceof Error ? cause.message : 'Unable to prepare the current design.' }

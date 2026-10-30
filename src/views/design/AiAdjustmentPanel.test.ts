@@ -12,9 +12,9 @@ const wrappers: any[] = []
 const result = { summary: 'Larger time', changes: [{ id: 'time', patch: { fontSize: 72 } }] }
 const snapshot = { projectId: 'local:test', width: 454, height: 454, fingerprint: 'original', elements: [{ id: 'time', eleType: 'time', fields: { fontSize: 60 }, context: {} }], selectedIds: ['time'] }
 const job = (id: string, status = 'running') => ({ id, projectId: 'local:test', status, creditCost: 5, result: status === 'succeeded' ? result : null })
-function setup() {
+function setup(selectedCount = 1) {
   const applyResult = vi.fn().mockResolvedValue(undefined), capture = vi.fn().mockResolvedValue(snapshot)
-  const wrapper = mount(AiAdjustmentPanel, { props: { projectId: 'local:test', selectedCount: 1, capture, applyResult }, global: { stubs: {
+  const wrapper = mount(AiAdjustmentPanel, { props: { projectId: 'local:test', selectedCount, capture, applyResult }, global: { stubs: {
     ElButton: { props: ['disabled', 'loading'], template: '<button :disabled="disabled || loading"><slot /></button>' },
   } } })
   wrappers.push(wrapper)
@@ -78,16 +78,16 @@ it('refreshes a changed price without a retry loop', async () => {
   const s = setup(); await s.send()
   expect(s.wrapper.text()).toContain('AI credit price changed'); expect(s.wrapper.text()).not.toContain('Recover request'); expect(mocks.start).toHaveBeenCalledOnce()
 })
-it('defaults to whole face despite selection and explicitly opts into selection', async () => {
+it('defaults to selected elements when entering with a selection', async () => {
   const s = setup(); await s.send()
-  expect(s.capture).toHaveBeenCalledWith('all')
-  expect(mocks.start.mock.calls[0][1].protocolVersion).toBe(2)
+  expect(s.capture).toHaveBeenCalledWith('selected')
+  expect(mocks.start.mock.calls[0][1].protocolVersion).toBe(3)
 })
 
-it('retains draft and scope after remount and a fresh browser session', async () => {
+it('retains draft but defaults to current selection after remount', async () => {
   const s = setup(); await flushPromises()
   await s.wrapper.find('textarea').setValue('My unfinished adjustment')
-  await s.wrapper.find('select').setValue('selected')
+  await s.wrapper.find('select').setValue('all')
   s.wrapper.unmount(); sessionStorage.clear()
   const next = setup(); await flushPromises()
   expect((next.wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('My unfinished adjustment')
@@ -143,4 +143,26 @@ it('does not charge when the frozen request cannot be saved locally', async () =
     expect(mocks.start).not.toHaveBeenCalled()
     expect(s.wrapper.text()).toContain('could not save')
   } finally { write.mockRestore() }
+})
+
+it('previews a name-only change and applies only after explicit Apply', async () => {
+  mocks.status.mockImplementation(async id => ({ data: { ...job(id, 'succeeded'), result: { summary: 'Renamed the watch face', changes: [], designName: '童年阳光' } } }))
+  const s = setup(0); s.capture.mockResolvedValue({ ...snapshot, selectedIds: [], designName: 'AppbRPxhR' } as any)
+  await s.send(); await vi.advanceTimersByTimeAsync(2000); await flushPromises()
+  expect(s.wrapper.text()).toContain('AppbRPxhR → 童年阳光')
+  expect(s.applyResult).not.toHaveBeenCalled()
+  await s.button('Apply').trigger('click'); await flushPromises()
+  expect(s.applyResult).toHaveBeenCalledOnce()
+})
+
+it('defaults to whole face without selection even if selected scope was saved', async () => {
+  localStorage.setItem('studio-ai-adjust:7:local:test', JSON.stringify({ scope: 'selected' }))
+  const s = setup(0); await s.send()
+  expect(s.capture).toHaveBeenCalledWith('all')
+})
+it('allows explicitly choosing the whole face while elements are selected', async () => {
+  const s = setup(); await flushPromises()
+  await s.wrapper.find('select').setValue('all')
+  await s.send()
+  expect(s.capture).toHaveBeenCalledWith('all')
 })

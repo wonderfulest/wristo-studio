@@ -1,6 +1,8 @@
 import type { Canvas } from 'fabric'
 
 export interface MinimalBaseStore {
+  watchFaceName?: string
+  setWatchFaceName?: (name: string) => void
   canvas: Canvas | null
   generateConfig: (options?: { validateBindings?: boolean }) => unknown
 }

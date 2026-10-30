@@ -264,6 +264,7 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       return JSON.stringify({
         layoutGroups: useLayoutGroupStore().snapshot(),
+        watchFaceName: baseStore?.watchFaceName,
       })
     } catch {
       return undefined
@@ -359,6 +360,7 @@ export const useHistoryStore = defineStore('history', () => {
       const parsed = JSON.parse(snap.designJSON)
       const elements = useElementDataStore().elements.map((snapshot) => snapshot.config)
       layoutGroupStore.hydrate(parsed?.layoutGroups ?? [], elements)
+      if (typeof parsed?.watchFaceName === 'string') baseStore?.setWatchFaceName?.(parsed.watchFaceName)
     } catch (error) {
       console.warn('[History] restore design snapshot failed', error)
       throw error

@@ -40,15 +40,18 @@ export function adjustmentElements(configs: readonly Record<string, any>[], grou
   })
 }
 export function validateAdjustment(elements: AdjustmentElement[], selected: string[], result: AdjustmentResult, size = 1024) {
-  if (!isRecord(result) || Object.keys(result).some(k => !['summary', 'changes', 'additions', 'removals', 'weatherRules', 'systemRules'].includes(k)) || typeof result.summary !== 'string' || !result.summary.trim() || result.summary.length > 1000 || !Array.isArray(result.changes) || result.changes.length > 200) throw Error('Invalid adjustment result.')
+  if (!isRecord(result) || Object.keys(result).some(k => !['summary', 'changes', 'additions', 'removals', 'weatherRules', 'systemRules', 'designName'].includes(k)) || typeof result.summary !== 'string' || !result.summary.trim() || result.summary.length > 1000 || !Array.isArray(result.changes) || result.changes.length > 200) throw Error('Invalid adjustment result.')
   if (result.systemRules !== undefined) {
     const rules = result.systemRules
     if (!isRecord(rules) || Object.keys(rules).some(k => !['id', 'version', 'sha256'].includes(k)) ||
       typeof rules.id !== 'string' || !rules.id || typeof rules.version !== 'string' || !rules.version ||
       typeof rules.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(rules.sha256)) throw Error('Invalid adjustment rule identity.')
   }
+  if (result.designName !== undefined && (selected.length || typeof result.designName !== 'string' ||
+    !result.designName.trim() || result.designName !== result.designName.trim() || result.designName.length > 50 ||
+    /[\u0000-\u001f\u007f-\u009f]/.test(result.designName))) throw Error('Invalid design name or rename scope.')
   const operationCount = validateSceneOperations(elements, selected, result, size, validAdjustmentValue)
-  if (!result.changes.length && !operationCount) throw Error('No changes were returned.')
+  if (!result.changes.length && !operationCount && result.designName === undefined) throw Error('No changes were returned.')
   const seen = new Set<string>()
   for (const change of result.changes) {
     if (!isRecord(change) || Object.keys(change).length !== 2) throw Error('Invalid adjustment change.')
@@ -69,6 +72,7 @@ export async function fingerprintDesign(value: unknown): Promise<string> {
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('')
 }
 export async function applyAdjustment(fingerprint: string, elements: AdjustmentElement[], selected: string[], result: AdjustmentResult, deps: {
+  rename?: (name: string) => void | Promise<void>;
   currentFingerprint: () => Promise<string>; atomic: (task: () => Promise<void>) => Promise<unknown>
   update: (id: string, patch: AdjustmentFields) => Promise<void>; save: () => void
   add?: (addition: AdjustmentAddition) => Promise<void>; remove?: (id: string) => Promise<void>
@@ -77,11 +81,13 @@ export async function applyAdjustment(fingerprint: string, elements: AdjustmentE
   validateAdjustment(elements, selected, result)
   if (await deps.currentFingerprint() !== fingerprint) throw Error('The design changed. Send a new request using the current design.')
   if ((result.additions?.length && !deps.add) || (result.removals?.length && !deps.remove) || (result.weatherRules?.length && !deps.weather)) throw Error('This editor does not support scene operations.')
+  if (result.designName !== undefined && !deps.rename) throw Error('This editor does not support renaming.')
   await deps.atomic(async () => {
     for (const id of result.removals ?? []) await deps.remove!(id)
     for (const change of result.changes) await deps.update(change.id, change.patch)
     for (const rule of result.weatherRules ?? []) await deps.weather!(rule.id, rule.weather)
     for (const addition of result.additions ?? []) await deps.add!(addition)
+    if (result.designName !== undefined) await deps.rename!(result.designName)
   })
   deps.save()
 }

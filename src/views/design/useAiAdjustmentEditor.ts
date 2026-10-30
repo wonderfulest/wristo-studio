@@ -27,7 +27,7 @@ export function useAiAdjustmentEditor() {
     base.canvas.discardActiveObject()
     const config = base.generateConfig({ validateBindings: false })
     if (!config) throw Error('Unable to read the current design.')
-    return JSON.stringify({ projectId: base.id, owner: user.userInfo?.id, width: design.designSpec.width, height: design.designSpec.height, config })
+    return JSON.stringify({ projectId: base.id, designName: base.watchFaceName, owner: user.userInfo?.id, width: design.designSpec.width, height: design.designSpec.height, config })
   }
   async function currentFingerprint() {
     const state = serializedState()
@@ -50,7 +50,7 @@ export function useAiAdjustmentEditor() {
     if (!referenceImage) throw Error('Unable to capture the current design. Please try again before sending an adjustment.')
     const fingerprint = await fingerprintDesign(state)
     if (serializedState() !== state) throw Error('The design changed. Try again using the current design.')
-    return { projectId, width, height, elements, selectedIds: selected, fingerprint, referenceImage }
+    return { projectId, designName: base.watchFaceName, width, height, elements, selectedIds: selected, fingerprint, referenceImage }
   }
   async function applyResult(snapshot: { fingerprint: string; request: AdjustmentRequest }, result: AdjustmentResult) {
     if (applying.value || snapshot.request.projectId !== String(base.id)) throw Error('Open the original design to apply this adjustment.')
@@ -60,6 +60,7 @@ export function useAiAdjustmentEditor() {
     try {
       await applyAdjustment(snapshot.fingerprint, snapshot.request.elements, snapshot.request.selectedIds, result, {
         currentFingerprint,
+        rename: name => base.setWatchFaceName(name),
         atomic: task => history.runAtomicMutation('ai:adjust', task),
         update: async (id, patch) => {
           if (!base.canvas?.getObjects().some((e: any) => String(e.id) === id)) throw Error('An adjusted element is no longer available.')
