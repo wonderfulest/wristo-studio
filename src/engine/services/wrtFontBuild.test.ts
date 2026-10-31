@@ -46,7 +46,7 @@ it('automatically builds source-only fonts and preserves them through save and r
   const { readWrtDesignPackage, buildWrtDesignPackage } = await import('./designAssetBundleService')
   const imported = await readWrtDesignPackage(await input())
   expect(build).toHaveBeenCalledOnce()
-  expect(build.mock.calls[0][0]).toMatchObject({ slug: 'fixture', preserveSource: true })
+  expect(build.mock.calls[0][0]).toMatchObject({ slug: 'fixture', preserveSource: true, sourceIsSymbolFont: false })
   expect(packageFonts.get('fixture')?.bitmapPreviewAtlasUrl).toMatch(/^blob:/)
   expect(packageFontBuildFiles.get('fixture')?.size).toBe(4)
   const saved = await buildWrtDesignPackage(imported.config)
@@ -176,7 +176,7 @@ it('never replaces an existing 0068 glyph or adds the legacy pressure alias by d
 })
 
 
-it('allows source-only icon fonts to build even when required glyphs are absent', async () => {
+it.each(['icon_font', 'weather_font'])('preserves source-only %s coverage even when required glyphs are absent', async type => {
   const { buildMissingWrtFonts } = await import('./wrtFontBuild')
   const zip = new JSZip()
   const ot = await import('opentype.js')
@@ -185,10 +185,11 @@ it('allows source-only icon fonts to build even when required glyphs are absent'
     glyphs: [new ot.Glyph({ name: '.notdef', advanceWidth: 120, path: new ot.Path() })],
   }).toArrayBuffer()
   zip.file('fonts/fixture.ttf', source)
-  const fonts = [{ slug: 'fixture', path: 'fonts/fixture.ttf', metadata: { type: 'icon_font' } }]
+  const fonts = [{ slug: 'fixture', path: 'fonts/fixture.ttf', metadata: { type } }]
   build.mockReturnValue({ result: workerResult() })
   await expect(buildMissingWrtFonts(zip, fonts, undefined, {
-    elements: [{ eleType: 'icon', fontFamily: 'fixture', metricSymbol: ':FIELD_TYPE_BATTERY' }],
+    elements: [{ eleType: type === 'icon_font' ? 'icon' : 'weather', fontFamily: 'fixture', metricSymbol: ':FIELD_TYPE_BATTERY' }],
   })).resolves.toHaveLength(4)
   expect(build).toHaveBeenCalledOnce()
+  expect(build.mock.calls[0][0]).toMatchObject({ sourceIsSymbolFont: true })
 })

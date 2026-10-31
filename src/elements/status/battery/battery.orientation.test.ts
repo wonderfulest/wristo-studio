@@ -91,3 +91,25 @@ describe('battery direction', () => {
     expect(encodeBattery(element).level).toBe(0)
   })
 })
+
+
+describe('battery head visibility', () => {
+  it.each(['horizontal', 'vertical'] as const)('hides zero-sized heads and restores them for %s batteries', (orientation) => {
+    for (const dimensions of [
+      { headWidth: 0, headHeight: 4 },
+      { headWidth: 10, headHeight: 0 },
+      { headWidth: 0, headHeight: 0 },
+    ]) {
+      const element: any = createBattery({ ...vertical, orientation, ...dimensions })
+      expect(element._head.visible).toBe(false)
+      expect(encodeBattery(element)).toMatchObject(dimensions)
+      const reloaded: any = createBattery(decodeBattery(encodeBattery(element)) as any)
+      expect(reloaded._head.visible).toBe(false)
+      updateBattery(reloaded, { headWidth: 10, headHeight: 4 })
+      expect(reloaded._head.visible).toBe(true)
+      updateBattery(reloaded, dimensions)
+      expect(reloaded._head.visible).toBe(false)
+      expect(encodeBattery(reloaded)).toMatchObject(dimensions)
+    }
+  })
+})

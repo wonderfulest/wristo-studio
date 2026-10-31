@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { charsetForType, normalizeBitmapFontRecipe } from './contracts'
+import { BITMAP_FONT_SIZES, charsetForType, normalizeBitmapFontRecipe } from './contracts'
 import { parseFontSource } from './fontSource'
 import { createGlyphRendererSession, GlyphRenderError, rasterizeFallbackContours, registerUploadedFontFace, renderGlyphs, renderGlyphsPreferWorkerCanvas } from './glyphRenderer'
 
@@ -24,6 +24,38 @@ const recipe = (changes: Partial<Parameters<typeof normalizeBitmapFontRecipe>[0]
   })
 
 describe('renderGlyphs', () => {
+  it('renders a visible default degree at every size without changing source coverage or other glyphs', async () => {
+    const parsed = await source()
+    const originalBytes = parsed.bytes.slice()
+    const originalA = renderGlyphs(parsed, [65], 48, recipe()).glyphs[0]
+    parsed.supportedCodepoints.delete(176)
+    for (const size of BITMAP_FONT_SIZES) {
+      const degree = renderGlyphs(parsed, [176], size, recipe()).glyphs[0]
+      expect(degree.width).toBeGreaterThan(0)
+      expect(degree.height).toBeGreaterThan(0)
+      expect(degree.alpha.some(alpha => alpha > 0)).toBe(true)
+      expect(degree.yoffset).toBeGreaterThanOrEqual(0)
+      expect(degree.yoffset + degree.height).toBeLessThanOrEqual(Math.ceil(parsed.ascender * size / parsed.unitsPerEm))
+    }
+    const degree = renderGlyphs(parsed, [176], 48, recipe()).glyphs[0]
+    expect(degree.alpha[Math.floor(degree.height / 2) * degree.width + Math.floor(degree.width / 2)]).toBe(0)
+    expect(renderGlyphs(parsed, [65], 48, recipe()).glyphs[0]).toEqual(originalA)
+    expect(parsed.supportedCodepoints.has(176)).toBe(false)
+    expect(parsed.bytes).toEqual(originalBytes)
+  })
+
+  it('preserves the native degree and replaces an empty mapped degree', async () => {
+    const parsed = await source()
+    const native = renderGlyphs(parsed, [176], 48, recipe()).glyphs[0]
+    parsed.supportedCodepoints.delete(176)
+    const fallback = renderGlyphs(parsed, [176], 48, recipe()).glyphs[0]
+    expect(native.alpha).not.toEqual(fallback.alpha)
+    parsed.supportedCodepoints.add(176)
+    const degreeGlyph = parsed.font.charToGlyph('°')
+    degreeGlyph.path.commands = []
+    expect(renderGlyphs(parsed, [176], 48, recipe()).glyphs[0]).toEqual(fallback)
+  })
+
   it('uses fixed digit cells and half-width colon without changing pixels', async () => {
     const parsed = await source()
     const cps = charsetForType('time_font').codepoints
@@ -293,6 +325,14 @@ describe('renderGlyphs', () => {
         }
       }
     }
+    const missingDegree = await source()
+    missingDegree.supportedCodepoints.delete(176)
+    const fallback = await renderGlyphsPreferWorkerCanvas(missingDegree, [176], 48, recipe(), {
+      FontFace: TestFontFace, OffscreenCanvas: TestCanvas,
+      fonts: { add: () => undefined, delete: () => true },
+    })
+    expect(fallback.glyphs).toEqual(renderGlyphs(missingDegree, [176], 48, recipe()).glyphs)
+
     const faces = new Set<object>()
     const result = await renderGlyphsPreferWorkerCanvas(await source(), [65], 48, recipe(), {
       FontFace: TestFontFace,

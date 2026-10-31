@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getBannerGeneration: vi.fn(),
   getLatestBannerGeneration: vi.fn().mockResolvedValue({ code: 0, data: null }),
   publish: vi.fn(),
+  saveDetails: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
   messageWarning: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('@/api/wristo/products', () => ({
   productsApi: {
     getBundles: mocks.getBundles,
     publish: mocks.publish,
+    saveDetails: mocks.saveDetails,
     generateDescription: vi.fn(),
     generateBanner: mocks.generateBanner,
     getBannerGeneration: mocks.getBannerGeneration,
@@ -188,6 +190,20 @@ describe('PublishForm product image behavior', () => {
   })
 
   afterEach(() => { vi.useRealTimers() })
+
+  it('saves details without a Garmin image', async () => {
+    mocks.saveDetails.mockResolvedValue(true)
+    const wrapper = mountDialog()
+    await showDialog(wrapper, {
+      ...design,
+      product: { ...design.product, garminImageUrl: '' },
+    } as unknown as Design)
+    await wrapper.get('[data-testid="save-details"]').trigger('click')
+    await flushPromises()
+    expect(mocks.saveDetails).toHaveBeenCalledWith(expect.objectContaining({ heroImage: '' }))
+    expect(mocks.messageError).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
 
   it('publishes an already published product without a payment record as free', async () => {
     const wrapper = mountDialog()

@@ -854,8 +854,8 @@ const handleConfirm = async (publish = true) => {
   }
   updateProductTags(form.tagIds)
   
-  // 验证必填字段
-  if (!form.garminImageUrl.trim()) {
+  // 发布时验证 Garmin 图片；保存详情允许留空
+  if (publish && !form.garminImageUrl.trim()) {
     emit('section-change', 'media')
     messageStore.error(t('goLive.enterGarminImageUrl'))
     return

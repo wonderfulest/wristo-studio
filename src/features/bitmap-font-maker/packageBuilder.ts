@@ -11,8 +11,10 @@ import {
   type BitmapFontType,
 } from './contracts'
 import { parseFontSource, type ParsedFontSource } from './fontSource'
+import { DEGREE_CODEPOINT } from './degreeGlyph'
 import {
   createGlyphRendererSession,
+  GlyphRenderError,
   type GlyphRendererSession,
   type RenderedGlyph,
   type RenderedGlyphSet,
@@ -30,6 +32,8 @@ export interface BitmapFontBuildRequest {
   recipe: BitmapFontRecipe
   /** WRT imports preserve the uploaded font's glyph coverage and native style. */
   preserveSource?: boolean
+  /** Source-only WRT icon/weather fonts share this worker but must keep their exact charset. */
+  sourceIsSymbolFont?: boolean
 }
 
 export interface BitmapFontBuildProgress {
@@ -272,6 +276,12 @@ export async function buildBitmapFontPackage(
       })
       .sort((a, b) => a - b) }
     : charsetForType(request.fontType)
+  const requiresDegree = request.fontType !== 'time_font' && !request.sourceIsSymbolFont
+  if (requiresDegree && !charset.codepoints.includes(DEGREE_CODEPOINT)) {
+    charset.codepoints.push(DEGREE_CODEPOINT)
+    // Fixed text profiles have a publication-validated order; only source coverage is sorted.
+    if (request.preserveSource) charset.codepoints.sort((a, b) => a - b)
+  }
   assertNotCancelled(isCancelled)
   const normalizedRecipe = solidWhiteRecipe(normalizeBitmapFontRecipe(request.preserveSource
     ? { ...request.recipe, fontWeight: source.sourceWeight, italicAngle: 0 }
@@ -322,6 +332,12 @@ export async function buildBitmapFontPackage(
       try {
         assertNotCancelled(isCancelled)
         rendered = session.render(size, normalizedRecipe, charset.codepoints)
+        if (requiresDegree) {
+          const degree = rendered.glyphs.find(glyph => glyph.codepoint === DEGREE_CODEPOINT)
+          if (!degree || degree.width <= 0 || degree.height <= 0 || !degree.alpha.some(alpha => alpha > 0)) {
+            throw new GlyphRenderError('GLYPH_RENDER_EMPTY', DEGREE_CODEPOINT)
+          }
+        }
         assertNotCancelled(isCancelled)
         packed = packGlyphAtlas(rendered.glyphs, { padding: 0 })
         assertNotCancelled(isCancelled)

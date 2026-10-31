@@ -49,6 +49,13 @@ describe('parseFontSource', () => {
     ).toEqual({ profile: 'test', missing: [0x4e2d] })
   })
 
+  it('allows a missing degree symbol to use the built-in fallback while rejecting other missing glyphs', async () => {
+    const source = await parseFontSource(await fixtureFile())
+    source.supportedCodepoints.delete(176)
+    expect(checkRequiredGlyphs(source, { profile: 'test', codepoints: [176, 0x4e2d] }).missing).toEqual([0x4e2d])
+    expect(source.supportedCodepoints.has(176)).toBe(false)
+  })
+
   it('treats the supported filename extensions case-insensitively', async () => {
     await expect(parseFontSource(await fixtureFile('font.TTF'))).resolves.toBeDefined()
     await expect(parseFontSource(await fixtureFile('font.OtF'))).resolves.toBeDefined()

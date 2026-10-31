@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { describe, expect, it, vi } from 'vitest'
-import { BITMAP_FONT_SIZES, type BitmapFontRecipe } from './contracts'
+import { BITMAP_FONT_SIZES, charsetForType, type BitmapFontRecipe } from './contracts'
 import type { ParsedFontSource } from './fontSource'
 import type { GlyphRendererSession, RenderedGlyphSet } from './glyphRenderer'
 import {
@@ -77,6 +77,12 @@ function adapters(options?: {
 }
 
 describe('buildBitmapFontPackage', () => {
+  it('rejects a text package if the renderer omits the degree glyph', async () => {
+    await expect(buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer,
+      fileName: 'Fixture.ttf', slug: 'fixture', fontType: 'text_font', recipe,
+    }, adapters().value)).rejects.toMatchObject({ code: 'GLYPH_RENDER_EMPTY', codepoint: 176 })
+  })
+
   it('exports the baseline angle in recipe, descriptors and runtime layout', async () => {
     const fixture = adapters()
     const result = await buildBitmapFontPackage({ source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf', slug: 'baseline', fontType: 'time_font', recipe: { ...recipe, baselineAngle: 12 } }, fixture.value)
@@ -87,7 +93,7 @@ describe('buildBitmapFontPackage', () => {
     expect(layout.sizes['48']).toMatchObject({ baselineAngle: 12, lineHeight: 48, drawOffsetY: 0 })
   })
 
-  it('preserves source styling and visible glyphs without rasterizing invisible control characters', async () => {
+  it.each([false, true])('preserves visible source glyphs and adds degree only to text (symbol=%s)', async sourceIsSymbolFont => {
     const fixture = adapters()
     fixture.value.parseSource.mockResolvedValue({
       ...parsedSource, sourceWeight: 300,
@@ -98,13 +104,13 @@ describe('buildBitmapFontPackage', () => {
       rendererPath: 'opentype-path', dispose: fixture.dispose,
       render(size, actualRecipe, codepoints) {
         expect(actualRecipe.fontWeight).toBe(300)
-        expect(codepoints).toEqual([32, 48, 65])
-        return rendered(size)
+        expect(codepoints).toEqual(sourceIsSymbolFont ? [32, 48, 65] : [32, 48, 65, 176])
+        return { ...rendered(size), glyphs: codepoints.map(codepoint => ({ ...rendered(size).glyphs[0], codepoint })) }
       },
     })
     const result = await buildBitmapFontPackage({
       source: Uint8Array.from(parsedSource.bytes).buffer, fileName: 'Fixture.ttf',
-      slug: 'fixture', fontType: 'text_font', recipe, preserveSource: true,
+      slug: 'fixture', fontType: 'text_font', recipe, preserveSource: true, sourceIsSymbolFont,
     }, fixture.value)
     const archive = await JSZip.loadAsync(result.zip)
     expect(archive.file('312/fixture-g.fnt')).not.toBeNull()
@@ -269,9 +275,11 @@ describe('buildBitmapFontPackage', () => {
       slug: 'fixture-chinese',
       fontType: 'text_font_zh',
       recipe,
-    }, adapters().value)
+    }, adapters({ render: size => ({ ...rendered(size), glyphs: [...rendered(size).glyphs, { ...rendered(size).glyphs[0], codepoint: 176 }] }) }).value)
 
     expect(result.manifest.language).toBe('zh')
+    // The publishing validator compares this ordered charset with the requested profile.
+    expect(result.manifest.charset).toEqual(charsetForType('text_font_zh'))
   })
 
   it('rejects unsafe names and always disposes the renderer on cancellation', async () => {

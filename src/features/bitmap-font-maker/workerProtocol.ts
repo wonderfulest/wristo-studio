@@ -10,6 +10,7 @@ export interface BitmapFontWorkerBuildRequest {
   fontType: BitmapFontType
   recipe: BitmapFontRecipe
   preserveSource?: boolean
+  sourceIsSymbolFont?: boolean
 }
 
 export interface BitmapFontWorkerCancelRequest { type: 'cancel'; requestId: string }

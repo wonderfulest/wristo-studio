@@ -42,7 +42,7 @@ export async function buildMissingWrtFonts(zip: JSZip, fonts: WrtSourceFont[], o
           && element.iconDisplayType !== 'amoled' && (element.fontFamily || element.iconFont) === font.slug)
       const artifact = await worker.build({
         source: await source.async('arraybuffer'), fileName: font.path!.split('/').pop()!,
-        slug: font.slug, fontType: 'text_font', preserveSource: true,
+        slug: font.slug, fontType: 'text_font', preserveSource: true, sourceIsSymbolFont: Boolean(isIcon || font.metadata?.type === 'weather_font'),
         recipe: { schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0,
           outlineWidthEm: 0, outlineMode: 'fill', lineJoin: 'round', antialias: true },
       }, progress => report(0.95 * progress.completed / progress.total, progress.size)).result

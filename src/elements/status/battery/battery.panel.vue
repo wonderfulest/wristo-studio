@@ -70,11 +70,11 @@
       <div class="text-settings-grid">
         <div class="text-setting-field">
           <label>{{ t('elementSettings.width') }}</label>
-          <el-input-number v-model="currentModel.headWidth" :min="2" :max="50" @change="updateElement" />
+          <el-input-number v-model="currentModel.headWidth" :min="0" :max="50" @change="updateElement" />
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.height') }}</label>
-          <el-input-number v-model="currentModel.headHeight" :min="2" :max="100" @change="updateElement" />
+          <el-input-number v-model="currentModel.headHeight" :min="0" :max="100" @change="updateElement" />
         </div>
         <div class="text-setting-field">
           <label>{{ t('elementSettings.fillColor') }}</label>

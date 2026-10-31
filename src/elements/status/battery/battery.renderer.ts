@@ -93,6 +93,7 @@ export function createBattery(config: BatteryElementConfig): FabricElement {
   const batteryHead: any = new Rect({
     width: headWidth,
     height: headHeight,
+    visible: headWidth > 0 && headHeight > 0,
     fill: headFill,
     rx: headRx,
     ry: headRy,
@@ -208,6 +209,7 @@ export function updateBattery(
   batteryHead.set({
     width: headWidth,
     height: headHeight,
+    visible: headWidth > 0 && headHeight > 0,
     fill: next.headFill,
     rx: next.headRx,
     ry: next.headRy,

@@ -3,6 +3,7 @@ import type { PathCommand } from 'opentype.js'
 import type { BitmapFontRecipe } from './contracts'
 import { BITMAP_FONT_SIZES } from './contracts'
 import type { ParsedFontSource } from './fontSource'
+import { createDefaultDegreeGlyph, DEGREE_CODEPOINT, needsDegreeFallback } from './degreeGlyph'
 
 export type GlyphRenderErrorCode = 'GLYPH_MISSING' | 'GLYPH_RENDER_EMPTY' | 'GLYPH_RENDER_FAILED' | 'GLYPH_RENDER_INVALID_INPUT' | 'GLYPH_RENDER_TOO_LARGE' | 'GLYPH_OUTLINE_REQUIRED'
 
@@ -366,6 +367,9 @@ function renderGlyphsWithWorkerCanvas(
     measureContext.textBaseline = 'alphabetic'
 
     const glyphs = codepoints.map((codepoint): RenderedGlyph => {
+      if (codepoint === DEGREE_CODEPOINT && needsDegreeFallback(source)) {
+        return renderProportionalGlyphs(source, [codepoint], size, recipe).glyphs[0]
+      }
       if (!source.supportedCodepoints.has(codepoint)) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
       const text = String.fromCodePoint(codepoint)
       const metrics = measureContext.measureText(text)
@@ -468,8 +472,9 @@ function renderProportionalGlyphs(source: ParsedFontSource, codepoints: number[]
   const insetRadius = recipe.outlineMode === 'fill' ? Math.max(0, -weightRadius) : 0
 
   const glyphs = codepoints.map((codepoint): RenderedGlyph => {
-    if (!source.supportedCodepoints.has(codepoint)) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
-    const glyph = source.font.charToGlyph(String.fromCodePoint(codepoint))
+    const fallbackDegree = codepoint === DEGREE_CODEPOINT && needsDegreeFallback(source)
+    if (!fallbackDegree && !source.supportedCodepoints.has(codepoint)) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
+    const glyph = fallbackDegree ? createDefaultDegreeGlyph(source) : source.font.charToGlyph(String.fromCodePoint(codepoint))
     if (glyph.index === 0 && codepoint !== 0) throw new GlyphRenderError('GLYPH_MISSING', codepoint)
     const xadvance = Math.max(1, Math.round(((glyph.advanceWidth ?? source.unitsPerEm) * scale + weightRadius) * horizontalScale))
     const contours = flatten(glyph.getPath(0, baseline, size).commands, shear, horizontalScale, baseline, baselineSlope(recipe.baselineAngle), xadvance)

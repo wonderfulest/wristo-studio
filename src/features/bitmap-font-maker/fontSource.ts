@@ -1,5 +1,6 @@
 import opentype, { type Font, type FontNames, type LocalizedName } from 'opentype.js'
 import type { BitmapFontCharset } from './contracts'
+import { DEGREE_CODEPOINT } from './degreeGlyph'
 
 export const FONT_SOURCE_MAX_BYTES = 20 * 1024 * 1024
 
@@ -143,7 +144,7 @@ export function checkRequiredGlyphs(
   return {
     profile: charset.profile,
     missing: [...new Set(charset.codepoints)].filter(
-      (codepoint) => !source.supportedCodepoints.has(codepoint),
+      (codepoint) => codepoint !== DEGREE_CODEPOINT && !source.supportedCodepoints.has(codepoint),
     ),
   }
 }
