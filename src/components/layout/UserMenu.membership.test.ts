@@ -30,4 +30,17 @@ describe('Premium avatar badge', () => {
     expect(wrapper.find('.premium-badge').exists()).toBe(false)
     wrapper.unmount()
   })
+  it.each(['studio', 'merchant', 'admin'])('does not infer Premium from %s privileges', (kind) => {
+    auth.userInfo.premium.active = false
+    auth.studioMembership = { level: kind === 'studio' ? 'annual' : 'free', status: null }
+    auth.isMerchantUser = kind === 'merchant'
+    auth.isAdminUser = kind === 'admin'
+    const wrapper = mount(UserMenu, { global: { stubs: { Icon: true, DesignerDefaultConfigDialog: true } } })
+    expect(wrapper.find('.premium-badge').exists()).toBe(false)
+    wrapper.unmount()
+    auth.isMerchantUser = false
+    auth.isAdminUser = false
+    auth.studioMembership = { level: 'free', status: null }
+  })
+
 })

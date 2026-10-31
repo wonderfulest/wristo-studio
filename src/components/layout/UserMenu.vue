@@ -160,12 +160,7 @@ const showAvatarDot = computed(() => showMerchantEntrypoints.value && pendingCou
 const userAvatar = computed(() => userStore.userInfo?.avatar || 'https://cdn.wristo.io/test/avatar/561aae25-41bd-47ab-974e-7231f5a850e8.png')
 const userDisplayName = computed(() => userStore.userInfo?.nickname || userStore.userInfo?.username || t('common.unknownUser'))
 const userEmail = computed(() => userStore.userInfo?.email || t('profile.noEmail'))
-const isPremiumMember = computed(() => {
-  if (hasPremiumEntitlement(userStore.userInfo) || userStore.isMerchantUser || userStore.isAdminUser) return true
-  const membership = userStore.studioMembership
-  if (!membership || membership.level === 'free') return false
-  return membership.status == null || membership.status === '1' || membership.status === '5'
-})
+const isPremiumMember = computed(() => hasPremiumEntitlement(userStore.userInfo))
 const accountStatusLabel = computed(() => {
   if (userStore.isMerchantUser) return t('nav.merchant')
   if (userStore.isAdminUser) return t('nav.admin')
