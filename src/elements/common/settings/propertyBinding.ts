@@ -226,7 +226,7 @@ export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: str
       const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
       return { dataProperty: propertyKey, goalProperty: null, text: unitText, metricValue: unitText }
     }
-    return { dataProperty: propertyKey, goalProperty: null, text: formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue) }
+    return { dataProperty: propertyKey, goalProperty: null, text: formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue, canonicalMetric.metricSymbol) }
   }
 
   if (['goalBar', 'goalArc'].includes(eleType)) {
@@ -245,7 +245,7 @@ export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: str
     }
   }
   if (eleType === 'label') return { goalProperty: propertyKey, dataProperty: null, text: resolveMetricLabel(canonicalMetric, contentLanguage) }
-  if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue) }
+  if (eleType === 'data') return { goalProperty: propertyKey, dataProperty: null, text: formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue, canonicalMetric.metricSymbol) }
   if (eleType === 'unit') {
     const unitText = resolveMetricUnit(canonicalMetric, contentLanguage, catalog)
     return { goalProperty: propertyKey, dataProperty: null, text: unitText, metricValue: unitText }

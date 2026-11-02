@@ -28,6 +28,17 @@ const unit = {
 const catalog = { unitsByKey: new Map([['distance', unit]]) } as unknown as ValidatedDataCatalog
 
 describe('metric display result', () => {
+  it('adds degrees for temperature with unitKey none from the production catalog', () => {
+    const noneCatalog = { unitsByKey: new Map([['none', {
+      unitKey: 'none', defaultVariant: null, selectionPolicy: { type: 'none' }, variants: {},
+    }]]) } as unknown as ValidatedDataCatalog
+    expect(resolveMetricDisplayResult({
+      ...metric, metricSymbol: ':FIELD_TYPE_TEMPERATURE', unitKey: 'none',
+    }, { rawValue: 24, displayValue: '24' }, {
+      language: 'eng', distanceUnits: 'metric', temperatureUnits: 'metric',
+    }, noneCatalog)).toMatchObject({ rawValue: 24, displayValue: '24°', unitLabel: '' })
+  })
+
   it('keeps one distance decimal when converting compact whole values to miles', () => {
     expect(resolveMetricDisplayResult(metric, {
       rawValue: 5.04, displayValue: '5', providerUnit: 'km',

@@ -28,6 +28,7 @@ export function resolveMetricDisplayResult(
   const displayValue = formatInlineMetricUnit(
     metric.unitKey,
     formatForVariant(metric, unit.unitKey, variantKey, source),
+    metric.metricSymbol,
   )
   return {
     rawValue: source.rawValue,

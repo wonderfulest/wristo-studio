@@ -239,7 +239,7 @@ const updateDataProperty = async () => {
   if (dataProperty.value) {
     await nextTick()
       if (dataElement.value) {
-        const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
+        const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue, canonicalMetric.metricSymbol)
         dataElement.value.set('dataProperty', dataProperty.value)
         dataElement.value.set('goalProperty', null)
         dataElement.value.set('text', displayValue)
@@ -296,7 +296,7 @@ const updateGoalProperty = async () => {
   if (goalProperty.value) {
     await nextTick()
       if (dataElement.value) {
-        const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue)
+        const displayValue = formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue, canonicalMetric.metricSymbol)
         dataElement.value.set('goalProperty', goalProperty.value)
         dataElement.value.set('dataProperty', null)
         dataElement.value.set('text', displayValue)
