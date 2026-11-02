@@ -85,7 +85,7 @@
                 <el-input-number
                   v-model="segmentsLocal"
                   :min="1"
-                  :max="120"
+                  :max="360"
                   :step="1"
                   controls-position="right"
                   @change="onSegmentsChange" />
