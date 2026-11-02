@@ -52,7 +52,7 @@ describe('metric display result', () => {
     })
   })
 
-  it('keeps the temperature value numeric and exposes the selected unit separately', () => {
+  it('appends degrees to temperature display while preserving the numeric value', () => {
     const metricValue = { valueCode: 57, metricSymbol: ':FIELD_TYPE_TEMPERATURE', unitKey: 'temperature' }
     const unitValue = {
       unitKey: 'temperature',
@@ -75,7 +75,8 @@ describe('metric display result', () => {
     }, {
       language: 'eng', distanceUnits: 'metric', temperatureUnits: 'statute',
     }, inlineCatalog)).toMatchObject({
-      displayValue: '68',
+      displayValue: '68°',
+      rawValue: 20,
       unitLabel: '°F',
     })
   })
@@ -133,7 +134,7 @@ describe('metric display result', () => {
     }, {
       language: 'eng', distanceUnits: 'metric', temperatureUnits: 'statute',
     }, temperatureCatalog)).toMatchObject({
-      displayValue: '68/86',
+      displayValue: '68/86°',
       unitLabel: '°F',
     })
   })
