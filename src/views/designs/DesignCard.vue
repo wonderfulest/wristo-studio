@@ -63,9 +63,9 @@
           class="background-image"
         />
         <div v-else class="placeholder-circle"></div>
-        <div v-if="viewMode !== 'list' && (showCreator || (!summaryOnly && paymentMethodLabel))" class="card-badges">
+        <div v-if="viewMode !== 'list' && (showCreator || paymentMethodLabel)" class="card-badges">
+          <span v-if="paymentMethodLabel" class="payment-badge" :title="paymentMethodLabel">{{ paymentMethodLabel }}</span>
           <span v-if="showCreator" class="creator-badge">{{ creatorName }}</span>
-          <span v-if="!summaryOnly && paymentMethodLabel" class="creator-badge payment-badge">{{ paymentMethodLabel }}</span>
         </div>
       </component>
       <Teleport :to="informationTarget || 'body'" :disabled="!management">
@@ -1187,13 +1187,29 @@ const downloadPackage = (type: 'prg' | 'iq') => {
 
 .card-badges {
   position: absolute;
-  top: 0;
-  right: 4px;
-  left: 4px;
+  top: 6px;
+  right: 6px;
+  left: 6px;
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: flex-end;
   gap: 4px;
+}
+
+.payment-badge {
+  min-width: 0;
+  max-width: 100%;
+  margin-right: auto;
+  padding: 2px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 4px;
+  background: var(--studio-surface-raised);
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
 }
 
 .creator-badge {
