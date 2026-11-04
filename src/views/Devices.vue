@@ -21,7 +21,7 @@
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column :label="t('device.image')" width="80" align="center">
         <template #default="{ row }">
-          <el-image v-if="row.imageUrl" :src="row.imageUrl" style="width: 48px; height: 48px" fit="cover" />
+          <el-image v-if="row.imageUrl" :src="row.imageUrl" style="width: 48px; height: 48px" fit="contain" />
           <span v-else>-</span>
         </template>
       </el-table-column>

@@ -10,7 +10,7 @@
         @click="handleSelectDevice"
       >
         <div class="device-avatar">
-          <img v-if="currentDevice.imageUrl" :src="currentDevice.imageUrl" :alt="currentDevice.displayName" />
+          <img v-if="deviceImageUrl" :src="deviceImageUrl" :alt="currentDevice.displayName" />
           <div v-else class="device-fallback">W</div>
         </div>
         <div class="device-name" :style="{ maxWidth: props.nameMaxWidth + 'px' }">{{ currentDevice.displayName }}</div>
@@ -34,11 +34,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import type { GarminDeviceVO } from '@/types/user'
 import DeviceSelector from '@/components/common/DeviceSelector.vue'
-import type { GarminDeviceVO as ApiGarminDeviceVO } from '@/api/device'
+import { getDeviceList, type GarminDeviceBaseVO, type GarminDeviceVO as ApiGarminDeviceVO } from '@/api/device'
 import { useI18n } from '@/i18n'
 
 interface Props {
@@ -65,6 +65,13 @@ const { t } = useI18n()
 
 const userStore = useUserStore()
 const showSelector = ref(false)
+// Resolve saved selections against the current catalog so old JPG URLs migrate.
+const artworkDevices = ref<GarminDeviceBaseVO[]>([])
+onMounted(async () => {
+  try { artworkDevices.value = await getDeviceList() } catch { /* Keep existing image when offline. */ }
+})
+const deviceImageUrl = computed(() => artworkDevices.value.find(item => item.deviceId === currentDevice.value?.deviceId)?.imageUrl || currentDevice.value?.imageUrl)
+
 
 // Current device computed property
 const currentDevice = computed(() => {
@@ -121,7 +128,7 @@ defineExpose({
   gap: 8px;
   min-height: 44px;
   padding: 6px 12px;
-  background: #fff;
+  background: var(--el-bg-color, #fff);
   border: 1px solid #e5e7eb;
   border-radius: 999px;
   box-shadow: var(--shadow-sm);
@@ -151,10 +158,10 @@ defineExpose({
   width: 26px;
   height: 26px;
   aspect-ratio: 1 / 1;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,7 +175,7 @@ defineExpose({
   object-fit: contain;
   padding: 2px;
   display: block;
-  background: #fff;
+  background: transparent;
 }
 
 .device-fallback {
@@ -193,13 +200,13 @@ defineExpose({
 .device-info.no-device {
   cursor: pointer;
   border-color: #e5e7eb;
-  background: #f8faf9;
+  background: var(--el-fill-color-light, #f8fafc);
   transition: all 0.2s ease;
 }
 
 .device-info.no-device:hover {
   border-color: rgba(15, 107, 104, 0.24);
-  background: #edf6f5;
+  background: var(--el-fill-color-light, #f8fafc);
   box-shadow: 0 8px 18px rgba(15, 107, 104, 0.1);
 }
 
@@ -223,7 +230,7 @@ defineExpose({
 .device-display-container.mobile .device-info {
   gap: 12px;
   padding: 12px 16px;
-  background: #f8faf9;
+  background: var(--el-fill-color-light, #f8fafc);
   border-radius: 12px;
   border: 1px solid #e5e7eb;
 }
@@ -231,7 +238,7 @@ defineExpose({
 .device-display-container.mobile .device-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 0;
   flex: 0 0 32px;
 }
 
@@ -252,10 +259,10 @@ defineExpose({
 
 /* Mobile No Device State */
 .device-display-container.mobile .device-info.no-device {
-  background: #f8faf9;
+  background: var(--el-fill-color-light, #f8fafc);
 }
 
 .device-display-container.mobile .device-info.no-device:hover {
-  background: #edf6f5;
+  background: var(--el-fill-color-light, #f8fafc);
 }
 </style>

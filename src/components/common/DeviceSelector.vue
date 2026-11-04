@@ -382,10 +382,10 @@ onBeforeUnmount(() => {
 .device-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--studio-surface-soft);
-  border: 1px solid var(--studio-border);
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
