@@ -1,3 +1,7 @@
+import { createBitmapGlyphGroup } from '@/elements/common/bitmapGlyphGroup'
+import { encodeData } from './data.encoder'
+import { registerElementInstance } from '@/engine/managers/elementManager'
+import { assertElementRenderCurrent, type ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { SECOND_TIME_ZONE_SYMBOL, secondTimeZoneTime } from '@/utils/secondTimeZone'
 import type { FabricElement } from '@/types/element'
 import type { DataElementConfig } from '@/types/elements/data'
@@ -17,7 +21,7 @@ import { useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { requireCanonicalMetric } from '@/utils/metricLabel'
 import { formatInlineMetricUnit } from '@/utils/inlineMetricUnit'
 
-export async function createData(config: DataElementConfig): Promise<FabricElement> {
+export async function createData(config: DataElementConfig, renderContext?: ElementRenderContext): Promise<FabricElement> {
   const canvasStore = useCanvasStore()
   const layerStore = useLayerStore()
   const elementDataStore = useElementDataStore()
@@ -29,8 +33,10 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   const canonicalMetric = requireCanonicalMetric(metric ?? config, catalog)
   const displayValue = canonicalMetric.metricSymbol === SECOND_TIME_ZONE_SYMBOL ? secondTimeZoneTime(usePropertiesStore().secondTimeZone) : formatInlineMetricUnit(canonicalMetric.unitKey, canonicalMetric.defaultValue, canonicalMetric.metricSymbol)
   const displayStates = normalizeDisplayStates(config.displayStates)
-  const previewFont = resolveCurrentElementPreviewFont(config, displayValue)
-  const element = new FabricText(displayValue, {
+  const previewFont = config.fontRenderType === 'bitmap' ? config : resolveCurrentElementPreviewFont(config, displayValue)
+  const element = config.fontRenderType === 'bitmap'
+    ? await createBitmapGlyphGroup({ id, text: displayValue, options: { ...config, eleType: 'data', displayStates } })
+    : new FabricText(displayValue, {
     id,
     eleType: 'data',
     left: config.left,
@@ -50,7 +56,9 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
     hasControls: false,
     hasBorders: true,
   } as any)
-  applyCurrentElementPreviewFont(element, config, displayValue)
+  assertElementRenderCurrent(renderContext)
+  if (config.fontRenderType !== 'bitmap') applyCurrentElementPreviewFont(element, config, displayValue)
+  element.set('visible', getDisplayState(displayStates, layerStore.previewMode))
 
   const canvas = canvasStore.canvas
   canvas?.add(element as any)
@@ -59,6 +67,7 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   canvas?.renderAll()
 
   elementDataStore.upsertElement({
+    ...(config.fontRenderType === 'bitmap' ? { fontRenderType: 'bitmap', bitmapFontId: config.bitmapFontId, fontGap: config.fontGap ?? 4 } : {}),
     eleType: 'data',
     id: String(id),
     left: Math.round((element as any).left ?? config.left ?? 0),
@@ -80,11 +89,14 @@ export async function createData(config: DataElementConfig): Promise<FabricEleme
   return element as any
 }
 
-export function updateData(
+const bitmapUpdates = new WeakMap<object, number>()
+const bitmapPending = new WeakSet<object>()
+
+export async function updateData(
   element: FabricElement,
   patch: Partial<DataElementConfig> = {},
   context: ElementUpdateContext = {},
-): void {
+): Promise<void> {
   const canvasStore = useCanvasStore()
   const canvas = canvasStore.canvas
   if (!canvas) return
@@ -93,6 +105,43 @@ export function updateData(
     .getObjects()
     .find((o: any) => (o as any).id === (element as any).id)
   if (!obj) return
+
+  if (context.persist === false && bitmapPending.has(obj)) return
+  if (patch.fontRenderType === 'bitmap' || obj.fontRenderType === 'bitmap') {
+    const next = { ...encodeData(obj), displayStates: obj.displayStates, ...patch } as DataElementConfig
+    const version = (bitmapUpdates.get(obj) ?? 0) + 1
+    bitmapUpdates.set(obj, version)
+    const display = patch.metricValue ?? obj.metricValue ?? obj.text ?? ''
+    // Keep pending edits on the current instance so a later edit includes them.
+    Object.assign(obj, patch)
+    bitmapPending.add(obj)
+    let replacement: any
+    try {
+      replacement = next.fontRenderType === 'bitmap'
+        ? await createBitmapGlyphGroup({ id: String(obj.id), text: String(display), options: next })
+        : new FabricText(String(display), { ...next, fontRenderType: 'truetype', bitmapFontId: null } as any)
+    } finally {
+      if (bitmapUpdates.get(obj) === version) bitmapPending.delete(obj)
+    }
+    if (bitmapUpdates.get(obj) !== version || !canvas.getObjects().includes(obj)) return
+    if (next.fontRenderType !== 'bitmap') applyCurrentElementPreviewFont(replacement, next, String(display))
+    for (const key of ['interaction', 'visibility', 'layoutVisibility', 'layerName', 'angle', 'opacity', 'selectable', 'evented']) {
+      if (obj[key] !== undefined) replacement[key] = obj[key]
+    }
+    replacement.visible = getDisplayState(normalizeDisplayStates(next.displayStates), useLayerStore().previewMode)
+    replacement.metricValue = String(display)
+    const index = canvas.getObjects().indexOf(obj)
+    const active = canvas.getActiveObject() === obj
+    canvas.remove(obj)
+    canvas.insertAt(index, replacement)
+    useLayerStore().addLayer(replacement)
+    registerElementInstance(replacement)
+    if (active) canvas.setActiveObject(replacement)
+    replacement.setCoords()
+    canvas.requestRenderAll()
+    if (context.persist !== false) useElementDataStore().patchElement(String(obj.id), { ...encodeData(replacement), fontRenderType: next.fontRenderType ?? 'truetype', bitmapFontId: next.fontRenderType === 'bitmap' ? next.bitmapFontId : null, displayStates: next.displayStates })
+    return
+  }
 
   const currentLeft = obj.left
   const currentTop = obj.top

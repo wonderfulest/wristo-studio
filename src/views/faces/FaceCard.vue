@@ -6,15 +6,15 @@
             </RouterLink>
             <div class="face-info">
               <RouterLink :to="faceDetailsUrl(face.appId)" class="face-name">{{ face.name }}</RouterLink>
-              <div v-if="showCreator && face.creator" class="face-creator">
-                <span class="creator-avatar">
-                  <img v-if="face.creator.avatar" :src="face.creator.avatar" alt="" loading="lazy" @error="hideBrokenImage" />
-                  <span v-else>{{ face.creator.name.slice(0, 1).toUpperCase() }}</span>
-                </span>
-                <span class="creator-name">{{ face.creator.name }}</span>
-              </div>
               <div class="face-meta">
-                <span>{{ face.price === 0 ? 'Free' : face.price == null ? 'View pricing' : `$${face.price.toFixed(2)}` }}</span>
+                <div v-if="showCreator && face.creator" class="face-creator">
+                  <span class="creator-avatar">
+                    <img v-if="face.creator.avatar" :src="face.creator.avatar" alt="" loading="lazy" @error="hideBrokenImage" />
+                    <span v-else>{{ face.creator.name.slice(0, 1).toUpperCase() }}</span>
+                  </span>
+                  <span class="creator-name">{{ face.creator.name }}</span>
+                </div>
+                <span class="face-price">{{ face.price === 0 ? 'Free' : face.price == null ? 'View pricing' : `$${face.price.toFixed(2)}` }}</span>
                 <span v-if="face.download != null">↓ {{ formatDownloadCount(face.download, userStore.isAdminUser || userStore.isMerchantUser) }}</span>
                 <span v-if="face.ratingCount">★ {{ (face.averageRating || 0).toFixed(1) }}</span>
                 <span v-if="canEditFace" class="face-editable" role="img" aria-label="Editable in Builder" title="Editable in Builder">
@@ -79,19 +79,23 @@ a:focus-visible { outline: 2px solid #608928; outline-offset: 3px; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.face-creator { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted, #707771); font-size: 12px; }
+.face-creator { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; color: var(--muted, #707771); font-size: 12px; }
 .creator-avatar { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: var(--studio-primary-soft, #e0f3ef); }
 .creator-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .creator-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .face-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-size: 12px;
   color: var(--muted, #707771);
   margin-top: 8px;
 }
-.face-meta span:first-child {
+.face-meta > span {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.face-price {
   margin-right: auto;
 }
 .face-editable {

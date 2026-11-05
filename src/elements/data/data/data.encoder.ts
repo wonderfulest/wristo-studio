@@ -25,6 +25,12 @@ export function encodeData(element: FabricElement): DataElementConfig {
     topBase: encodeTopBaseForElement(element as any),
   }
 
+  if ((element as any).fontRenderType === 'bitmap') {
+    config.fontRenderType = 'bitmap'
+    config.bitmapFontId = (element as any).bitmapFontId ?? null
+    config.fontGap = (element as any).fontGap ?? 4
+  }
+
   // 如果 dataProperty 和 goalProperty 都为空，抛出错误
   if (config.dataProperty == null && config.goalProperty == null) {
     const eleId = String(element.id ?? '')
@@ -58,5 +64,8 @@ export function decodeData(config: DataElementConfig): Partial<FabricElement> {
     metricSymbol: config.metricSymbol ?? '',
   }
 
+  if (config.fontRenderType === 'bitmap') {
+    Object.assign(result, { fontRenderType: 'bitmap', bitmapFontId: config.bitmapFontId, fontGap: config.fontGap ?? 4 })
+  }
   return result as Partial<FabricElement>
 }

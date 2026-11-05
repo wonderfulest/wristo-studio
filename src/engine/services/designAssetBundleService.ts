@@ -2,7 +2,7 @@ import { clearJsonProjectFiles, isJsonProject, restoreJsonProject, hydrateJsonPr
 import { hasBitmapFontColon } from './bitmapFontValidation'
 import { createPackageAssetReads, hashPackageBlob } from './packageAssetReads'
 import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
-import { GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
+import { BITMAP_DATA_FEATURE, hasBitmapData, GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 import type { WrtImportProgress } from './wrtImportProgress'
 import { translate } from '@/i18n'
@@ -528,6 +528,7 @@ export const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
     }
     const record = value as Record<string, unknown>
     Object.entries(record).forEach(([childKey, childValue]) => {
+      if (record.fontRenderType === 'bitmap' && ['time', 'data'].includes(String(record.eleType)) && FONT_FIELDS.has(childKey)) return
       walk(childValue, childKey)
     })
   }
@@ -903,7 +904,7 @@ const buildDesignAssetArchive = async (
   const slug = slugifyDesignName(config.name, designUid || 'watchface')
   const manifest: DesignAssetManifest = {
     version: packageOptions.version || 2,
-    requiredFeatures: hasGoalProgressImages(config) ? [GOAL_PROGRESS_IMAGES_FEATURE] : undefined,
+    requiredFeatures: [...(hasGoalProgressImages(config) ? [GOAL_PROGRESS_IMAGES_FEATURE] : []), ...(hasBitmapData(config) ? [BITMAP_DATA_FEATURE] : [])],
     selfContained: packageOptions.format === WRT_FORMAT ? true : undefined,
     format: packageOptions.format,
     generatedAt: new Date().toISOString(),
@@ -1083,12 +1084,14 @@ const buildDesignAssetArchive = async (
   if (previewEntry) manifest.preview = { path: manifest.assets.preview, sha256: await sha256Hex(new Blob([await previewEntry.async('arraybuffer')])) }
   if (manifest.selfContained) {
     const bitmapIds = new Set<number>()
+    const timeBitmapIds = new Set<number>()
     const collectBitmapIds = (value: any): void => {
       if (!value || typeof value !== 'object') return
       // Older designs may retain an unused bitmap selection after switching
       // to TrueType. Only active bitmap fonts are design dependencies.
       if (value.fontRenderType === 'bitmap' && Number(value.bitmapFontId) > 0) {
         bitmapIds.add(Number(value.bitmapFontId))
+        if (value.eleType === 'time') timeBitmapIds.add(Number(value.bitmapFontId))
       }
       Object.values(value).forEach(collectBitmapIds)
     }
@@ -1096,7 +1099,7 @@ const buildDesignAssetArchive = async (
     manifest.bitmapFonts = []
     for (const id of bitmapIds) {
       const chars = packageBitmapChars.get(id) || (await listBitmapFontChars(id)).data
-      if (!hasBitmapFontColon(chars)) {
+      if (timeBitmapIds.has(id) && !hasBitmapFontColon(chars)) {
         throw new Error(translate('font.missingBitmapColon', useLocaleStore().currentLocale, { font: `#${id}` }))
       }
       if (!chars?.length) throw new Error(`Missing bitmap characters: ${id}`)
@@ -1237,7 +1240,7 @@ export async function buildWrtDesignPackage(
   }
   return buildDesignAssetArchive(config, options, {
     format: WRT_FORMAT,
-    version: hasGoalProgressImages(config) ? 3 : WRT_VERSION,
+    version: (hasGoalProgressImages(config) || hasBitmapData(config)) ? 3 : WRT_VERSION,
     fileNameSuffix: '.wrt',
     mimeType: 'application/vnd.wristo.design-package+zip',
   })

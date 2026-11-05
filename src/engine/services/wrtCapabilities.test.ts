@@ -14,3 +14,9 @@ describe('WRT goal-image version gate',()=>{
   expect(validateWrtCapabilities({version:2},{elements:[]})).toEqual([])
  })
 })
+it('requires explicit bitmap data support without affecting ordinary data', () => {
+ const bitmap = { elements: [{ eleType: 'data', fontRenderType: 'bitmap' }] }
+ expect(validateWrtCapabilities({ version: 2 }, bitmap)).not.toEqual([])
+ expect(validateWrtCapabilities({ version: 3, requiredFeatures: ['bitmap-data-v1'] }, bitmap)).toEqual([])
+ expect(validateWrtCapabilities({ version: 2 }, { elements: [{ eleType: 'data' }] })).toEqual([])
+})

@@ -14,6 +14,9 @@ export interface BaseTextConfig extends BaseElementConfig {
 
 export interface DataElementConfig extends BaseTextConfig {
   eleType: 'data' | 'icon' | 'label' | 'unit'
+  fontRenderType?: 'truetype' | 'bitmap'
+  bitmapFontId?: number | null
+  fontGap?: number
   metricSymbol: string
   metricValue?: string
   dataProperty?: string

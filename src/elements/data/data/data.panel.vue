@@ -29,7 +29,19 @@
         />
       </el-form-item>
 
-      <el-form-item :label="t('elementSettings.font')">
+      <el-form-item :label="t('elementSettings.fontType')">
+        <el-radio-group :model-value="currentModel.fontRenderType ?? 'truetype'" @update:model-value="(value: string) => applyUpdate({ fontRenderType: value })">
+          <el-radio label="truetype">{{ t('elementSettings.trueTypeFont') }}</el-radio>
+          <el-radio label="bitmap">{{ t('elementSettings.bitmapFont') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item v-if="currentModel.fontRenderType === 'bitmap'" :label="t('elementSettings.font')">
+        <BitmapFontPicker v-model="currentModel.bitmapFontId" @change="handleBitmapFontChange" />
+      </el-form-item>
+      <el-form-item v-if="currentModel.fontRenderType === 'bitmap'" :label="t('elementSettings.fontGap')">
+        <el-input-number v-model="currentModel.fontGap" :max="100" @change="(value: number) => applyUpdate({ fontGap: value })" />
+      </el-form-item>
+      <el-form-item v-else :label="t('elementSettings.font')">
         <font-picker
           v-model="currentModel.fontFamily"
           :type="FontTypes.TEXT_FONT"
@@ -43,6 +55,8 @@
 </template>
 
 <script setup lang="ts">
+import BitmapFontPicker from '@/components/font-picker/BitmapFontPicker.vue'
+import { invalidateBitmapFontCache } from '@/elements/common/bitmapGlyphGroup'
 import { ref, computed } from 'vue'
 import * as elementManager from '@/engine/managers/elementManager'
 import { originXOptions } from '@/config/settings'
@@ -95,6 +109,11 @@ const applyUpdate = async (patch: Record<string, any>) => {
   if (props.element) {
     elementManager.updateElement(props.element as any, patch)
   }
+}
+
+const handleBitmapFontChange = (id: number) => {
+  invalidateBitmapFontCache(id)
+  return applyUpdate({ fontRenderType: 'bitmap', bitmapFontId: id })
 }
 
 // 保持原有的 updateElement 调用点，只是改为派发补丁

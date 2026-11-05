@@ -9,11 +9,11 @@ import DataPanel from '@/elements/data/data/data.panel.vue'
 export default function registerDataPlugin() {
   registerElement('data' as ElementType, {
     // renderer
-    add: (config) => {
-      return createData(config as DataElementConfig)
+    add: (config, renderContext) => {
+      return createData(config as DataElementConfig, renderContext)
     },
     update: (element, patch, context) => {
-      updateData(element as any, patch as Partial<DataElementConfig>, context)
+      return updateData(element as any, patch as Partial<DataElementConfig>, context)
     },
     // encoder
     encode: (element) => {

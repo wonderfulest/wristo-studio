@@ -1,3 +1,4 @@
+import { updateData } from '@/elements/data/data/data.renderer'
 import { SECOND_TIME_ZONE_SYMBOL, secondTimeZoneLabel, secondTimeZoneTime } from '@/utils/secondTimeZone'
 import moment from 'moment'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -355,6 +356,10 @@ export class DataSimulatorEngine {
         const textCase = (propertiesStore as any).textCase
         const display = propertiesStore.getMetricByOptions(obj)?.metricSymbol === SECOND_TIME_ZONE_SYMBOL ? metricResultFor(obj).displayValue : applyTextCase(metricResultFor(obj).displayValue, textCase)
 
+        if (obj.fontRenderType === 'bitmap') {
+          if (String(obj.text ?? '') !== String(display)) void updateData(obj, { metricValue: String(display) }, { persist: false }).then(() => reflowAllLayoutGroups()).catch(console.error)
+          return
+        }
         if (String(obj.text ?? '') !== String(display)) {
           obj.set?.('text', String(display))
           obj.metricValue = String(display)

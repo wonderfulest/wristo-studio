@@ -1,6 +1,5 @@
-import { packageBitmapChars } from '@/engine/services/packageAssetRegistry'
 import { nanoid } from 'nanoid'
-import { FabricText, TextProps, Group, FabricImage } from 'fabric'
+import { FabricText, TextProps } from 'fabric'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useLayerStore } from '@/stores/layerStore'
 import { useElementDataStore } from '@/stores/elementDataStore'
@@ -8,7 +7,6 @@ import { getSimulatedNow } from '@/engine/simulator/simulatedClock'
 import { formatTimePreview, normalizeHourFormatRenderConfig } from './formatTimePreview'
 import type { TimeElementConfig } from '@/types/elements'
 import type { FabricElement } from '@/types/element'
-import { listBitmapFontChars, type BitmapFontAssetRelationVO } from '@/api/wristo/bitmapFont'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
 import { assertElementRenderCurrent } from '@/engine/runtime/elementRenderContext'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
@@ -18,21 +16,9 @@ import { getPersistedTextFont, getSavedFontFamily } from '@/utils/systemFontElem
 
 type TimeElementOptions = TimeElementConfig & TextProps
 
-// 缓存 bitmap 字体的字符绑定，避免频繁请求
-const bitmapCharCache = new Map<number, BitmapFontAssetRelationVO[]>()
-// 控制同一时间元素的 bitmap Group 重建不并发执行，避免出现多个 time 元素
+export { invalidateBitmapTimeFontCache } from '@/elements/common/bitmapGlyphGroup'
+import { createBitmapGlyphGroup as createBitmapTimeGroup } from '@/elements/common/bitmapGlyphGroup'
 const bitmapUpdateLocks = new Set<string>()
-
-export function invalidateBitmapTimeFontCache(fontId?: number | null) {
-  if (fontId == null) {
-    bitmapCharCache.clear()
-    return
-  }
-  bitmapCharCache.delete(Number(fontId))
-  // Explicit library selection/edit replaces the embedded snapshot too. Both
-  // rendering and project export prefer package glyphs over the library cache.
-  packageBitmapChars.delete(Number(fontId))
-}
 
 // 确保同一 id 的 bitmap 时间元素在画布上只存在一个 Group
 function removeBitmapTimeGroupsById(canvas: any, id: string) {
@@ -45,100 +31,6 @@ function removeBitmapTimeGroupsById(canvas: any, id: string) {
     if (String(o.id) !== String(id)) return
     canvas.remove(o)
   })
-}
-
-async function getBitmapChars(fontId: number): Promise<BitmapFontAssetRelationVO[]> {
-  if (packageBitmapChars.has(fontId)) return packageBitmapChars.get(fontId)!
-  if (bitmapCharCache.has(fontId)) return bitmapCharCache.get(fontId) as BitmapFontAssetRelationVO[]
-  const res = await listBitmapFontChars(fontId)
-  const list = (res.data || []) as BitmapFontAssetRelationVO[]
-  bitmapCharCache.set(fontId, list)
-  return list
-}
-
-// 根据时间字符串和 bitmapFontId 创建由图片组成的 Group
-async function createBitmapTimeGroup(params: {
-  id: string
-  text: string
-  options: TimeElementConfig
-}): Promise<FabricElement> {
-  const { id, text, options } = params
-  const fontId = options.bitmapFontId
-  if (!fontId) throw new Error('bitmapFontId is required for bitmap time group')
-
-  const chars = await getBitmapChars(fontId)
-  const charMap = new Map<string, BitmapFontAssetRelationVO>()
-  chars.forEach((r) => {
-    if (typeof r.charValue === 'string') {
-      charMap.set(r.charValue, r)
-    }
-  })
-
-  const images: any[] = []
-  const fontSize = Number(options.fontSize) || 24
-  const spacing = options.fontGap != null ? Number(options.fontGap) : 4
-  let currentX = 0
-
-  for (const ch of text) {
-    const rel = charMap.get(ch)
-    const imgMeta = rel?.image
-    const url = imgMeta?.previewUrl || imgMeta?.url
-    if (!url) {
-      currentX += spacing
-      continue
-    }
-
-    // 为每个字符创建全新的 FabricImage，避免复用导致 Group 内部状态冲突
-    const img: any = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
-    if (!img || !img.width || !img.height) {
-      currentX += spacing
-      continue
-    }
-
-    const scale = fontSize / img.height
-    const scaledWidth = img.width * scale
-
-    img.set({
-      eleType: 'time-char',
-      left: currentX,
-      top: 0,
-      originX: 'left',
-      originY: 'top',
-      scaleX: scale,
-      scaleY: scale,
-      selectable: false,
-      evented: false,
-      charValue: ch,
-      bitmapFontId: fontId,
-    })
-
-    images.push(img)
-    currentX += scaledWidth + spacing
-  }
-
-  const group = new Group(images as any) as any
-  // 避免 fabric 的类型/内部 set 兼容问题，这里直接挂载自定义字段
-  group.id = id
-  group.eleType = 'time'
-  group.left = options.left
-  group.top = options.top
-  group.originX = options.originX as any
-  group.originY = options.originY as any
-  group.formatter = options.formatter
-  group.fontRenderType = 'bitmap'
-  group.bitmapFontId = fontId
-  group.isBitmapTimeGroup = true
-  group.text = text
-  group.fontSize = fontSize
-  group.fill = options.fill ?? '#ffffff'
-  ;(group as any).fontGap = spacing
-  group.hasControls = true
-  group.evented = true
-  group.selectable = true
-  group.lockScalingX = false
-  group.lockScalingY = false
-
-  return group as FabricElement
 }
 
 function formatTime(date: Date, formatter: number) {

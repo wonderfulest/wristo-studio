@@ -705,6 +705,26 @@ describe('bitmap font colon validation on save', () => {
     vi.clearAllMocks()
   })
 
+  it('round trips shared data bitmap fonts without requiring missing digits or colon', async () => {
+    setActivePinia(createPinia())
+    const { packageBitmapChars } = await import('./packageAssetRegistry')
+    packageBitmapChars.set(156, [glyph('1'), glyph('.')] as any)
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const design = { designId: 'data-bitmap', name: 'Bitmap data', elements: [
+      { id: 'steps', eleType: 'data', fontRenderType: 'bitmap', bitmapFontId: 156, fontSize: 32, fontGap: -2, dataProperty: 'steps' },
+      { id: 'heart', eleType: 'data', fontRenderType: 'bitmap', bitmapFontId: 156, fontSize: 32, dataProperty: 'heart' },
+    ] }
+    const blob = await buildWrtDesignPackage(design as any)
+    const archive = await JSZip.loadAsync(await blob.arrayBuffer())
+    const manifest = JSON.parse(await archive.file('manifest.json')!.async('string'))
+    const imported = await readWrtDesignPackage(new File([await blob.arrayBuffer()], 'data.wrt'))
+    expect(imported.config.elements).toMatchObject(design.elements)
+    const reexport = await JSZip.loadAsync(await (await buildWrtDesignPackage(imported.config as any)).arrayBuffer())
+    expect(JSON.parse(await reexport.file('manifest.json')!.async('string')).bitmapFonts).toHaveLength(1)
+    expect(manifest.bitmapFonts).toHaveLength(1)
+    expect(manifest.bitmapFonts[0].chars.map((char: any) => char.charValue)).toEqual(['1', '.'])
+  })
+
   it('ignores an unused bitmap font retained after switching to TrueType', async () => {
     setActivePinia(createPinia())
     const { listBitmapFontChars } = await import('@/api/wristo/bitmapFont')
