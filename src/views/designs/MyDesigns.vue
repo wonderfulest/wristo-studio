@@ -140,6 +140,11 @@
           :active-text="t('project.showCreator')"
           :aria-label="t('project.showCreator')"
         />
+        <el-switch
+          v-model="showPaymentMethod"
+          :active-text="t('project.showPaymentMethod')"
+          :aria-label="t('project.showPaymentMethod')"
+        />
       </div>
       </div>
       <div class="filter-preferences">
@@ -202,6 +207,7 @@
           :can-delete-design="isAdminUser"
           @delete="deleteDesign"
           :show-creator="showCreator"
+          :show-payment-method="showPaymentMethod"
           :loading-states="emptyLoadingStates"
           :current-user-id="userStore.userInfo?.id ?? null"
           :status-text="getStatusText(design.designStatus)"
@@ -498,6 +504,7 @@ const initialDesignScope = guidedList ? 'mine' : getPreferredDesignScope(isAdmin
 
 // 添加作者显示控制
 const showCreator = ref(isAdminUser.value && initialDesignScope === 'all')  // 管理员默认查看全部设计时展示作者
+const showPaymentMethod = ref(true)
 const designScope = ref<DesignScope>(initialDesignScope)
 const designScopeOptions = computed(() => [
   { label: t('project.scopeMine'), value: 'mine' },
@@ -879,6 +886,8 @@ onUnmounted(() => {
 }
 .display-options {
   display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
   align-items: center;
   margin-left: auto;
   min-height: 36px;

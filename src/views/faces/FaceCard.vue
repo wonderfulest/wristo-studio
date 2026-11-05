@@ -6,6 +6,13 @@
             </RouterLink>
             <div class="face-info">
               <RouterLink :to="faceDetailsUrl(face.appId)" class="face-name">{{ face.name }}</RouterLink>
+              <div v-if="showCreator && face.creator" class="face-creator">
+                <span class="creator-avatar">
+                  <img v-if="face.creator.avatar" :src="face.creator.avatar" alt="" loading="lazy" @error="hideBrokenImage" />
+                  <span v-else>{{ face.creator.name.slice(0, 1).toUpperCase() }}</span>
+                </span>
+                <span class="creator-name">{{ face.creator.name }}</span>
+              </div>
               <div class="face-meta">
                 <span>{{ face.price === 0 ? 'Free' : face.price == null ? 'View pricing' : `$${face.price.toFixed(2)}` }}</span>
                 <span v-if="face.download != null">↓ {{ formatDownloadCount(face.download, userStore.isAdminUser || userStore.isMerchantUser) }}</span>
@@ -27,7 +34,7 @@ import '@fontsource/yantramanav/latin-400.css'
 import '@fontsource/yantramanav/latin-700.css'
 import { formatDownloadCount } from './downloadCount'
 import { faceDetailsUrl, faceImage, type PublishedFace } from './catalog'
-const props = defineProps<{ face: PublishedFace }>()
+const props = defineProps<{ face: PublishedFace; showCreator?: boolean }>()
 const userStore = useUserStore()
 const canEditFace = computed(() => !!props.face.designId && (userStore.isAdminUser || (userStore.userInfo?.id != null && props.face.ownerId != null && String(userStore.userInfo.id) === String(props.face.ownerId))))
 function hideBrokenImage(event: Event) { (event.target as HTMLImageElement).style.visibility = 'hidden' }
@@ -72,6 +79,10 @@ a:focus-visible { outline: 2px solid #608928; outline-offset: 3px; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.face-creator { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted, #707771); font-size: 12px; }
+.creator-avatar { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: var(--studio-primary-soft, #e0f3ef); }
+.creator-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.creator-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .face-meta {
   display: flex;
   align-items: center;

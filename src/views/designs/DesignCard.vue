@@ -488,7 +488,7 @@ interface LoadingStates {
   previewPrg: Set<number>
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   design: T
   summaryOnly?: boolean
   management?: boolean
@@ -498,6 +498,7 @@ const props = defineProps<{
   isAdminUser: boolean
   canDeleteDesign: boolean
   showCreator: boolean
+  showPaymentMethod?: boolean
   loadingStates: LoadingStates
   currentUserId: number | null
   statusText: string
@@ -513,7 +514,7 @@ const props = defineProps<{
   renameSaving?: boolean
   allowRename?: boolean
   nowMs?: number
-}>()
+}>(), { showPaymentMethod: true })
 
 const emit = defineEmits<{
   (e: 'delete', design: T): void
@@ -558,6 +559,7 @@ const statusColor = computed(() => props.statusColor)
 const lastGoLiveText = computed(() => props.lastGoLiveText)
 const creatorName = computed(() => props.creatorName)
 const paymentMethodLabel = computed(() => {
+  if (props.showPaymentMethod === false) return ''
   const payment = props.design.product?.payment
   switch (payment?.paymentMethod) {
     case 'free': return t('payment.free')

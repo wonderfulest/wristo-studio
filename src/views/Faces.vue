@@ -79,6 +79,11 @@
                 <option value="createdAt:desc">Newest</option>
               </select>
             </label>
+            <label class="creator-toggle">
+              Show creators
+              <input v-model="showCreators" type="checkbox" role="switch" aria-label="Show creators" />
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
           </div>
         </div>
         <div v-if="error" class="empty" role="alert">
@@ -98,7 +103,7 @@
           <button @click="clearFilters">Browse all faces</button>
         </div>
         <div v-else class="face-grid">
-          <FaceCard v-for="face in faces" :key="face.appId" :face="face" />
+          <FaceCard v-for="face in faces" :key="face.appId" :face="face" :show-creator="showCreators" />
         </div>
         <div v-if="!loading && !error && pages > 1" class="pagination">
           <button :disabled="page === 1" @click="changePage(-1)">← Previous</button>
@@ -148,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import '@fontsource/roboto-condensed/latin-700.css'
 import '@fontsource/yantramanav/latin-400.css'
@@ -156,6 +161,12 @@ import '@fontsource/yantramanav/latin-700.css'
 import GlobalHeader from '@/components/layout/GlobalHeader.vue'
 import FaceCard from './faces/FaceCard.vue'
 import { faceDetailsUrl, faceImage, loadFaces, loadFaceDevices, type PublishedFace, type FaceDevice } from './faces/catalog'
+const creatorPreferenceKey = 'wristo-faces-show-creators'
+const showCreators = ref(false)
+try { showCreators.value = localStorage.getItem(creatorPreferenceKey) === 'true' } catch { /* Storage may be unavailable. */ }
+watch(showCreators, value => {
+  try { localStorage.setItem(creatorPreferenceKey, String(value)) } catch { /* Keep the toggle usable without storage. */ }
+})
 const faces = ref<PublishedFace[]>([])
 const featured = ref<PublishedFace[]>([])
 const devices = ref<FaceDevice[]>([])
@@ -444,6 +455,13 @@ h2 {
   color: var(--muted);
   font-size: 13px;
 }
+.creator-toggle { position: relative; cursor: pointer; }
+.creator-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track { width: 32px; height: 18px; border-radius: 12px; background: var(--muted); position: relative; flex-shrink: 0; }
+.switch-track::after { content: ''; position: absolute; width: 14px; height: 14px; top: 2px; left: 2px; border-radius: 50%; background: white; transition: transform .15s; }
+.creator-toggle input:checked + .switch-track { background: #087d78; }
+.creator-toggle input:checked + .switch-track::after { transform: translateX(14px); }
+.creator-toggle input:focus-visible + .switch-track { outline: 2px solid #087d78; outline-offset: 3px; }
 .filters select {
   font: inherit;
   font-weight: 600;

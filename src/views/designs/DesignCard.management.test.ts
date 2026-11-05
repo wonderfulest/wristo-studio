@@ -87,6 +87,22 @@ describe('design card management placement', () => {
     wrapper.unmount()
   })
 
+  it('toggles payment badges independently of the creator', async () => {
+    const { wrapper } = await setup({ summaryOnly: true, viewMode: 'grid', design: {
+      ...design, product: { ...design.product, payment: { paymentMethod: 'wpay' } },
+    } })
+    expect(wrapper.get('.payment-badge').text()).toBe('WPay')
+    await wrapper.setProps({ showPaymentMethod: false })
+    expect(wrapper.find('.payment-badge').exists()).toBe(false)
+    expect(wrapper.get('.creator-badge').text()).toBe('Creator')
+    await wrapper.setProps({ showCreator: false })
+    expect(wrapper.find('.card-badges').exists()).toBe(false)
+    await wrapper.setProps({ showPaymentMethod: true })
+    expect(wrapper.get('.payment-badge').text()).toBe('WPay')
+    expect(wrapper.find('.creator-badge').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('shows the last package versions independently while new tasks are queued', async () => {
     const { wrapper } = await setup({ summaryOnly: true, design: {
       ...design, product: { ...design.product,

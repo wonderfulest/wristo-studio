@@ -1,4 +1,5 @@
 export interface PublishedFace {
+  creator?: { name: string; avatar?: string | null } | null
   ownerId?: number
   appId: number
   designId?: string | null
