@@ -22,6 +22,7 @@ import ExpressionEditor from '@/components/expression/ExpressionEditor.vue'
 import TokenPreviewControls from '@/components/expression/TokenPreviewControls.vue'
 import { getReferencedTokenDefinitions } from '@/components/expression/tokenPickerModel'
 import { createVisibilityExpression } from '@/components/expression/visibilityExpressionModel'
+import { TimeFormatConstants } from '@/config/elements/options/timeFormats'
 import { useLayerStore } from '@/stores/layerStore'
 import { useI18n } from '@/i18n'
 
@@ -32,18 +33,26 @@ const props = defineProps<{
 const { t } = useI18n()
 const layerStore = useLayerStore()
 const enabled = ref(false)
-const source = ref('(ds3) <= 20')
+const defaultSource = computed(() =>
+  props.config?.eleType === 'time' && 'formatter' in props.config && props.config.formatter === TimeFormatConstants.COLON
+    ? '(tm9) % 2 == 0'
+    : '(ds3) <= 20',
+)
+const source = ref(defaultSource.value)
 const fallback = ref(true)
 const error = ref('')
 const referencedTokens = computed(() => getReferencedTokenDefinitions(source.value))
 
 watch(
-  () => (props.config as any)?.visibility,
-  (visibility) => {
+  () => [props.config?.id, props.config?.visibility, defaultSource.value] as const,
+  ([, visibility]) => {
     enabled.value = visibility?.mode === 'expression'
     if (visibility?.mode === 'expression') {
-      source.value = visibility.expression?.source || '(ds3) <= 20'
+      source.value = visibility.expression?.source || defaultSource.value
       fallback.value = Boolean(visibility.fallback)
+    } else {
+      source.value = defaultSource.value
+      fallback.value = true
     }
     error.value = ''
   },
