@@ -1,9 +1,11 @@
 import { FabricObject } from 'fabric'
+import { VISUAL_THEME_COLOR_BINDINGS } from '@/engine/services/visualThemeElementFields'
 
 // 默认需要参与序列化的自定义字段
 const DEFAULT_FABRIC_PROPS = [
   'id',
   'eleType',
+  'layerName',
   'metricSymbol',
   'metricGroup',
   'guideline',
@@ -17,6 +19,8 @@ const DEFAULT_FABRIC_PROPS = [
   'visibility',
   'interaction',
   'displayStates',
+  // Bindings must survive the initial snapshot, before interactive discovery runs.
+  ...VISUAL_THEME_COLOR_BINDINGS.map(([, propertyField]) => propertyField),
   // 滚动字段
   'scrollAreaWidth',
   'scrollAreaLeft',
@@ -34,6 +38,14 @@ const DEFAULT_FABRIC_PROPS = [
   'wristoImageId',
   'imageUrl',
   'imageId',
+  'assetId',
+  'assetType',
+  // Undo/redo and clone restore Fabric objects directly, without the dynamic-image decoder.
+  'items',
+  'selectionMode',
+  'progress',
+  'frameWidth',
+  'frameHeight',
 ] as const
 
 const registry = new Set<string>(DEFAULT_FABRIC_PROPS)
