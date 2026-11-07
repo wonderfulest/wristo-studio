@@ -861,12 +861,6 @@ const handleConfirm = async (publish = true) => {
     return
   }
   
-  if (publish && !form.garminStoreUrl.trim()) {
-    emit('section-change', 'distribution')
-    messageStore.error(t('goLive.enterGarminStoreUrlRequired'))
-    return
-  }
-  
   if (!currentDesign.value.product.appId) {
     messageStore.error(t('goLive.productAppIdRequired'))
     return

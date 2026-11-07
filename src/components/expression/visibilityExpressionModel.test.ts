@@ -16,6 +16,7 @@ describe('createVisibilityExpression', () => {
     for (let second = 0; second < 60; second++) {
       expect(resolveElementVisibility({
         visibility,
+        displayStates: { active: true, ambient: true },
         previewMode: 'active',
         tokenValues: { 'time.second': second },
       })).toBe(second % 2 === 0)

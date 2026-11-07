@@ -446,10 +446,10 @@ describe('PublishForm product tag behavior', () => {
     expect(mocks.publish).not.toHaveBeenCalled()
   })
 
-  it('saves without a store URL but blocks publishing', async () => {
+  it.each(['', '   '])('saves and publishes without a store URL (%s)', async (url) => {
     const wrapper = mountDialog()
     const value = structuredClone(design)
-    value.product.garminStoreUrl = ''
+    value.product.garminStoreUrl = url
     ;(wrapper.vm as unknown as { show: (value: Design) => void }).show(value)
     await flushPromises()
     await wrapper.get('[data-testid="save-details"]').trigger('click')
@@ -458,7 +458,7 @@ describe('PublishForm product tag behavior', () => {
     expect(mocks.publish).not.toHaveBeenCalled()
     await wrapper.get('[data-testid="publish-details"]').trigger('click')
     await flushPromises()
-    expect(mocks.publish).not.toHaveBeenCalled()
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ garminStoreUrl: '' }))
   })
 
   it('allows publishing without tags', async () => {
