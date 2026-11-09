@@ -1,3 +1,5 @@
+import { packageAmoledIcons } from '@/engine/services/packageAssetRegistry'
+import { normalizeIconUnicode } from '@/types/amoledIcons'
 import { supportsElementInteraction, INTERACTION_DEFAULTS, captureInteraction } from '@/engine/interaction/elementInteraction'
 import * as elementManager from '@/engine/managers/elementManager'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -211,13 +213,14 @@ export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: str
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
     if (eleType === 'icon') {
       const iconUnicode = resolveMetricIconUnicode(canonicalMetric)
+      const artwork = packageAmoledIcons.get(normalizeIconUnicode(iconUnicode))
       return {
         dataProperty: propertyKey,
         goalProperty: null,
         metricSymbol: canonicalMetric.metricSymbol,
         text: resolveIconGlyphText(iconUnicode),
-        iconDisplayType: 'mip',
-        amoledImageUrl: null,
+        iconDisplayType: artwork ? 'amoled' : 'mip',
+        amoledImageUrl: artwork?.url ?? null,
         amoledIconUnicode: iconUnicode || null
       }
     }

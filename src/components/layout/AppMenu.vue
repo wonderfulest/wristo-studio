@@ -5,6 +5,7 @@
         :on-screenshot="handleScreenshot"
         :on-record-gif="handleRecordGif"
         :on-verify="() => verificationDrawerVisible = true"
+        :is-admin="userStore.isAdminUser"
         :on-export-wrt="handleExportWrt"
         :exporting-wrt="exportingWrt"
         :on-import-wrt="handleImportWrt"
@@ -62,7 +63,7 @@
   >
     <VisualThemeSettings />
   </el-drawer>
-  <input ref="wrtFileInput" type="file" accept=".wrt,application/vnd.wristo.design-package+zip" hidden @change="handleWrtFileChange" />
+  <input v-if="userStore.isAdminUser" ref="wrtFileInput" type="file" accept=".wrt,application/vnd.wristo.design-package+zip" hidden @change="handleWrtFileChange" />
 
   <el-dialog
     v-model="screenshotDialogVisible"
@@ -195,6 +196,7 @@ import { getDataSimulatorEngine } from '@/engine/simulator/dataSimulatorEngine'
 import { getSimulatedClockSnapshot, setSimulatedSpeed, setSimulatedTime } from '@/engine/simulator/simulatedClock'
 import { encodeGifFrames, type GifFrameSource } from '@/utils/gifRecorder'
 import { buildWrtDesignPackage } from '@/engine/services/designAssetBundleService'
+import { useUserStore } from '@/stores/user'
 import { encryptWrtFile } from '@/engine/services/wrtCryptoService'
 import type { FabricElement } from '@/types/element'
 import type { LayerElement } from '@/types/layer'
@@ -222,6 +224,7 @@ import { applyLastEditedElementStyle } from '@/engine/services/elementStyleMemor
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const baseStore = useBaseStore()
 const messageStore = useMessageStore()
 const fontStore = useFontStore()
@@ -1040,7 +1043,7 @@ const wrtExportStage = ref('editor.wrtExportPreparing')
 const wrtExportProgress = ref(0)
 
 const handleExportWrt = async () => {
-  if (exportingWrt.value) return
+  if (!userStore.isAdminUser || exportingWrt.value) return
   exportingWrt.value = true
   wrtExportProgress.value = 0
   wrtExportStage.value = 'editor.wrtExportPreparing'
@@ -1079,10 +1082,11 @@ const handleExportWrt = async () => {
 }
 
 const handleImportWrt = () => {
-  wrtFileInput.value?.click()
+  if (userStore.isAdminUser) wrtFileInput.value?.click()
 }
 
 const handleWrtFileChange = (event: Event) => {
+  if (!userStore.isAdminUser) return
   const input = event.target as HTMLInputElement
   try {
     const file = input.files?.[0]

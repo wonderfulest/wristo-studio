@@ -486,6 +486,10 @@ const { creating: entryCreating, error: entryError, open: openEditorEntry } = us
   },
 })
 
+const importUserWrt = (file: File) => {
+  if (userStore.isAdminUser) return importWrtDesign(file)
+}
+
 const importAiWatchface = async (file: File, automatic: boolean, projectId: string, revision: number): Promise<boolean> => {
   if (baseStore.designLoading || loadedDesignId !== projectId || (automatic && draftRevision !== revision)) return false
   const hasContent = elementDataStore.elements.some((element: any) => !['global', 'background'].includes(element.eleType))
@@ -568,7 +572,7 @@ onMounted(() => {
   })
 
   changelogDialog.value?.checkShowChangelog()
-  emitter.on('import-wrt-design', importWrtDesign as any)
+  emitter.on('import-wrt-design', importUserWrt as any)
 
   void refreshEditorAiCapabilities()
   void openEditorEntry()
@@ -604,7 +608,7 @@ onBeforeUnmount(() => {
   saveDirtyDraft()
   stopElementDataSubscription?.()
   stopElementDataSubscription = null
-  emitter.off('import-wrt-design', importWrtDesign as any)
+  emitter.off('import-wrt-design', importUserWrt as any)
   emitter.off('design-save-started', handleDesignSaveStarted as any)
   emitter.off('design-saved', handleDesignSaved as any)
   emitter.off('local-design-promoted', handleLocalDesignPromoted as any)

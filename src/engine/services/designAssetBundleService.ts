@@ -11,7 +11,7 @@ import { findInvalidUnicodePaths } from './unicodeValidation'
 import { decryptWrtFileIfNeeded } from './wrtCryptoService'
 import JSZip from 'jszip'
 import { assertSelfContainedSvg } from './selfContainedSvg'
-import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras } from './packageAssetRegistry'
+import { packageFonts, packageFontBuildFiles, packageBitmapChars, packageArchiveExtras, packageAmoledIcons } from './packageAssetRegistry'
 import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
 import { canonicalFontSlug } from '@/features/bitmap-font-maker/fontSlug'
 import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
@@ -210,6 +210,7 @@ const restoredDesignAssetUrls = new Set<string>()
 export const clearRestoredDesignAssetUrls = (): void => {
   restoredDesignAssetUrls.forEach((url) => URL.revokeObjectURL(url))
   restoredDesignAssetUrls.clear()
+  packageAmoledIcons.clear()
   clearJsonProjectFiles()
 }
 
@@ -855,15 +856,12 @@ const addAmoledIconAssetToBundle = async (
   }
 
   if (input.file || input.source) {
-    const format = input.format || getFileFormat(input.file)
+    const blob = input.file || await fetchBlob(input.source!)
+    const format = input.format || (blob.type === 'image/png' ? 'png' : getFileFormat(input.file))
     const path = `assets/icons/amoled/${iconUnicode}.${format}`
     if (!usedPaths.has(path)) {
       usedPaths.add(path)
-      if (input.file) {
-        zip.file(path, await input.file.arrayBuffer())
-      } else if (input.source) {
-        zip.file(path, await (await fetchBlob(input.source)).arrayBuffer())
-      }
+      zip.file(path, await blob.arrayBuffer())
       if (manifest.selfContained && format === 'svg') assertSelfContainedSvg(await zip.file(path)!.async('string'))
       entry.sha256 = await sha256Hex(new Blob([await zip.file(path)!.async('arraybuffer')]))
       entry.path = path
@@ -1059,6 +1057,11 @@ const buildDesignAssetArchive = async (
       })
     }
     assetCompleted()
+  }
+
+  for (const [iconUnicode, asset] of packageAmoledIcons) {
+    if (manifest.icons?.amoled.some(item => item.iconUnicode === iconUnicode)) continue
+    await addAmoledIconAssetToBundle(zip, manifest, usedPaths, { iconUnicode, file: asset.file })
   }
 
   if (options.previewDataUrl) {
@@ -1315,6 +1318,19 @@ export async function restoreDesignAssetBundleFromZip(
       } catch (error) {
         if ((manifest?.version ?? 0) >= 2 && manifest?.format === WRT_FORMAT) throw error
         console.warn('[designAssetBundle] Failed to restore referenced asset', error)
+      }
+    }
+    if (manifest?.format === WRT_FORMAT && manifest.version >= 2) {
+      for (const asset of iconAssets) {
+        const entry = asset.path && zip.file(asset.path)
+        if (!entry || !asset.path) continue
+        const mimeType = getBundleAssetMimeType(asset.path)
+        const file = new File([await entry.async('arraybuffer')], asset.path.split('/').pop()!, { type: mimeType })
+        const ref = `bundle://${asset.path}`
+        const url = restoredAssetUrls.get(ref) || URL.createObjectURL(file)
+        restoredDesignAssetUrls.add(url)
+        restoredAssetUrls.set(ref, url)
+        packageAmoledIcons.set(normalizeIconUnicode(asset.iconUnicode), { url, file })
       }
     }
     const restoreElementAssetUrls = (value: unknown): void => {

@@ -10,7 +10,7 @@
     :z-index="4000"
   >
     <div class="dialog-body">
-      <template v-if="!inheritSource">
+      <template v-if="userStore.isAdminUser && !inheritSource">
         <div class="field-label">{{ t('editor.importWrt') }}</div>
         <input ref="wrtInput" type="file" accept=".wrt" hidden @change="handleWrtSelected" />
         <div class="wrt-selection">
@@ -223,7 +223,7 @@ const handleOk = () => {
     return
   }
   emit('confirm', {
-    wrtFile: props.inheritSource ? undefined : wrtFile.value,
+    wrtFile: userStore.isAdminUser && !props.inheritSource ? wrtFile.value : undefined,
     name: localName.value,
     appLanguage: appLanguage.value,
     originalType: resolvedOriginalType,

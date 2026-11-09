@@ -17,11 +17,11 @@
       <el-icon><CircleCheck /></el-icon>
       <span>Verify design</span>
     </el-menu-item>
-    <el-menu-item index="actions/exportWrt" :disabled="exportingWrt" @click="onExportWrt">
+    <el-menu-item v-if="isAdmin" index="actions/exportWrt" :disabled="exportingWrt" @click="onExportWrt">
       <el-icon><Download /></el-icon>
       <span>{{ t('editor.exportWrt') }}</span>
     </el-menu-item>
-    <el-menu-item index="actions/importWrt" @click="onImportWrt">
+    <el-menu-item v-if="isAdmin" index="actions/importWrt" @click="onImportWrt">
       <el-icon><Upload /></el-icon>
       <span>{{ t('editor.importWrt') }}</span>
     </el-menu-item>
@@ -55,6 +55,7 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  isAdmin: Boolean,
   exportingWrt: Boolean,
   onExportWrt: {
     type: Function,

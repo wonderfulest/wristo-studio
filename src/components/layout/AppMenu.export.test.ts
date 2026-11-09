@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 // Exercise the actual handler without mounting the editor and its canvas dependencies.
 const source = readFileSync(new URL('./AppMenu.vue', import.meta.url), 'utf8')
 const body = source.match(/const handleExportWrt = async \(\) => \{([\s\S]*?)\n\}\n\nconst handleImportWrt/)![1].replace('(percent: number)', '(percent)')
-function setup() {
+function setup(isAdminUser = true) {
   const exportingWrt = ref(false)
   const wrtExportStage = ref('')
   const wrtExportProgress = ref(0)
@@ -19,11 +19,17 @@ function setup() {
   const encrypt = vi.fn().mockResolvedValue(encrypted)
   const download = vi.fn()
   const messages = { error: vi.fn(), success: vi.fn() }
-  const run = new Function('exportingWrt', 'wrtExportProgress', 'wrtExportStage', 'baseStore', 'buildWrtDesignPackage', 'encryptWrtFile', 'downloadBlob', 'messageStore', 'showErrorOnce', 't', `return async () => {${body}}`)(exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, encrypt, download, messages, (_error: unknown, message: string) => messages.error(message), (key: string) => key)
+  const run = new Function('userStore', 'exportingWrt', 'wrtExportProgress', 'wrtExportStage', 'baseStore', 'buildWrtDesignPackage', 'encryptWrtFile', 'downloadBlob', 'messageStore', 'showErrorOnce', 't', `return async () => {${body}}`)({ isAdminUser }, exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, encrypt, download, messages, (_error: unknown, message: string) => messages.error(message), (key: string) => key)
   return { exportingWrt, wrtExportProgress, wrtExportStage, baseStore, build, encrypt, download, messages, run }
 }
 afterEach(() => { vi.restoreAllMocks() })
 describe('WRT export', () => {
+  it('blocks non-admin exports before packaging', async () => {
+    const s = setup(false)
+    await s.run()
+    expect(s.build).not.toHaveBeenCalled()
+    expect(s.download).not.toHaveBeenCalled()
+  })
   it('locks immediately and ignores repeat clicks until packaging finishes', async () => {
     const s = setup()
     let finish!: (file: unknown) => void

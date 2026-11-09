@@ -11,3 +11,6 @@ export const packageArchiveExtras: {
   files: Map<string, Blob>
   preview?: { path: string; sha256: string }
 } = { productImages: [], files: new Map() }
+
+/** Original AMOLED artwork from the active WRT, keyed by catalog icon Unicode. */
+export const packageAmoledIcons = new Map<string, { url: string; file: File }>()

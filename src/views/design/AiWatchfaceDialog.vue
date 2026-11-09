@@ -28,7 +28,7 @@
       <p v-else>You can close this window and return later.</p>
       <div v-if="job.status === 'succeeded'" class="ai-actions">
         <el-button type="primary" :loading="importing" @click="importResult(job, false)">Import into Editor</el-button>
-        <el-button :disabled="importing" @click="download(job)">Download WRT</el-button>
+        <el-button v-if="user.isAdminUser" :disabled="importing" @click="download(job)">Download WRT</el-button>
       </div>
     </div>
     <details v-if="history.length" class="ai-history">
@@ -184,12 +184,13 @@ async function importResult(item: WatchfaceJob, automatic: boolean) {
     if (current !== version || !props.modelValue) return
     const imported = await props.importFile(file, automatic, project, targetRevision)
     if (imported && current === version) emit('update:modelValue', false)
-  } catch { if (current === version) error.value = 'Import did not complete. Your WRT is saved; you can import or download it again for free.' }
+  } catch { if (current === version) error.value = 'Import did not complete. Your design is saved. You can retry for free.' }
   finally { importing.value = false }
 }
 async function download(item: WatchfaceJob) {
+  if (!user.isAdminUser) return
   const current = version
-  try { const file = await aiWatchfaceApi.file(item.id); if (current === version) downloadBlob(file, 'ai-watchface.wrt') }
+  try { const file = await aiWatchfaceApi.file(item.id); if (current === version && user.isAdminUser) downloadBlob(file, 'ai-watchface.wrt') }
   catch { error.value = 'Download failed. Your result remains available; please try again.' }
 }
 watch(() => props.modelValue, visible => {
