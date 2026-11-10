@@ -9,6 +9,13 @@ import type {
 import type { Bundle } from '@/types/api/bundle'
 import type { Product as ProductVo, GenerateDescriptionDto } from '@/types/api/product'
 
+export interface DescriptionGenerationJob {
+  id: string
+  productId: number
+  status: 'running' | 'succeeded' | 'failed'
+  result: { descriptions: Record<string, string>; failedLanguages: string[] } | null
+}
+
 export interface BannerGenerationJob {
   id: string
   productId: number
@@ -93,6 +100,14 @@ export const productsApi = {
    */
   generateDescription(data: GenerateDescriptionDto): Promise<ApiResponse<string>> {
     return instance.post('/dsn/products/generate-description', data, { timeout: 65000 })
+  },
+
+  generateDescriptions(data: { productId: number; languages: string[]; paymentMethod: GenerateDescriptionDto['paymentMethod']; expectedCreditCost: number }): Promise<ApiResponse<DescriptionGenerationJob>> {
+    return instance.post('/dsn/products/generate-descriptions', data)
+  },
+
+  getDescriptionGeneration(productId: number, jobId: string): Promise<ApiResponse<DescriptionGenerationJob>> {
+    return instance.get(`/dsn/products/${productId}/description-generation/${encodeURIComponent(jobId)}`)
   },
 
   updateStoreWeight(appId: number, storeWeight: number): Promise<ApiResponse<ProductVo>> {

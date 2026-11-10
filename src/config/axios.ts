@@ -65,9 +65,9 @@ const instance = axios.create({
   }
 })
 
-const isAiGeneration = (url = '') => /\/(generate-description|generate-banner)$|\/tag-generation$/.test(url)
+const isAiGeneration = (url = '') => /\/(generate-descriptions?|generate-banner)$|\/tag-generation$/.test(url)
 const refreshCredits = (config?: { url?: string; method?: string }) => {
-  if ((config?.method === 'post' && isAiGeneration(config.url)) || config?.url?.includes('/banner-generation/')) {
+  if ((config?.method === 'post' && isAiGeneration(config.url)) || config?.url?.includes('/banner-generation/') || config?.url?.includes('/description-generation/')) {
     window.dispatchEvent(new Event('studio-credits-changed'))
   }
 }

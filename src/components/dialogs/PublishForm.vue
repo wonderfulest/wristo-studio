@@ -1295,15 +1295,32 @@ const generateAllDescriptions = async () => {
   let completed = 0
   try {
     const aiCount = jobs.filter(job => job.usesAi).length
-    if (aiCount && !await confirmTextGenerationCost('DESCRIPTION', isCurrent, aiCount)) return
+    if (aiCount && !await confirmTextGenerationCost('DESCRIPTION', isCurrent)) return
+    if (!isCurrent()) return
+    let response = await productsApi.generateDescriptions({
+      productId: pid,
+      languages: jobs.map(job => job.language),
+      paymentMethod,
+      expectedCreditCost: aiCount ? aiPrices.value!.DESCRIPTION : 0,
+    })
+    if (!isCurrent()) return
+    const deadline = Date.now() + 7 * 60 * 1000
+    while (response.code === 0 && response.data?.status === 'running') {
+      if (Date.now() > deadline) throw new Error('Description generation timed out')
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      if (!isCurrent()) return
+      response = await productsApi.getDescriptionGeneration(pid, response.data.id)
+      if (!isCurrent()) return
+    }
+    if (response.code !== 0 || response.data?.status !== 'succeeded' || !response.data.result) throw new Error('Invalid descriptions response')
+    const result = response.data.result
     for (const job of jobs) {
       if (!isCurrent()) return
       if (!isUnchanged(job)) continue
       try {
-        const response = await productsApi.generateDescription({ ...buildGenerateDescriptionPayload(uid, pid, job.language), paymentMethod })
-        if (!isUnchanged(job)) continue
-        if (response.code !== 0 || typeof response.data !== 'string') throw new Error('Invalid description response')
-        writeDescription(job.language, response.data)
+        const description = result.descriptions[job.language]
+        if (typeof description !== 'string' || result.failedLanguages.includes(job.language)) throw new Error('Invalid description response')
+        writeDescription(job.language, description)
         if (!readName(job.language).trim()) writeName(job.language, readName('en'))
         if (job.language === 'en') updateProductTags(form.tagIds)
         completed += 1
