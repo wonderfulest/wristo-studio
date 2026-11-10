@@ -656,7 +656,7 @@ const commitLayerName = (layer: LayerElement): void => {
 const getLayerBackgroundColor = (layer: MinimalFabricLike & { dataProperty?: string; goalProperty?: string; locked?: boolean }): Record<string, string> => {
   // locked layers: force gray background
   if (layer.locked) {
-    return { backgroundColor: '#e8ecf2' }
+    return { backgroundColor: 'var(--studio-surface-soft)' }
   }
   const hasTypeMatch = layer.eleType === 'icon' || layer.eleType === 'data' || layer.eleType === 'label' || layer.eleType === 'goalArc' || layer.eleType === 'goalBar'
   const id = layer.element?.dataProperty || layer.element?.goalProperty
@@ -888,18 +888,19 @@ onUnmounted((): void => {
 
 .layer-group-members {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   padding: 0 6px 6px 18px;
 }
 
 .layer-group-member .layer-item {
   min-height: 40px;
-  border-color: rgba(15, 107, 104, 0.24);
-  background: #ffffff;
+  border-color: var(--studio-border);
+  background: var(--studio-surface);
 }
 
 .layer-item:hover {
-  background: #ffffff;
+  background: var(--studio-surface);
   border-color: var(--studio-border-strong);
   box-shadow: var(--studio-shadow-sm);
 }
@@ -939,7 +940,7 @@ onUnmounted((): void => {
   width: 28px;
   height: 28px;
   border-radius: var(--studio-radius-sm);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--studio-surface);
   color: var(--studio-primary);
   font-size: 17px;
   display: flex;
@@ -965,7 +966,7 @@ onUnmounted((): void => {
   border: 1px solid var(--studio-primary);
   border-radius: var(--studio-radius-sm);
   outline: none;
-  background: #ffffff;
+  background: var(--studio-surface);
   color: var(--studio-text);
   font: inherit;
   font-size: 12px;
@@ -1006,19 +1007,19 @@ onUnmounted((): void => {
 
 /* 锁定状态置灰样式 */
 .layer-locked .layer-item {
-  background: #e8ecf2;
-  border-color: #d5dbe5;
+  background: var(--studio-surface-soft);
+  border-color: var(--studio-border);
   filter: grayscale(100%);
 }
 
 .layer-locked .layer-name,
 .layer-locked .layer-icon,
 .layer-locked .layer-btn {
-  color: #7b8494;
+  color: var(--studio-text-muted);
 }
 
 .layer-locked .layer-item:hover {
-  background: #e8ecf2;
+  background: var(--studio-surface-soft);
 }
 
 .layer-locked .layer-btn:hover {
