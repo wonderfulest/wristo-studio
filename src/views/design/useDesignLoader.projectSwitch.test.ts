@@ -1,3 +1,4 @@
+import { getDesignSaveVersion, rememberDesignSaveVersion } from '@/engine/services/designSaveVersion'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 vi.hoisted(() => {
@@ -36,7 +37,7 @@ describe('switching to a different cloud project', () => {
     packageArchiveExtras.files.set('old-preview.png', new Blob(['old']))
     packageArchiveExtras.productImages = [{ imageId: 1 } as any]
     const initial = vi.spyOn(useHistoryStore(), 'saveInitial').mockImplementation(() => {})
-    getDesignByUid.mockResolvedValue({ code: 0, data: { name: 'Untitled', configJson: {} } })
+    getDesignByUid.mockResolvedValue({ code: 0, data: { name: 'Untitled', version: 21, configJson: {} } })
     const onLoaded = vi.fn()
     const loader = useDesignLoader({ canvasRef: { value: null } as any, waitCanvasReady: async () => {}, translate: key => key, redirectToDesigns: vi.fn(), onDesignLoaded: onLoaded })
     await loader.loadDesign('new-project')
@@ -47,5 +48,21 @@ describe('switching to a different cloud project', () => {
     expect(usePropertiesStore().textCase).toBe(defaultTextCase)
     expect(initial).toHaveBeenCalledOnce()
     expect(onLoaded).toHaveBeenCalledWith('new-project')
+    expect(getDesignSaveVersion('new-project')).toBe(21)
   })
+})
+
+it('does not authorize a restored local draft with the freshly fetched server version', async () => {
+  setActivePinia(createPinia())
+  useBaseStore().canvas = { getObjects: () => [], discardActiveObject: vi.fn(), requestRenderAll: vi.fn() } as any
+  vi.spyOn(useHistoryStore(), 'saveInitial').mockImplementation(() => {})
+  rememberDesignSaveVersion('draft-project', 18)
+  getDesignByUid.mockResolvedValue({ code: 0, data: { name: 'Face', version: 21, configJson: {} } })
+  const onLoaded = vi.fn()
+  const loader = useDesignLoader({ canvasRef: { value: null } as any, waitCanvasReady: async () => {},
+    translate: key => key, redirectToDesigns: vi.fn(), onDesignLoaded: onLoaded,
+    resolveLoadedConfig: async () => ({ name: 'Old local draft' } as any) })
+  await loader.loadDesign('draft-project')
+  expect(onLoaded).toHaveBeenCalledWith('draft-project')
+  expect(getDesignSaveVersion('draft-project')).toBeUndefined()
 })

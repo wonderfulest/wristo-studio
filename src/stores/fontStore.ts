@@ -205,7 +205,7 @@ export const useFontStore = defineStore<'fontStore', FontStoreState, {
         if (!normalized.slug) return normalized
         const slug = canonicalFontSlug(normalized.slug)
         const previous = this.serverFonts.get(slug)
-        if (previous?.ttfFile?.url !== normalized.ttfFile?.url) {
+        if (previous?.ttfFile?.url !== normalized.ttfFile?.url || previous?.version !== normalized.version) {
           this.loadedFonts.delete(slug)
           this.loadedFonts.delete(normalized.slug)
           if (typeof document !== 'undefined' && document.fonts?.forEach) {

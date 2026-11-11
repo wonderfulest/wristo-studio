@@ -31,6 +31,7 @@ export interface CreateCopyDesignParams {
  * 更新设计的请求参数
  */
 export interface UpdateDesignParamsV2 {
+  expectedVersion?: number
   uid: string
   name?: string
   description?: string

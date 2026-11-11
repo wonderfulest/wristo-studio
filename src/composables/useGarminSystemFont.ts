@@ -40,8 +40,8 @@ export const resolveCurrentElementPreviewFont = (config: TextFontPreviewConfig, 
     fontFamily: resolvePreviewFontFamily(content, slug),
     fontSize: config.fontSize
   }
-  // Imported designs retain their bitmap previews even when catalog refreshes
-  // return only the newly registered TTF metadata.
+  // Design loading replaces package metadata with the current library font;
+  // only references missing from the library retain embedded previews.
   const font = packageFonts.get(canonicalFontSlug(slug)) || useFontStore().serverFonts.get(canonicalFontSlug(slug))
   const preview = recipeToFabricProps(font?.bitmapRecipe, config.fontSize, config.fill)
   const previewSize = Number(font?.bitmapPreviewSize)

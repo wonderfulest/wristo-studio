@@ -1,3 +1,4 @@
+import { getDesignSaveVersion } from './designSaveVersion'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { SaveWrtProgress } from './saveWrtProject'
 import { listBitmapFontChars } from '@/api/wristo/bitmapFont'
@@ -85,6 +86,14 @@ async function persistValue(value: any): Promise<any> {
 export function clearJsonProjectFiles(): void {
   deferredBuildFiles = []
   deferredFiles = []
+}
+/** Library fonts must not inherit bitmap bytes from the embedded older version. */
+export function discardEmbeddedFontBuildFiles(slug: string): void {
+  const key = canonicalFontSlug(slug)
+  for (const name of packageFontBuildFiles.keys()) {
+    if (canonicalFontSlug(name) === key) packageFontBuildFiles.delete(name)
+  }
+  deferredBuildFiles = deferredBuildFiles.filter(([name]) => canonicalFontSlug(name) !== key)
 }
 export function isJsonProject(config: RuntimeDesignConfig): boolean {
   return config?.studioResources?.version === 1
@@ -204,6 +213,7 @@ async function persistResources(design: unknown, resources: SelectedResources, p
 export async function saveJsonProject(designUid: string, config: RuntimeDesignConfig,
   options: { previewDataUrl?: string | null; onSaveProgress?: (progress: SaveWrtProgress) => void } = {}) {
   if (!designUid) throw new Error('A design ID is required to save a project')
+  const expectedVersion = getDesignSaveVersion(designUid)
   options.onSaveProgress?.({ stage: 'assets' })
   const { studioResources: _previous, ...design } = config
   const resources = await selectResources(design)
@@ -212,7 +222,7 @@ export async function saveJsonProject(designUid: string, config: RuntimeDesignCo
   persisted.studioResources = await snapshotResources(resources)
   const preview = options.previewDataUrl ? await persistValue(options.previewDataUrl) : undefined
   options.onSaveProgress?.({ stage: 'uploading' })
-  const response = await designApi.updateDesign({ uid: designUid, name: config.name, configJson: persisted,
+  const response = await designApi.updateDesign({ uid: designUid, expectedVersion, name: config.name, configJson: persisted,
     ...(preview ? { coverImage: { url: preview, type: 'screenshot', usageType: 'screenshot' } } : {}) } as any)
   if (response.code !== 0 || !response.data) throw new Error(response.msg || 'Failed to save JSON project')
   options.onSaveProgress?.({ stage: 'saved' })

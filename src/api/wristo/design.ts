@@ -1,3 +1,4 @@
+import { getDesignSaveVersion, rememberDesignSaveVersion } from '@/engine/services/designSaveVersion'
 import instance from '@/config/axios'
 import { uploadDesignAssetBundle } from './designAssetUpload'
 import type { 
@@ -167,14 +168,20 @@ export const designApi = {
    * @param data 设计数据
    * @returns 更新结果
    */
-  updateDesign(data: UpdateDesignParamsV2): Promise<ApiResponse<Design>> {
+  async updateDesign(data: UpdateDesignParamsV2): Promise<ApiResponse<Design>> {
     // 清理 name 和 description 中的特殊空白字符
     const cleanedData = {
       ...data,
+      expectedVersion: data.expectedVersion ?? getDesignSaveVersion(data.uid),
       name: normalizeWhitespace(data.name),
       description: normalizeWhitespace(data.description),
     }
-    return instance.post(`/dsn/design/update`, cleanedData)
+    const response: ApiResponse<Design> = await instance.post(`/dsn/design/update`, cleanedData)
+    if (response.code === 0 && response.data && (cleanedData.expectedVersion !== undefined || data.configJson !== undefined)
+      && getDesignSaveVersion(data.uid) === cleanedData.expectedVersion) {
+      rememberDesignSaveVersion(data.uid, response.data.version)
+    }
+    return response
   },
   /**
    * 提交设计

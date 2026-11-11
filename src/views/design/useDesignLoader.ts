@@ -1,4 +1,6 @@
+import { rememberDesignSaveVersion } from '@/engine/services/designSaveVersion'
 import { importPackageFonts } from '@/engine/services/importPackageFonts'
+import { resolveDesignFonts } from '@/engine/services/resolveDesignFonts'
 import { importBitmapFonts } from '@/engine/services/importBitmapFonts'
 import { isLocalProject } from '@/auth/guestProject'
 import { readLocalProject } from '@/engine/services/guestProjectDraft'
@@ -323,6 +325,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
       const loadedIconFontSlug = String((loadConfig as any).currentIconFontSlug || resolveLoadedIconFontSlug(loadConfig.elements)).trim()
       if (loadedIconFontSlug) iconFontStrategyStore.setIconFontSlug(loadedIconFontSlug)
       visualThemeStore.hydrate(config.visualThemes, config.elements as unknown as Array<Record<string, unknown>>)
+      await resolveDesignFonts(loadConfig, () => isCurrentDesignLoad(generation))
+      if (!isCurrentDesignLoad(generation)) return false
       await fontStore.loadFontsForElements(loadConfig.elements as any)
       if (!isCurrentDesignLoad(generation)) return false
     } else {
@@ -626,6 +630,8 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
         if (!isCurrentDesignLoad(generation)) return
         if (!(await prepareProjectCanvas(generation))) return
         if (await applyRuntimeDesignConfig(selectedConfig, generation)) {
+          // A restored local draft did not originate from this server version.
+          rememberDesignSaveVersion(designUid, selectedConfig === projectConfig ? designData.version : undefined)
           options.onDesignLoaded?.(designUid)
         }
       })
