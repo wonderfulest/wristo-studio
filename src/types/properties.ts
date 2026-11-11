@@ -22,6 +22,8 @@ export interface PropertyOption {
 }
 
 export interface PropertyItem {
+  /** Persisted settings position; JSON object key order is not durable. */
+  sortOrder?: number
   type: PropertyType
   title: string
   options?: PropertyOption[]

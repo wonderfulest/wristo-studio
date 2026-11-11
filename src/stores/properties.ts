@@ -8,8 +8,13 @@ import { DATA_NUMBER_FORMAT_AUTO, DEFAULT_MAX_FIELD_LENGTH } from '@/utils/dataN
 import type { DialProgressMode } from '@/types/settings'
 import { useLayoutPreviewStore } from './layoutPreviewStore'
 
+const propertyPosition = (property: PropertyItem): number =>
+  typeof property.sortOrder === 'number' && Number.isSafeInteger(property.sortOrder) && property.sortOrder >= 0
+    ? property.sortOrder
+    : Number.POSITIVE_INFINITY
+
 const withoutLegacyLocalizedTitles = (properties?: PropertiesMap): PropertiesMap => Object.fromEntries(
-  Object.entries(properties || {}).map(([key, value]) => {
+  Object.entries(properties || {}).sort(([, left], [, right]) => propertyPosition(left) - propertyPosition(right)).map(([key, value]) => {
     const { titleCn: _legacyTitleCn, ...property } = value as PropertyItem & { titleCn?: string }
     return [key, property]
   })
@@ -130,13 +135,15 @@ export const usePropertiesStore = defineStore('propertiesStore', {
         || orderedKeys.some((key) => !allowedKeys.has(key))
         || orderedKeys.every((key, index) => key === currentKeys[index])) return false
 
-      // Preserve other groups' slots and property identities; JSON snapshots retain this order.
+      // Preserve other groups' slots and property identities.
       let index = 0
       this.properties = Object.fromEntries(entries.map(([key, property]) => {
         if (property.type !== type) return [key, property]
         const nextKey = orderedKeys[index++]
         return [nextKey, this.properties[nextKey]]
       }))
+      // Persist positions as values: servers may normalize JSON object keys.
+      Object.values(this.properties).forEach((property, position) => { property.sortOrder = position })
       return true
     },
 
@@ -235,7 +242,11 @@ export const usePropertiesStore = defineStore('propertiesStore', {
       const defaultValue =
         propertyData.defaultValue !== undefined ? propertyData.defaultValue : this.properties[propertyData.key]?.value || propertyData.options?.[0]?.value || this.getDefaultValue(propertyData.type)
 
+      const existingPosition = this.properties[propertyData.key]?.sortOrder
+      const positions = Object.values(this.properties).map(propertyPosition).filter(Number.isFinite)
       this.properties[propertyData.key] = {
+        ...(existingPosition !== undefined ? { sortOrder: existingPosition }
+          : positions.length ? { sortOrder: Math.max(...positions) + 1 } : {}),
         type: propertyData.type,
         title: propertyData.title,
         options: propertyData.options,

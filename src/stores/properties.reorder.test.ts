@@ -33,6 +33,20 @@ describe('property group ordering', () => {
     expect(Object.keys(store.allProperties)).toEqual(['data_2', 'color_1', 'data_3', 'data_1'])
   })
 
+  it.each(['loadProperties', 'loadDataPropertyConfig'] as const)('restores explicit order after server key normalization via %s', (load) => {
+    const store = usePropertiesStore()
+    store.reorderProperties('data', ['data_3', 'data_1', 'data_2'])
+    store.addProperty({ key: 'data_3', type: 'data', title: 'Edited', defaultValue: ':BATTERY' })
+    store.addProperty({ key: 'data_4', type: 'data', title: 'New', defaultValue: ':STEPS' })
+    const expected = Object.keys(store.allProperties)
+    const saved = JSON.parse(JSON.stringify(store.allProperties))
+    const normalized = Object.fromEntries(Object.entries(saved).sort(([a], [b]) => a.localeCompare(b)))
+    store.clearProperties()
+    store[load](normalized as any)
+    expect(Object.keys(store.allProperties)).toEqual(expected)
+    expect(store.allProperties.data_3.title).toBe('Edited')
+  })
+
   it.each([
     ['data_1', 'data_2', 'data_3'],
     ['data_1', 'data_2'],

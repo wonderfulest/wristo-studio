@@ -3,6 +3,7 @@
   <router-view></router-view>
   <FirstDesignGuide />
   <CookieConsent />
+  <CustomOrderPrompt />
   <InsufficientCreditsDialog />
   <DesignLimitDialog />
   <WrtImportProgressDialog />
@@ -15,6 +16,7 @@ import WrtImportProgressDialog from '@/components/WrtImportProgressDialog.vue'
 import InsufficientCreditsDialog from '@/components/InsufficientCreditsDialog.vue'
 import DesignLimitDialog from '@/components/DesignLimitDialog.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
+import CustomOrderPrompt from '@/components/CustomOrderPrompt.vue'
 import { useLocaleStore } from '@/stores/locale'
 import { useShareVisit } from '@/composables/useShareVisit'
 import { useThemeStore } from '@/stores/theme'

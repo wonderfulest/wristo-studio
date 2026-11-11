@@ -40,6 +40,7 @@ declare module 'vue' {
     CookieConsent: typeof import('./src/components/CookieConsent.vue')['default']
     CopyGarminDescriptionButton: typeof import('./src/components/common/CopyGarminDescriptionButton.vue')['default']
     CreateDesignDialog: typeof import('./src/components/dialogs/CreateDesignDialog.vue')['default']
+    CustomOrderPrompt: typeof import('./src/components/CustomOrderPrompt.vue')['default']
     DataPropertyDialog: typeof import('./src/components/properties/dialogs/DataPropertyDialog.vue')['default']
     DatePropertyDialog: typeof import('./src/components/properties/dialogs/DatePropertyDialog.vue')['default']
     DefaultTextField: typeof import('./src/components/properties/common/DefaultTextField.vue')['default']
