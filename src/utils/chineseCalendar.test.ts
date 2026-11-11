@@ -12,21 +12,42 @@ import { DateFormatConstants } from '@/config/elements/options/dateFormats'
 const localDate = (year: number, month: number, day: number) => new Date(year, month - 1, day, 12)
 
 describe('Chinese festival or solar-term formatter', () => {
-  it('shows only the name on Gregorian festival, solar-term, and lunar festival dates', () => {
+  it('shows the nearest Gregorian festival or solar term, excluding lunar festivals', () => {
     expect(formatChineseCulturalDate(localDate(2026, 1, 1), 23, 'zh-CN')).toBe('元旦节')
     expect(formatChineseCulturalDate(localDate(2026, 9, 7), 23, 'zh-CN')).toBe('白露')
-    expect(getChineseFestival(localDate(2025, 1, 29))).toBe('春节')
-    expect(formatChineseCulturalDate(localDate(2025, 1, 29), 23, 'zh-CN')).toBe('春节')
+    expect(getChineseFestival(localDate(2025, 1, 29))).toBe('立春')
+    expect(formatChineseCulturalDate(localDate(2025, 1, 29), 23, 'zh-CN')).toBe('立春')
   })
 
-  it('does not project a future event into the today-only formatter', () => {
-    expect(formatChineseCulturalDate(localDate(2026, 9, 6), 23, 'zh-CN')).toBe('')
+  it('projects the next event into the festival formatter', () => {
+    expect(formatChineseCulturalDate(localDate(2026, 9, 6), 23, 'zh-CN')).toBe('白露')
   })
 
   it('preserves Gregorian-festival priority and existing English output', () => {
     // 2020-10-01 is both National Day and Mid-Autumn Festival.
     expect(getChineseFestival(localDate(2020, 10, 1))).toBe('国庆节')
     expect(formatChineseCulturalDate(localDate(2025, 12, 31), 23, 'en-US')).toBe('Dec 31')
+  })
+})
+
+describe('Connect IQ festival parity', () => {
+  it.each([
+    [2026, 5, 11, '小满', '儿童节+21'],
+    [2026, 11, 11, '小雪', '感恩节+15'],
+    [2026, 11, 26, '感恩节', '感恩节'],
+    [2026, 6, 21, '父亲节', '父亲节'],
+    [2026, 5, 10, '母亲节', '母亲节'],
+    [2026, 3, 30, '安全日', '安全日'],
+    [2026, 3, 15, '消费日', '消费日'],
+    [2026, 10, 31, '万圣夜', '万圣夜'],
+    [2026, 12, 25, '圣诞节', '圣诞节'],
+    [2026, 9, 21, '秋分', '国庆节+10'],
+    [2026, 12, 31, '元旦节', '元旦节+1'],
+    [2024, 2, 10, '情人节', '情人节+4'],
+  ])('matches backend on %i-%i-%i', (year, month, day, nearest, next) => {
+    const date = localDate(year as number, month as number, day as number)
+    expect(formatChineseCulturalDate(date, 23)).toBe(nearest)
+    expect(formatChineseCulturalDate(date, 48)).toBe(next)
   })
 })
 
@@ -87,7 +108,7 @@ describe('expanded Chinese date formatters', () => {
   })
 
   it('formats festivals, solar terms, and four pillars independently', () => {
-    expect(formatChineseCulturalDate(date, DateFormatConstants.FESTIVAL_OR_SOLAR_TERM)).toBe('春节')
+    expect(formatChineseCulturalDate(date, DateFormatConstants.FESTIVAL_OR_SOLAR_TERM)).toBe('立春')
     expect(formatChineseCulturalDate(localDate(2026, 8, 8), DateFormatConstants.NEXT_SOLAR_TERM)).toBe('处暑+15')
   })
 })

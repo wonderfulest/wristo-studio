@@ -37,6 +37,7 @@
     "gifenc": "^1.0.3",
     "jszip": "^3.10.1",
     "lodash-es": "^4.17.21",
+    "lunar-javascript": "1.7.7",
     "md-editor-v3": "5.8.5",
     "mitt": "^3.0.1",
     "moment": "^2.30.1",

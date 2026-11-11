@@ -215,7 +215,7 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
     expect(chineseDate.assetFontFamily).toBe('new-chinese-bitmap-font')
   })
 
-  it('shows the design sample when festival or solar term today is empty', () => {
+  it('shows the nearest calendar event instead of the design sample', () => {
     const festivalDate: any = {
       id: 'festival-or-solar-term',
       eleType: 'date',
@@ -235,7 +235,7 @@ describe('DataSimulatorEngine bitmap time refresh', () => {
 
     new DataSimulatorEngine().updateCanvas()
 
-    expect(festivalDate.text).toBe('国庆+10')
+    expect(festivalDate.text).toBe('大暑')
   })
 
   it('keeps a custom date token template when the simulator refreshes the canvas', () => {

@@ -1,3 +1,5 @@
+import { Solar } from 'lunar-javascript'
+
 const LUNAR_INFO = [
   0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
   0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977,
@@ -34,11 +36,6 @@ const WEEKDAYS_SHORT = ['周日', '周一', '周二', '周三', '周四', '周�
 const WEEKDAYS_LONG = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const EN_ZODIACS = ['Rat', 'Ox', 'Tiger', 'Rabbit', 'Dragon', 'Snake', 'Horse', 'Goat', 'Monkey', 'Rooster', 'Dog', 'Pig']
 const EN_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const SOLAR_FESTIVALS: Record<string, string> = {
-  '01-01': '元旦节',
-  '05-01': '劳动节',
-  '10-01': '国庆节',
-}
 const EN_SOLAR_FESTIVALS: Record<string, string> = {
   '01-01': 'New Year',
   '05-01': 'Labor Day',
@@ -73,11 +70,6 @@ const EN_LUNAR_FESTIVALS: Record<string, string> = {
 const YI = ['祭祀', '出行', '交易', '嫁娶', '入宅', '动土', '安床', '开市']
 const JI = ['动土', '远行', '嫁娶', '开市', '安葬', '入宅', '交易', '安床']
 
-const SOLAR_TERM_NAMES = [
-  '小寒', '大寒', '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
-  '立夏', '小满', '芒种', '夏至', '小暑', '大暑', '立秋', '处暑',
-  '白露', '秋分', '寒露', '霜降', '立冬', '小雪', '大雪', '冬至',
-]
 const SOLAR_TERM_MINUTES = [
   0, 21208, 42467, 63836, 85337, 107014, 128867, 150921,
   173149, 195551, 218072, 240693, 263343, 285989, 308563, 331033,
@@ -257,28 +249,23 @@ function apparentSolarLongitude(timestamp: number): number {
   return ((longitude % 360) + 360) % 360
 }
 
-function sameLocalDay(date: Date, other: Date): boolean {
-  return date.getFullYear() === other.getFullYear()
-    && date.getMonth() === other.getMonth()
-    && date.getDate() === other.getDate()
+// Keep these rules aligned with ChineseCalendarTokenService (lunar 1.7.7).
+function calendarSolar(date: Date) {
+  return Solar.fromYmdHms(date.getFullYear(), date.getMonth() + 1, date.getDate(),
+    date.getHours(), date.getMinutes(), date.getSeconds())
 }
 
 export function getSolarTerm(date: Date): string {
-  const year = date.getFullYear()
-  for (let index = 0; index < SOLAR_TERM_NAMES.length; index += 1) {
-    if (sameLocalDay(date, solarTermMoment(year, index))) return SOLAR_TERM_NAMES[index]
-  }
-  return ''
+  return calendarSolar(date).getLunar().getJieQi() || ''
 }
 
 export function getNextSolarTerm(date: Date): UpcomingChineseFestival | null {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12)
-  for (let days = 0; days <= 366; days += 1) {
-    const candidate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + days, 12)
-    const name = getSolarTerm(candidate)
-    if (name) return { name, days }
-  }
-  return null
+  const solar = calendarSolar(date)
+  const lunar = solar.getLunar()
+  const today = lunar.getJieQi()
+  if (today) return { name: today, days: 0 }
+  const next = lunar.getNextJieQi()
+  return next ? { name: next.getName(), days: Math.max(next.getSolar().subtract(solar), 0) } : null
 }
 
 function ganzhiByIndex(index: number): string {
@@ -333,16 +320,29 @@ export function getFourPillars(date: Date): FourPillars {
   }
 }
 
-export function getChineseFestival(date: Date) {
-  const solarKey = key(date.getMonth() + 1, date.getDate())
-  if (SOLAR_FESTIVALS[solarKey]) return SOLAR_FESTIVALS[solarKey]
-  const lunar = getChineseLunarDate(date)
-  const lunarFestival = lunar ? (LUNAR_FESTIVALS[key(lunar.month, lunar.day)] || '') : ''
-  return lunarFestival || getSolarTerm(date)
+export function getChineseFestival(date: Date): string {
+  const festival = getNextFestival(date)
+  const term = getNextSolarTerm(date)
+  if (!festival) return term?.name || ''
+  if (!term) return festival.name
+  return festival.days <= term.days ? festival.name : term.name
 }
 
+// Java and JavaScript editions have different festival catalogs even at 1.7.7.
+// Match SolarUtil.FESTIVAL / WEEK_FESTIVAL in the backend's cn.6tail:lunar.
+const BACKEND_GREGORIAN_FESTIVALS = new Set([
+  '元旦节', '情人节', '妇女节', '植树节', '消费者权益日', '愚人节',
+  '劳动节', '青年节', '儿童节', '建党节', '建军节', '教师节', '国庆节',
+  '万圣节前夜', '万圣节', '平安夜', '圣诞节', '全国中小学生安全教育日',
+  '母亲节', '父亲节', '感恩节',
+])
+
 export function getSolarFestival(date: Date): string {
-  return SOLAR_FESTIVALS[key(date.getMonth() + 1, date.getDate())] || ''
+  const name = calendarSolar(date).getFestivals().find(name => BACKEND_GREGORIAN_FESTIVALS.has(name)) || ''
+  if (name === '消费者权益日') return '消费日'
+  if (name === '全国中小学生安全教育日') return '安全日'
+  if (name === '万圣节前夜') return '万圣夜'
+  return name
 }
 
 export function getLunarFestival(date: Date): string {
@@ -461,7 +461,7 @@ export function formatChineseCulturalDate(date: Date, formatter: number, locale:
     case 48: {
       const event = getNextFestival(date)
       if (!event) return ''
-      const name = event.name.replace(/节$/, '')
+      const name = event.name
       return event.days === 0 ? name : `${name}+${event.days}`
     }
     case 50: {
