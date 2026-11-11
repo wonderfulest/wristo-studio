@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { getSimulatedDataByTokenCode, setDataSimulatorScenario } from './dataSimulator'
 
 describe('compact token simulation', () => {
+  it('previews native weather tokens and preserves missing values', () => {
+    const codes = ['w09', 'w11', 'w11.1', 'w13', 'w14', 'w15', 'w16', 'w17']
+    for (const code of codes) expect(getSimulatedDataByTokenCode(code)?.display).toBeTruthy()
+    expect(getSimulatedDataByTokenCode('w13')).toMatchObject({ display: '40', numeric: 40, unit: '%' })
+    expect(getSimulatedDataByTokenCode('w15')).toMatchObject({ display: '1013', numeric: 101325, unit: 'hPa' })
+    for (const code of ['w13', 'w14', 'w15', 'w17']) {
+      expect(getSimulatedDataByTokenCode(`${code}u`)?.display).toBe(getSimulatedDataByTokenCode(code)?.unit)
+    }
+    setDataSimulatorScenario('missing-data')
+    try {
+      for (const code of codes) expect(getSimulatedDataByTokenCode(code)).toMatchObject({ display: '--', numeric: null })
+    } finally { setDataSimulatorScenario('default') }
+  })
+
   it('resolves recovery hours and units, preserving missing data', () => {
     expect(getSimulatedDataByTokenCode('ds332')).toMatchObject({ display: '24', numeric: 24, unit: 'h' })
     expect(getSimulatedDataByTokenCode('ds332u')?.display).toBe('h')

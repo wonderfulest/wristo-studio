@@ -34,7 +34,7 @@ function scenarioData(key: string): SimulatedData | null {
       ? { display: '12', numeric: 12, unit: '%', label: 'BAT' }
       : { display: '1.2', numeric: 1.2, unit: 'd', label: 'BAT DAYS' }
   }
-  if (activeScenario === 'missing-data' && ['recoveryTime', 'heart', 'hr', 'weather', 'wthr', 'temperature', 'temp', 'weatherDescription', 'weatherDesc'].includes(key)) {
+  if (activeScenario === 'missing-data' && ['clouds', 'dewPoint', 'weatherPressure', 'uvIndex', 'visibility', 'windDirectionText', 'windDeg', 'humidity', 'recoveryTime', 'heart', 'hr', 'weather', 'wthr', 'temperature', 'temp', 'weatherDescription', 'weatherDesc'].includes(key)) {
     return { display: '--', numeric: null, unit: '', label: 'UNAVAILABLE' }
   }
   if (activeScenario === 'long-text' && ['quote', 'qt', 'location', 'loc', 'weatherDescription', 'weatherDesc'].includes(key)) {
@@ -301,7 +301,13 @@ export function getSimulatedDataByName(name: string, now: Date = new Date()): Si
     // 云量
     case 'clouds':
     case 'cld':
-      return { display: 'scattered', unit: '', label: 'CLOUDS' }
+      return { display: '40', numeric: 40, unit: '%', label: 'CLOUDS' }
+
+    case 'dewPoint': return { display: '12', numeric: 12, unit: '°C', label: 'DEW' }
+    case 'weatherPressure': return { display: '1013', numeric: 101325, unit: 'hPa', label: 'PRESS' }
+    case 'uvIndex': return { display: '4.2', numeric: 4.2, unit: '', label: 'UV' }
+    case 'visibility': return { display: '10000', numeric: 10000, unit: 'm', label: 'VIS' }
+    case 'windDirectionText': return { display: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.floor((simState.windDeg + 22.5) / 45) % 8], unit: '', label: 'WIND' }
 
     // AQI
     case 'aqi':
@@ -450,6 +456,12 @@ const COMPACT_TOKEN_SIMULATION_KEYS: Readonly<Record<string, string>> = {
   w09: 'humidity',
   w10: 'temperature',
   w11: 'windDeg',
+  'w13': 'clouds',
+  'w14': 'dewPoint',
+  'w15': 'weatherPressure',
+  'w16': 'uvIndex',
+  'w17': 'visibility',
+  'w11.1': 'windDirectionText',
   w12: 'windSpeed',
 }
 

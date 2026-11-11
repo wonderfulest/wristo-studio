@@ -487,7 +487,7 @@ const BASE_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = 
     description: 'Current weather normalized to the Wristo weather code.',
     descriptionCn: '当前天气归一化后的 Wristo 精简天气代码。',
     updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
-    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    requirement: 'Toybox.Weather current conditions and synced Garmin weather data',
   }),
   weather('conditionText', 'w02', 'Condition Text', '天气状况', 'Partly Cloudy', 'string'),
   weather('feelsLikeTemperature', 'w03', 'Feels Like Temperature', '体感温度', 28, 'number', '°C'),
@@ -499,16 +499,16 @@ const BASE_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = 
     id: 'weather.current.precipitationLevel', code: 'w08.1', label: 'Precipitation Level', labelCn: '降水概率阶段',
     category: 'weather', exampleValue: 1, enumValues: PRECIPITATION_LEVEL_VALUES, source: 'weather',
     updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
-    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    requirement: 'Toybox.Weather current conditions and synced Garmin weather data',
     description: 'Precipitation stage: 0 below 30%; 1 from 30% to below 70%; 2 at or above 70%.',
     descriptionCn: '降水概率阶段：原值低于 30% 返回 0；30%（含）至 70%（不含）返回 1；70% 及以上返回 2。',
   }),
-  weather('humidity', 'w09', 'Humidity', '湿度', 63, 'number', '%'),
+  weather('humidity', 'w09', 'Relative Humidity', '相对湿度', 63, 'number', '%'),
   token({
     id: 'weather.current.humidityLevel', code: 'w09.1', label: 'Humidity Level', labelCn: '湿度阶段',
     category: 'weather', exampleValue: 2, enumValues: HUMIDITY_LEVEL_VALUES, source: 'weather',
     updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
-    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    requirement: 'Toybox.Weather current conditions and synced Garmin weather data',
     description: 'Humidity stage: 0 below 40%; 1 from 40% through 60%; 2 above 60%.',
     descriptionCn: '湿度阶段：原值低于 40% 返回 0；40% 至 60%（含边界）返回 1；高于 60% 返回 2。',
   }),
@@ -517,12 +517,18 @@ const BASE_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = 
     id: 'weather.current.temperatureLevel', code: 'w10.1', label: 'Temperature Level', labelCn: '温度阶段',
     category: 'weather', exampleValue: 2, enumValues: TEMPERATURE_LEVEL_VALUES, source: 'weather',
     updateFrequency: 'network', providerKey: 'currentWeather', nullable: true,
-    requirement: 'Toybox.Weather current conditions or synced Wristo weather data',
+    requirement: 'Toybox.Weather current conditions and synced Garmin weather data',
     description: 'Celsius temperature stage: 0 below 10°C; 1 from 10°C to below 18°C; 2 from 18°C through 25°C; 3 above 25°C.',
     descriptionCn: '摄氏温度阶段：原值低于 10°C 返回 0；10°C（含）至 18°C（不含）返回 1；18°C（含）至 25°C（含）返回 2；高于 25°C 返回 3。',
   }),
   weather('windBearing', 'w11', 'Wind Bearing', '风向角度', 135, 'number', '°'),
+  weather('windDirectionText', 'w11.1', 'Wind Direction', '风向简写', 'SE', 'string'),
   weather('windSpeed', 'w12', 'Wind Speed', '风速', 4.2, 'number', 'm/s'),
+  weather('cloudCover', 'w13', 'Cloud Cover', '云量', 40, 'number', '%'),
+  weather('dewPoint', 'w14', 'Dew Point', '露点', 12, 'number', '°C'),
+  weather('pressure', 'w15', 'Weather Pressure', '天气气压', 101325, 'number', 'Pa'),
+  weather('uvIndex', 'w16', 'UV Index', '紫外线指数', 4.2, 'number'),
+  weather('visibility', 'w17', 'Visibility', '能见度', 10000, 'number', 'm'),
   astronomy({
     id: 'astronomy.moonAge', code: 'as3', label: 'Moon Age', labelCn: '月龄',
     exampleValue: 14, enumValues: MOON_AGE_VALUES,
@@ -600,7 +606,7 @@ const BASE_EXPRESSION_TOKEN_DEFINITIONS: readonly ExpressionTokenDefinition[] = 
 
 // Canonical logic units can differ from provider display units (e.g. Pa/hPa).
 export const TOKEN_DISPLAY_UNIT_EXAMPLES: Readonly<Record<string, string>> = {
-  ai4: 'CAL', 'ai4.1': 'CAL', ds11: 'hPa', 'as2.6': 'deg', 'as2.7': 'deg', w11: 'deg',
+  ai4: 'CAL', 'ai4.1': 'CAL', ds11: 'hPa', w15: 'hPa', 'as2.6': 'deg', 'as2.7': 'deg', w11: 'deg',
 }
 
 // Unit tokens describe the displayed value, including device units and scaled
