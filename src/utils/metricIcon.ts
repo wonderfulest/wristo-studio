@@ -24,6 +24,10 @@ export const resolveMetricIconUnicode = (
 
   for (const value of [metric?.iconUnicode, metric?.icon, ...fallbacks]) {
     const iconUnicode = normalizeIconUnicode(value)
+    // Older catalogs used the WEEK variant, absent from some icon fonts.
+    // Match the running glyph already used by the weekly-distance runtime.
+    if (String(metric?.metricSymbol ?? '').trim() === ':GOAL_TYPE_WEEKLY_RUN_DISTANCE'
+      && iconUnicode === '004a') return '0046'
     if (iconUnicode) return iconUnicode
   }
   return ''

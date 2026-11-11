@@ -9,11 +9,12 @@ describe('DynamicImageGroupCopyDialog', () => {
     expect(source).toContain('pageNum: projectPage.value')
     expect(source).toContain('name: projectSearch.value.trim() || undefined')
     expect(source).toContain('designApi.getDesignPage')
+    expect(source).toContain("dynamicImageKind: props.kind ?? 'all'")
   })
 
   it('loads source design details and emits the selected complete group', () => {
     expect(source).toContain('designApi.getDesignByUid')
-    expect(source).toContain('await loadCopyableDynamicImageGroups(response.data.configJson, response.data.assetBundleUrl)')
+    expect(source).toContain('await loadCopyableDynamicImageGroups(response.data.configJson, response.data.assetBundleUrl, props.kind)')
     expect(source).toContain("emit('copy', selectedGroup.value.items)")
   })
 })

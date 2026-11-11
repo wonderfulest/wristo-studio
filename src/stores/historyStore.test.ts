@@ -220,6 +220,24 @@ describe('history saveState result', () => {
     await history.undo(); expect(namedBase.watchFaceName).toBe('Before')
     await history.redo(); expect(namedBase.watchFaceName).toBe('童年阳光')
   })
+  it('undoes and redoes property reordering without changing the canvas', async () => {
+    const history = useHistoryStore()
+    history.attachCanvas({ ...createCanvas(), loadFromJSON: async () => undefined } as any, baseStore as any)
+    const properties = usePropertiesStore()
+    properties.loadProperties({
+      data_1: { type: 'data', title: 'First', value: ':STEPS' },
+      color_1: { type: 'color', title: 'Color', value: '0xFFFFFF' },
+      data_2: { type: 'data', title: 'Second', value: ':HR' },
+    })
+    history.saveInitial()
+    properties.reorderProperties('data', ['data_2', 'data_1'])
+    expect(history.saveState('properties:reorder-properties')).toBe(true)
+    await history.undo()
+    expect(Object.keys(properties.allProperties)).toEqual(['data_1', 'color_1', 'data_2'])
+    await history.redo()
+    expect(Object.keys(properties.allProperties)).toEqual(['data_2', 'color_1', 'data_1'])
+  })
+
   it('restores second timezone settings through undo and redo', async () => {
     const history = useHistoryStore()
     history.attachCanvas({ ...createCanvas(), loadFromJSON: async () => undefined } as any, baseStore as any)

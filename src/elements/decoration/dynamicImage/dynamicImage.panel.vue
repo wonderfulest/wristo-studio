@@ -75,7 +75,7 @@
         <el-button type="primary" @click="saveDraft">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
-    <DynamicImageGroupCopyDialog v-model="copyDialogVisible" @copy="handleCopyGroup" />
+    <DynamicImageGroupCopyDialog v-model="copyDialogVisible" :kind="quickImportKind" @copy="handleCopyGroup" />
     <DynamicImageQuickImportDialog
       v-model="quickImportVisible"
       :allowed-kinds="allowedQuickImportKinds"

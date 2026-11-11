@@ -8,6 +8,23 @@ import {
 } from './dynamicImage.copyModel'
 
 describe('dynamic image group copying', () => {
+  it('filters by referenced token while retaining the complete group including fallback rules', () => {
+    const config = { elements: [
+      { eleType: 'dynamicImage', id: 'weather', items: [
+        { expression: { ast: { type: 'binary', left: { type: 'token', code: 'w01' }, right: { type: 'literal', value: 1 } } } },
+        { expression: { ast: { type: 'literal', value: true } } },
+      ] },
+      { eleType: 'dynamicImage', id: 'weekday', items: [{ expression: { ast: { type: 'token', code: 'tm5' } } }] },
+      { eleType: 'dynamicImage', id: 'empty', items: [] },
+      { eleType: 'text', id: 'unrelated', items: [{ expression: { ast: { type: 'token', code: 'w01' } } }] },
+    ] }
+    expect(extractDynamicImageGroups(config, 'weather').map(group => group.id)).toEqual(['weather'])
+    expect(extractDynamicImageGroups(config, 'weather')[0].items).toHaveLength(2)
+    expect(extractDynamicImageGroups(JSON.stringify(config), 'weekday').map(group => group.id)).toEqual(['weekday'])
+    expect(extractDynamicImageGroups(config, 'all')).toHaveLength(2)
+    expect(extractDynamicImageGroups(null, 'weather')).toEqual([])
+  })
+
   it('extracts only non-empty dynamic image groups and gives unnamed groups stable labels', () => {
     const groups = extractDynamicImageGroups({
       elements: [

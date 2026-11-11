@@ -3,6 +3,16 @@ import { getBundleAssetMimeType } from '@/engine/services/bundleAssetMime'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'
 import { toRaw } from 'vue'
 
+export type DynamicImageCopyKind = 'all' | 'weekday' | 'weather'
+
+const containsToken = (node: unknown, code: string): boolean => {
+  if (!node || typeof node !== 'object') return false
+  if ('type' in node && node.type === 'token') return 'code' in node && node.code === code
+  return Object.values(node).some(value => Array.isArray(value)
+    ? value.some(child => containsToken(child, code))
+    : typeof value === 'object' && containsToken(value, code))
+}
+
 export interface CopyableDynamicImageGroup {
   id: string
   label: string
@@ -21,7 +31,7 @@ const parseDesignConfig = (config: unknown): Record<string, unknown> | null => {
   return config && typeof config === 'object' ? config as Record<string, unknown> : null
 }
 
-export const extractDynamicImageGroups = (config: unknown): CopyableDynamicImageGroup[] => {
+export const extractDynamicImageGroups = (config: unknown, kind: DynamicImageCopyKind = 'all'): CopyableDynamicImageGroup[] => {
   const parsed = parseDesignConfig(config)
   const elements = Array.isArray(parsed?.elements) ? parsed.elements : []
   let dynamicGroupIndex = 0
@@ -31,6 +41,7 @@ export const extractDynamicImageGroups = (config: unknown): CopyableDynamicImage
     const element = candidate as Record<string, unknown>
     if (element.eleType !== 'dynamicImage') return []
     if (!Array.isArray(element.items) || element.items.length === 0) return []
+    if (kind !== 'all' && !element.items.some(item => containsToken(item?.expression?.ast, kind === 'weather' ? 'w01' : 'tm5'))) return []
     dynamicGroupIndex += 1
 
     const layerName = typeof element.layerName === 'string' ? element.layerName.trim() : ''
@@ -60,6 +71,7 @@ export const appendCopiedDynamicImageItems = (
 export const loadCopyableDynamicImageGroups = async (
   config: unknown,
   assetBundleUrl?: string | null,
+  kind: DynamicImageCopyKind = 'all',
 ): Promise<CopyableDynamicImageGroup[]> => {
   let zip: JSZip | undefined
   let manifest: { design?: { path?: string }; studio?: { configPath?: string; assetRefs?: Array<{ path: string; sourceRef?: string; sourceUrl?: string; mimeType?: string }> } } | undefined
@@ -82,7 +94,7 @@ export const loadCopyableDynamicImageGroups = async (
       config = JSON.parse(await configFile.async('string'))
     }
   }
-  const groups = structuredClone(extractDynamicImageGroups(config))
+  const groups = structuredClone(extractDynamicImageGroups(config, kind))
   const images = new Map<string, string>()
   for (const group of groups) for (const item of group.items) {
     const reference = item.imageUrl

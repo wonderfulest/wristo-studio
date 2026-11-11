@@ -74,6 +74,23 @@ describe('icon bitmap font rendering', () => {
     expect(icon.dataProperty).toBeUndefined()
   })
 
+  it('uses the running glyph for a weekly goal with a legacy catalog icon', async () => {
+    useDataCatalogStore().snapshot = { dataTypeOptions: [
+      { category: 'goal', valueCode: 110, metricSymbol: ':GOAL_TYPE_WEEKLY_RUN_DISTANCE', iconUnicode: '004a' },
+    ] } as any
+    usePropertiesStore().loadProperties({
+      goal_run: { type: 'goal', title: 'Weekly Run', value: 110, options: [{ label: 'Weekly Run', value: 110 }] },
+    } as any)
+    const icon: any = await createIcon({
+      id: 'run-icon', eleType: 'icon', fontFamily: 'wonderful', fontSize: 22,
+      goalProperty: 'goal_run', iconDisplayType: 'mip',
+    } as any)
+    expect(icon.text).toBe('F')
+    expect(icon.fontFamily).toBe('wonderful')
+    await updateIcon(icon, { fontSize: 30 })
+    expect(icon.text).toBe('F')
+  })
+
   it('renders imported icon glyphs with the selected TTF when bitmap assets are missing', async () => {
     const icon: any = await createIcon({
       id: 'precipitation-icon', eleType: 'icon', left: 10, top: 20,

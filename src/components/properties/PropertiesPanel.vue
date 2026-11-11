@@ -128,56 +128,74 @@
                     <em>{{ group.items.length }}</em>
                   </div>
 
-                  <div class="property-list">
-                    <article
-                      v-for="item in group.items"
-                      :key="item.key"
-                      class="property-row"
-                      :class="{ 'property-row-bindable': canBindProperty(item.prop.type) }"
-                      @click="canBindProperty(item.prop.type) && bindProperty(item.key, item.prop.type)"
-                    >
-                      <div class="property-type-mark">
-                        <el-icon>
-                          <component :is="group.icon" />
-                        </el-icon>
-                      </div>
-                      <div class="property-value">
-                        <div class="property-title-line">
-                          <el-input
-                            v-if="editingTitleKey === item.key"
-                            :ref="setTitleEditorRef"
-                            v-model="editingTitleValue"
-                            class="property-title-editor"
-                            maxlength="50"
-                            @click.stop
-                            @dblclick.stop
-                            @keyup.enter="saveTitleEditing(item.key)"
-                            @keyup.esc="cancelTitleEditing"
-                            @blur="saveTitleEditing(item.key)"
-                          />
-                          <strong
-                            v-else
-                            :title="item.prop.title"
-                            @click.stop
-                            @dblclick.stop="startTitleEditing(item.key, item.prop.title)"
-                          >{{ item.prop.title }}</strong>
-                          <code>{{ item.key }}</code>
+                  <draggable
+                    :model-value="group.items"
+                    item-key="key"
+                    class="property-list"
+                    handle=".property-drag-handle"
+                    :animation="180"
+                    ghost-class="property-row-ghost"
+                    @update:model-value="reorderPropertyGroup(group.type, $event)"
+                  >
+                    <template #item="{ element: item }">
+                      <article
+                        class="property-row"
+                        :class="{ 'property-row-bindable': canBindProperty(item.prop.type) }"
+                        @click="canBindProperty(item.prop.type) && bindProperty(item.key, item.prop.type)"
+                      >
+                        <button
+                          type="button"
+                          class="property-drag-handle"
+                          :aria-label="t('property.dragToReorder')"
+                          :title="t('property.dragToReorder')"
+                          @click.stop
+                          @keydown.up.prevent.stop="movePropertyByKeyboard(group, item.key, -1)"
+                          @keydown.down.prevent.stop="movePropertyByKeyboard(group, item.key, 1)"
+                        >
+                          <el-icon><Rank /></el-icon>
+                        </button>
+                        <div class="property-type-mark">
+                          <el-icon>
+                            <component :is="group.icon" />
+                          </el-icon>
                         </div>
-                        <div class="property-preview">
-                          <template v-if="item.prop.type === 'date' || item.prop.type === 'complication'">
-                            <el-select
-                              :model-value="item.prop.value"
-                              class="date-format-select"
+                        <div class="property-value">
+                          <div class="property-title-line">
+                            <el-input
+                              v-if="editingTitleKey === item.key"
+                              :ref="setTitleEditorRef"
+                              v-model="editingTitleValue"
+                              class="property-title-editor"
+                              maxlength="50"
                               @click.stop
-                              @change="updateDatePropertyValue(item.key, $event)"
-                            >
-                              <el-option
-                                v-for="option in item.prop.options"
-                                :key="option.value"
-                                :label="getDateFormatOptionLabel(option)"
-                                :value="option.value"
-                              />
-                            </el-select>
+                              @dblclick.stop
+                              @keyup.enter="saveTitleEditing(item.key)"
+                              @keyup.esc="cancelTitleEditing"
+                              @blur="saveTitleEditing(item.key)"
+                            />
+                            <strong
+                              v-else
+                              :title="item.prop.title"
+                              @click.stop
+                              @dblclick.stop="startTitleEditing(item.key, item.prop.title)"
+                            >{{ item.prop.title }}</strong>
+                            <code>{{ item.key }}</code>
+                          </div>
+                          <div class="property-preview">
+                            <template v-if="item.prop.type === 'date' || item.prop.type === 'complication'">
+                              <el-select
+                                :model-value="item.prop.value"
+                                class="date-format-select"
+                                @click.stop
+                                @change="updateDatePropertyValue(item.key, $event)"
+                              >
+                                <el-option
+                                  v-for="option in item.prop.options"
+                                  :key="option.value"
+                                  :label="getDateFormatOptionLabel(option)"
+                                  :value="option.value"
+                                />
+                              </el-select>
                           </template>
                           <template v-else-if="item.prop.type === 'color'">
                             <span
@@ -234,7 +252,8 @@
                         </el-tooltip>
                       </div>
                     </article>
-                  </div>
+                    </template>
+                  </draggable>
                 </section>
               </div>
             </section>
@@ -283,6 +302,7 @@
 import { SECOND_TIME_ZONE_CITIES, normalizeSecondTimeZone } from '@/utils/secondTimeZone'
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import {
+  Rank,
   Document,
   Histogram,
   Brush,
@@ -294,6 +314,7 @@ import {
   Calendar
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import draggable from 'vuedraggable'
 import ColorPropertyDialog from '@/components/properties/dialogs/ColorPropertyDialog.vue'
 import GoalPropertyDialog from '@/components/properties/dialogs/GoalPropertyDialog.vue'
 import DataPropertyDialog from '@/components/properties/dialogs/DataPropertyDialog.vue'
@@ -450,6 +471,22 @@ const groupedProperties = computed(() =>
 
 const commitHistory = (reason) => {
   historyStore.saveState(`properties:${reason}`)
+}
+
+const reorderPropertyGroup = (type, items) => {
+  if (propertiesStore.reorderProperties(type, items.map((item) => item.key))) {
+    commitHistory('reorder-properties')
+  }
+}
+
+const movePropertyByKeyboard = (group, key, direction) => {
+  const items = [...group.items]
+  const index = items.findIndex((item) => item.key === key)
+  const target = index + direction
+  if (index < 0 || target < 0 || target >= items.length) return
+  const [item] = items.splice(index, 1)
+  items.splice(target, 0, item)
+  reorderPropertyGroup(group.type, items)
 }
 
 const setTitleEditorRef = (instance) => {
@@ -1152,7 +1189,7 @@ defineExpose({
 
 .property-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  grid-template-columns: 20px 36px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 68px;
@@ -1161,6 +1198,36 @@ defineExpose({
   border-radius: 8px;
   background: var(--el-fill-color-blank);
   transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.property-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: grab;
+  touch-action: none;
+}
+
+.property-drag-handle:hover,
+.property-drag-handle:focus-visible {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
+.property-drag-handle:active {
+  cursor: grabbing;
+}
+
+.property-row-ghost {
+  opacity: 0.4;
+  border-color: var(--el-color-primary);
 }
 
 .property-row:hover {
@@ -1400,7 +1467,7 @@ defineExpose({
   }
 
   .property-row {
-    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-columns: 20px 32px minmax(0, 1fr);
   }
 
   .property-type-mark {

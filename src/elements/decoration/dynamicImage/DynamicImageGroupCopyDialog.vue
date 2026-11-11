@@ -92,7 +92,7 @@ import type { Design, DesignPageParams } from '@/types/api/design'
 import type { DynamicImageItem } from '@/types/elements/dynamicImage'
 import { loadCopyableDynamicImageGroups, type CopyableDynamicImageGroup } from './dynamicImage.copyModel'
 
-const props = defineProps<{ modelValue: boolean }>()
+const props = defineProps<{ modelValue: boolean; kind?: 'all' | 'weekday' | 'weather' }>()
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   copy: [items: DynamicImageItem[]]
@@ -119,6 +119,7 @@ const loadProjects = async () => {
   try {
     const params: DesignPageParams = {
       pageNum: projectPage.value,
+      dynamicImageKind: props.kind ?? 'all',
       pageSize: projectPageSize,
       orderBy: 'updatedAt:desc',
       scope: userStore.isAdminUser ? 'all' : 'mine',
@@ -155,7 +156,7 @@ const selectProject = async (project: Design) => {
     const deviceId = (userStore.userInfo as any)?.device?.deviceId
     const response = await designApi.getDesignByUid(project.designUid, deviceId ? { device: deviceId } : {})
     if (response.code !== 0 || !response.data) throw new Error(response.msg)
-    sourceGroups.value = await loadCopyableDynamicImageGroups(response.data.configJson, response.data.assetBundleUrl)
+    sourceGroups.value = await loadCopyableDynamicImageGroups(response.data.configJson, response.data.assetBundleUrl, props.kind)
   } catch (error) {
     showErrorOnce(error, error instanceof Error && error.message ? error.message : t('dynamicImage.loadGroupsFailed'))
   } finally {

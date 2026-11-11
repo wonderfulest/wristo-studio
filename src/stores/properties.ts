@@ -121,6 +121,25 @@ export const usePropertiesStore = defineStore('propertiesStore', {
   },
 
   actions: {
+    reorderProperties(type: PropertyType, orderedKeys: string[]): boolean {
+      const entries = Object.entries(this.allProperties)
+      const currentKeys = entries.filter(([, property]) => property.type === type).map(([key]) => key)
+      const allowedKeys = new Set(currentKeys)
+      if (orderedKeys.length !== currentKeys.length
+        || new Set(orderedKeys).size !== currentKeys.length
+        || orderedKeys.some((key) => !allowedKeys.has(key))
+        || orderedKeys.every((key, index) => key === currentKeys[index])) return false
+
+      // Preserve other groups' slots and property identities; JSON snapshots retain this order.
+      let index = 0
+      this.properties = Object.fromEntries(entries.map(([key, property]) => {
+        if (property.type !== type) return [key, property]
+        const nextKey = orderedKeys[index++]
+        return [nextKey, this.properties[nextKey]]
+      }))
+      return true
+    },
+
     setColorThemeMode(key: string, mode: ThemeMode) {
       const property = this.properties[key]
       if (!property || property.type !== 'color') return
