@@ -572,9 +572,14 @@ const cancelBuild = async (design: DesignListItem, type: 'prg' | 'iq') => {
   }
 }
 
+const canDownloadOwnDesign = (design: DesignListItem) => isAdminUser.value || (
+  userStore.userInfo?.id != null && design.user?.id != null
+  && String(userStore.userInfo.id) === String(design.user.id)
+)
+
 // 下载安装包
 const downloadPackage = async (design: DesignListItem) => {
-  if (design.canInstall !== true && !membershipGate.requireExport()) return
+  if (!canDownloadOwnDesign(design) && design.canInstall !== true && !membershipGate.requireExport()) return
   const url = design.product?.release?.packageUrl
   if (url) {
     await downloadPackageFile(url, design.product?.name || design.name, 'iq', design.product?.id)
@@ -590,12 +595,12 @@ const currentDevicePrg = (item: DesignListItem) => {
 
 // 运行 PRG：只使用当前选择设备的发行文件
 const runPrg = async (design: DesignListItem) => {
-  if (userStore.isStudioConsumer) {
+  if (!canDownloadOwnDesign(design) && userStore.isStudioConsumer) {
     try {
       const response = await designUnlocksApi.status(design.designUid)
       if (!response.data?.canInstall) { await router.push(`/design-unlocks/${encodeURIComponent(design.designUid)}`); return }
     } catch (error) { showErrorOnce(error, 'Unable to check design access'); return }
-  } else if (design.canInstall !== true && !membershipGate.requireExport()) return
+  } else if (!canDownloadOwnDesign(design) && design.canInstall !== true && !membershipGate.requireExport()) return
   const release = currentDevicePrg(design)
   const url = release?.prgUrl
   if (url) {

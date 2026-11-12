@@ -21,7 +21,7 @@
       "destination": "/guides/install-garmin-watch-face/index.html"
     },
     {
-      "source": "/:app(auth|faces|tokens|moon|prg-installer|create-watch-face|wiki|academy|data-catalog-unavailable|design|designs|fonts|number-font-library|icon-library|weather-font-library|icon-assets|FAQ|devices|tickets|meter|profile|design-unlocks|design-slots|credits|pricing|packaging-logs)/:path*",
+      "source": "/:app(auth|faces|token-editor|moon|prg-installer|create-watch-face|wiki|academy|data-catalog-unavailable|design|designs|fonts|number-font-library|icon-library|weather-font-library|icon-assets|FAQ|devices|tickets|meter|profile|design-unlocks|design-slots|credits|pricing|packaging-logs)/:path*",
       "destination": "/app.html"
     }
   ],
@@ -42,6 +42,13 @@
           "value": "Content-Type"
         }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/tokens",
+      "destination": "https://wristo.io/tokens",
+      "permanent": true
     }
   ]
 }

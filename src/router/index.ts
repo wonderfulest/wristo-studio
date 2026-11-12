@@ -97,12 +97,22 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/tokens',
+    name: 'Tokens',
+    component: { render: () => null },
+    beforeEnter: to => {
+      window.location.replace('https://wristo.io/tokens' + to.fullPath.slice('/tokens'.length))
+      return false
+    },
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/token-editor',
     component: Layout,
     meta: { requiresAuth: false },
     children: [
       {
         path: '',
-        name: 'Tokens',
+        name: 'TokenEditor',
         component: () => import('@/views/Tokens.vue'),
         meta: { requiresAuth: false },
       },

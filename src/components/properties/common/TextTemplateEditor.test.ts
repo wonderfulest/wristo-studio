@@ -9,8 +9,8 @@ vi.mock('@/stores/designStore', () => ({
 }))
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    resolve: (route: { query?: Record<string, string> }) => ({
-      href: `/tokens?${new URLSearchParams(route.query).toString()}`
+    resolve: (route: { name?: string; query?: Record<string, string> }) => ({
+      href: `/${route.name === 'TokenEditor' ? 'token-editor' : 'tokens'}?${new URLSearchParams(route.query).toString()}`
     })
   })
 }))
@@ -58,6 +58,7 @@ describe('TextTemplateEditor token page handoff', () => {
     expect(window.open).toHaveBeenCalledOnce()
     const [url, target, features] = vi.mocked(window.open).mock.calls[0]
     const sessionId = new URL(String(url), 'https://studio.wristo.io').searchParams.get('session')
+    expect(new URL(String(url), 'https://studio.wristo.io').pathname).toBe('/token-editor')
     expect(target).toBe('_blank')
     expect(features).toBe('noopener')
     expect(new URL(String(url), 'https://studio.wristo.io').searchParams.get('tab')).toBe('editor')

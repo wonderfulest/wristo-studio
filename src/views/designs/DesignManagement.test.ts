@@ -227,11 +227,30 @@ describe('application management', () => {
     expect(mocks.download).toHaveBeenCalledTimes(1)
     expect(mocks.canPublish).not.toHaveBeenCalled()
   })
-  it('keeps the export and publish membership gates', async () => {
+  it.each([
+    ['owner', false, false, 7],
+    ['consumer owner', false, true, 7],
+    ['administrator', true, false, 8],
+  ])('allows %s to download IQ and PRG without membership or unlock', async (_role, admin, consumer, ownerId) => {
+    mocks.user.isAdminUser = admin as boolean
+    mocks.user.isStudioConsumer = consumer as boolean
+    const item = { ...fixture(), canInstall: false, user: { id: ownerId }, product: {
+      ...fixture().product,
+      prgRelease: { id: 42, deviceId: 'venu3', prgUrl: 'https://example.com/venu3.prg' },
+    } }
+    mocks.get.mockResolvedValue({ code: 0, data: item })
+    mocks.canExport.mockReturnValue(false)
+    await setup()
+    await (wrapper!.vm as any).downloadPackage(item)
+    await (wrapper!.vm as any).runPrg(item)
+    expect(mocks.download).toHaveBeenCalledWith('https://example.com/test.iq', 'Face', 'iq', 10)
+    expect(mocks.download).toHaveBeenCalledWith('https://example.com/venu3.prg', 'Face', 'prg', 10)
+    expect(mocks.canExport).not.toHaveBeenCalled()
+  })
+  it('keeps the build and publish membership gates', async () => {
     await setup()
     mocks.canExport.mockReturnValue(false)
     mocks.canPublish.mockReturnValue(false)
-    await (wrapper!.vm as any).downloadPackage(fixture())
     await (wrapper!.vm as any).buildPrg(fixture())
     await (wrapper!.vm as any).submitDesign(fixture())
     expect(mocks.download).not.toHaveBeenCalled()

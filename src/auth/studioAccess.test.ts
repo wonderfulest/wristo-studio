@@ -67,13 +67,13 @@ describe('Studio access policy', () => {
 })
 
 describe('mandatory Studio login', () => {
-  it.each(['/designs/new-projects', '/design', '/designs', '/tokens/private', '/moon', '/prg-installer', '/data-catalog-unavailable', '/', '/faces', '/faces/123', '/authors/7', '/wiki', '/academy', '/tokens', '/pricing', '/create-watch-face'])('requires authentication for %s', (path) => {
+  it.each(['/designs/new-projects', '/design', '/designs', '/tokens/private', '/moon', '/prg-installer', '/data-catalog-unavailable', '/', '/faces', '/faces/123', '/authors/7', '/wiki', '/academy', '/token-editor', '/pricing', '/create-watch-face'])('requires authentication for %s', (path) => {
     const redirectToLogin = vi.fn()
     expect(requiresStudioLogin(path)).toBe(true)
     expect(guardStudioRoute({ requiresAuth: requiresStudioLogin(path), isAuthenticated: false, hasAccess: true, fullPath: path, redirectToLogin, redirectToMembership: vi.fn() })).toBe(false)
     expect(redirectToLogin).toHaveBeenCalledWith(path)
   })
-  it.each(['/auth/callback', '/auth/signed-out'])('keeps %s accessible to avoid login loops', (path) => {
+  it.each(['/auth/callback', '/auth/signed-out', '/tokens', '/tokens/'])('keeps %s accessible to avoid login loops', (path) => {
     expect(requiresStudioLogin(path)).toBe(false)
     const redirectToLogin = vi.fn()
     const redirectToMembership = vi.fn()

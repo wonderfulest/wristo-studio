@@ -66,5 +66,5 @@ export function canEnterStudio(user: StudioUser) {
 
 export const requiresStudioLogin = (path: string) => {
   const normalized = path.replace(/\/$/, '') || '/'
-  return !['/auth/callback', '/auth/signed-out'].includes(normalized)
+  return !['/auth/callback', '/auth/signed-out', '/tokens'].includes(normalized)
 }

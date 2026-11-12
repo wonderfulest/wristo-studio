@@ -203,7 +203,7 @@ export const wikiChapters: WikiChapter[] = [
       {
         title: 'Token 参考与试算',
         paragraphs: ['完整 Token 列表、分类、格式化示例和动态图片表达式统一维护在 Tokens 专页。'],
-        links: [{ label: '打开 Tokens 参考 · 需登录', href: '/tokens' }]
+        links: [{ label: '打开 Tokens 参考 · 无需登录', href: '/tokens' }]
       }
     ]
   },

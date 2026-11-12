@@ -86,7 +86,7 @@ const openTokenEditor = () => {
     }
   )
   openRouteInNewTab(router, {
-    name: 'Tokens',
+    name: 'TokenEditor',
     query: { tab: 'editor', session: activeTokenEditorSession.value.id }
   })
 }
