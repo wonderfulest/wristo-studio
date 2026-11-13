@@ -7,12 +7,14 @@ export const FONT_TYPE_TEXT_FR = 'text_font_fr'
 export const FONT_TYPE_TEXT_ES = 'text_font_es'
 export const FONT_TYPE_TEXT_IT = 'text_font_it'
 export const FONT_TYPE_TEXT_PL = 'text_font_pl'
-export const FONT_TYPE_TEXT_PT = 'text_font_zh'
+export const FONT_TYPE_TEXT_ZH = 'text_font_zh'
+export const FONT_TYPE_TEXT_PT = FONT_TYPE_TEXT_ZH
 export const FONT_TYPE_TEXT_JA = 'text_font_ja'
 export const FONT_TYPE_TEXT_KR = 'text_font_kr'
 
 export const FontTypes = {
   TEXT_FONT: FONT_TYPE_TEXT,
+  TEXT_FONT_ZH: FONT_TYPE_TEXT_ZH,
   ICON_FONT: FONT_TYPE_ICON,
   WEATHER_FONT: FONT_TYPE_WEATHER,
   TIME_FONT: FONT_TYPE_TIME,

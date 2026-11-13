@@ -95,12 +95,24 @@
           <section v-if="themeColorProperties.length" class="color-section">
             <div class="color-section-header">
               <h4>{{ t('visualTheme.themeColors') }}</h4>
-              <el-button size="small" plain @click="store.randomizeColors(selectedTheme.id)">
+              <el-button size="small" plain data-theme-randomize @click="randomizeColors">
                 {{ t('visualTheme.randomizeColors') }}
               </el-button>
             </div>
-            <div v-for="[key, property] in themeColorProperties" :key="key" class="color-row">
-              <span>{{ property.title || key }}</span>
+            <div class="palette-code">
+              <label for="visual-theme-color-code">{{ t('visualTheme.colorCode') }}</label>
+              <el-input id="visual-theme-color-code" v-model="colorCodeDraft" data-theme-color-code
+                :aria-label="t('visualTheme.colorCode')" :placeholder="t('visualTheme.colorCodePlaceholder')"
+                @keyup.enter="applyColorCode" />
+              <div class="palette-code-actions">
+                <el-button size="small" data-theme-code-apply @click="applyColorCode">{{ t('visualTheme.applyColorCode') }}</el-button>
+                <el-button size="small" data-theme-code-copy :disabled="!colorCode" @click="copyColorCode">{{ t('visualTheme.copyColorCode') }}</el-button>
+              </div>
+              <p>{{ t('visualTheme.colorCodeHint', { count: themeColorProperties.length, length: themeColorProperties.length * 6 }) }}</p>
+              <p v-if="colorCodeError" role="alert" class="palette-code-error">{{ colorCodeError }}</p>
+            </div>
+            <div v-for="([key, property], index) in themeColorProperties" :key="key" class="color-row">
+              <span :title="property.title || key">Color {{ index + 1 }}</span>
               <el-color-picker
                 :model-value="colorAsHex(selectedTheme.colors?.[key] || String(property.value || '0xFFFFFF'))"
                 @change="(value: string | null) => value && store.updateColor(selectedTheme!.id, key, value)"
@@ -129,6 +141,7 @@ import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
+import { encodeThemeColorCode, orderedThemeColorProperties } from '@/engine/services/themeColorCode'
 import { MAX_VISUAL_THEMES } from '@/types/visualTheme'
 import type { VisualThemeAssetSlot } from '@/types/visualTheme'
 
@@ -157,9 +170,39 @@ const selectedTheme = computed(() =>
   themes.value.find((theme) => theme.id === selectedThemeId.value) ?? store.previewTheme ?? themes.value[0])
 const isDefault = computed(() => selectedTheme.value?.id === config.value?.defaultThemeId)
 const isPreview = computed(() => selectedTheme.value?.id === store.previewThemeId)
-const themeColorProperties = computed(() => Object.entries(propertiesStore.allProperties)
-  .filter(([key, property]) => property.type === 'color'
-    && selectedTheme.value?.colors?.[key] !== undefined))
+const themeColorProperties = computed(() => orderedThemeColorProperties(propertiesStore.allProperties))
+const colorCode = computed(() => encodeThemeColorCode(propertiesStore.allProperties, selectedTheme.value?.colors))
+const colorCodeDraft = ref('')
+const colorCodeError = ref('')
+watch([selectedThemeId, colorCode], () => {
+  colorCodeDraft.value = colorCode.value
+  colorCodeError.value = ''
+}, { immediate: true })
+
+const applyColorCode = () => {
+  if (!selectedTheme.value) return
+  if (!store.applyColorCode(selectedTheme.value.id, colorCodeDraft.value, propertiesStore.allProperties)) {
+    colorCodeError.value = t('visualTheme.invalidColorCode', { length: themeColorProperties.value.length * 6 })
+    return
+  }
+  colorCodeDraft.value = colorCode.value
+  colorCodeError.value = ''
+}
+const randomizeColors = () => {
+  if (!selectedTheme.value) return
+  store.syncColorProperties(propertiesStore.allProperties)
+  store.randomizeColors(selectedTheme.value.id)
+  colorCodeDraft.value = colorCode.value
+  colorCodeError.value = ''
+}
+const copyColorCode = async () => {
+  try {
+    await navigator.clipboard.writeText(colorCode.value)
+    ElMessage.success(t('visualTheme.codeCopied'))
+  } catch {
+    ElMessage.warning(t('visualTheme.codeCopyFailed'))
+  }
+}
 const baseCenterCap = computed(() => elementDataStore.elements.find(element => element.eleType === 'centerCap')?.config)
 const availableAssetSlots = computed<VisualThemeAssetSlot[]>(() => {
   const elementTypes = new Set(elementDataStore.elements.map((snapshot) => snapshot.eleType))
@@ -426,6 +469,11 @@ const removeTheme = async () => {
   padding-top: 10px;
   border-top: 1px solid var(--studio-border);
 }
+
+.palette-code { display: grid; gap: 8px; min-width: 0; }
+.palette-code-actions { display: flex; gap: 8px; }
+.palette-code p { margin: 0; color: var(--studio-text-muted); font-size: 12px; }
+.palette-code .palette-code-error { color: var(--el-color-danger); }
 
 @media (max-width: 760px) {
   .theme-layout {

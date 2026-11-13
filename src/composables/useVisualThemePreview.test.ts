@@ -59,6 +59,23 @@ describe('useVisualThemePreview', () => {
     captured.dependencies = null
   })
 
+  it('sends the applied palette to the canvas preview controller', async () => {
+    const wrapper = mount(Harness)
+    const store = useVisualThemeStore()
+    const properties = usePropertiesStore()
+    properties.loadProperties({ accent: { type: 'color', title: 'Color 1', value: '0xFFFFFF' } })
+    store.hydrate(config())
+    await nextTick()
+    controller.preview.mockClear()
+    expect(store.applyColorCode('day', '123abc', properties.allProperties)).toBe(true)
+    await nextTick()
+    expect(controller.preview).toHaveBeenCalledWith(
+      expect.objectContaining({ themes: [expect.objectContaining({ colors: { accent: '0x123ABC' } })] }),
+      'day', properties.allProperties,
+    )
+    wrapper.unmount()
+  })
+
   it('applies enabled preview state and restores when disabled', async () => {
     const wrapper = mount(Harness)
     const store = useVisualThemeStore()

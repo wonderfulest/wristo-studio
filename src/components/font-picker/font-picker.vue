@@ -66,7 +66,7 @@
         <FontSearch
           :model-value="modelValue"
           :type="type"
-          :types="types"
+          :types="effectiveFontTypes"
           :can-use-premium-assets="canUsePremiumAssets"
           :include-all-users="includeAllUsers"
           :date-content-language="effectiveContentLanguage"
@@ -79,7 +79,7 @@
             :fonts="recentFonts"
             :model-value="modelValue"
             :type="type"
-            :types="types"
+            :types="effectiveFontTypes"
             :can-use-premium-assets="canUsePremiumAssets"
             :date-content-language="effectiveContentLanguage"
             :exclude-icon-fonts="excludeIconFonts"
@@ -91,7 +91,7 @@
             ref="designerFontListRef"
             :model-value="modelValue"
             :type="type"
-            :types="types"
+            :types="effectiveFontTypes"
             :can-use-premium-assets="canUsePremiumAssets"
             :include-all-users="includeAllUsers"
             :excluded-font-values="recentFontValues"
@@ -331,8 +331,16 @@ const fontScopeOptions = computed(() => [
   { label: t('font.scopeMine'), value: 'mine' },
   { label: t('font.scopeAll'), value: 'all' },
 ])
+// Text items in Chinese designs query the Chinese font category directly.
+const effectiveFontTypes = computed(() => {
+  const types = props.types?.length ? props.types : [props.type || FontTypes.TEXT_FONT]
+  if (effectiveContentLanguage.value === 'zh' && types.includes(FontTypes.TEXT_FONT)) {
+    return [...new Set(types.map(type => type === FontTypes.TEXT_FONT ? FontTypes.TEXT_FONT_ZH : type))]
+  }
+  return props.types
+})
 const queryFontTypes = computed(() => {
-  const types = (props.types || []).map(type => String(type || '').trim()).filter(Boolean)
+  const types = (effectiveFontTypes.value || []).map(type => String(type || '').trim()).filter(Boolean)
   return types.length ? [...new Set(types)] : [props.type || FontTypes.TEXT_FONT]
 })
 
@@ -376,8 +384,8 @@ const togglePanel = async () => {
     emitter.emit('settings-popup-open', settingsPopupId)
     fontStore.expandedSections.recent = true
     await fontStore.initRecentFonts(
-      props.types?.length ? undefined : props.type,
-      props.types?.length ? queryFontTypes.value : undefined,
+      effectiveFontTypes.value?.length ? undefined : props.type,
+      effectiveFontTypes.value?.length ? queryFontTypes.value : undefined,
     )
     await nextTick()
     updatePanelPosition()
@@ -599,7 +607,7 @@ onMounted(async () => {
   // initial refresh with current type (if provided)
   if (props.type !== undefined) {
     try {
-      await fontStore.initBuiltinFontsFromSystem(props.type)
+      await fontStore.initBuiltinFontsFromSystem(queryFontTypes.value[0])
     } catch {}
   }
   window.addEventListener('resize', updatePanelPosition)
@@ -613,9 +621,9 @@ onUnmounted(() => {
   emitter.off('settings-popup-open', handleSettingsPopupOpen)
 })
 
-// When type changes, refresh system and recent fonts for the new type
+// Refresh the system category when the element type or content language changes.
 watch(
-  () => props.type,
+  () => queryFontTypes.value[0],
   async (newType, oldType) => {
     if (newType === oldType) return
     try {

@@ -618,6 +618,7 @@ const hasDescriptionTemplate = computed(() => !!getDescriptionTemplate(descripti
 const selectedTemplateUsesAi = computed(() => descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value as DescriptionTemplateLanguage))
 const canGenerateDescription = computed(() => descriptionConfigLoaded.value && hasDescriptionTemplate.value && (!selectedTemplateUsesAi.value || aiCapabilities.value.DESCRIPTION))
 const availableDescriptionLanguages = computed(() => descriptionConfigLoaded.value ? DESCRIPTION_LANGUAGES.filter(({ code }) =>
+  (code === 'en' || code === 'zh') &&
   getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, code).trim() &&
   (!descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, code) || aiCapabilities.value.DESCRIPTION)
 ) : [])

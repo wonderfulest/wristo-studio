@@ -4,6 +4,7 @@ import {
   createInitialVisualThemes,
   normalizeVisualThemesConfig,
 } from '@/engine/services/visualThemeService'
+import { decodeThemeColorCode } from '@/engine/services/themeColorCode'
 import { generateCoordinatedThemeColors } from '@/engine/services/visualThemePalette'
 import type { RuntimeDesignConfig } from '@/types/app/config'
 import type { PropertiesMap } from '@/types/properties'
@@ -152,6 +153,13 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       const theme = this.requireTheme(themeId)
       if (!theme.colors) theme.colors = {}
       theme.colors[propertyKey] = toMonkeyColor(color)
+    },
+
+    applyColorCode(themeId: string, code: string, properties: PropertiesMap): boolean {
+      const colors = decodeThemeColorCode(code, properties)
+      if (!colors) return false
+      this.requireTheme(themeId).colors = colors
+      return true
     },
 
     randomizeColors(themeId: string, random: () => number = Math.random): void {

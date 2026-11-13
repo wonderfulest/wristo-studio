@@ -8,6 +8,7 @@ import FontPicker from './font-picker.vue'
 import { FontTypes } from '@/config/fonts'
 import { useFontStore } from '@/stores/fontStore'
 import { useUserStore } from '@/stores/user'
+import { useDesignStore } from '@/stores/designStore'
 
 const wrappers: VueWrapper[] = []
 const mount = ((...args: Parameters<typeof mountComponent>) => {
@@ -28,7 +29,7 @@ vi.mock('@/api/wristo/fonts', () => ({
 
 const childStub = (name: string, className: string) => ({
   name,
-  props: ['types'],
+  props: ['types', 'dateContentLanguage'],
   template: `<div class="${className}" />`,
 })
 
@@ -40,6 +41,7 @@ describe('font picker multi-type queries', () => {
   it('propagates allowed types and refreshes recent fonts whenever the picker reopens', async () => {
     const fontStore = useFontStore()
     fontStore.fetchFonts = vi.fn().mockResolvedValue(undefined)
+    const initBuiltinFonts = vi.spyOn(fontStore, 'initBuiltinFontsFromSystem').mockResolvedValue(undefined)
     const initRecentFonts = vi.spyOn(fontStore, 'initRecentFonts').mockResolvedValue(undefined)
     useUserStore().setUserInfo({ roles: [{ roleCode: 'ROLE_ADMIN' }] } as any)
     const router = createRouter({
@@ -111,5 +113,25 @@ describe('font picker multi-type queries', () => {
     await wrapper.get('.font-preview').trigger('click')
 
     expect(initRecentFonts).toHaveBeenCalledTimes(3)
+
+    await wrapper.get('.font-preview').trigger('click')
+    await wrapper.setProps({ type: FontTypes.TEXT_FONT, types: undefined, dateContentLanguage: 'zh' })
+    await wrapper.get('.font-preview').trigger('click')
+    for (const child of [FontSearchStub, RecentFontListStub, DesignerFontListStub]) {
+      expect(wrapper.getComponent(child).props('types')).toEqual(['text_font_zh'])
+    }
+    expect(initRecentFonts).toHaveBeenLastCalledWith(undefined, ['text_font_zh'])
+    expect(initBuiltinFonts).toHaveBeenLastCalledWith('text_font_zh')
+
+    // Labels and ordinary text inherit the design language without an override.
+    useDesignStore().appLanguage = 'zhs'
+    await wrapper.setProps({ dateContentLanguage: undefined })
+    for (const child of [FontSearchStub, RecentFontListStub, DesignerFontListStub]) {
+      expect(wrapper.getComponent(child).props('types')).toEqual(['text_font_zh'])
+      expect(wrapper.getComponent(child).props('dateContentLanguage')).toBe('zh')
+    }
+
+    await wrapper.setProps({ dateContentLanguage: 'en' })
+    expect(wrapper.getComponent(DesignerFontListStub).props('types')).toBeUndefined()
   })
 })

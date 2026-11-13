@@ -712,7 +712,7 @@ describe('multilingual descriptions', () => {
     mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
     mocks.publish.mockResolvedValue({ code: 0, data: true })
     mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
-      descriptionTemplate: 'English template', descriptionTemplates: { fr: { wpay: 'French template' } },
+      descriptionTemplate: 'English template', descriptionTemplateZh: '中文模板', descriptionTemplates: { fr: { wpay: 'French template' } },
     } })
     mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Generated French' })
     mocks.generateDescriptions.mockReset().mockImplementation(async ({ languages }) => ({ code: 0, data: {
@@ -720,20 +720,20 @@ describe('multilingual descriptions', () => {
     } }))
   })
 
-  it('generates all configured languages without selecting them and saves each result', async () => {
+  it('generates only English and Chinese even when other languages are configured', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)
     mocks.getAiPrices.mockClear()
     await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
     await flushPromises()
-    expect(mocks.generateDescriptions).toHaveBeenCalledWith({ productId: 20, languages: ['en', 'fr'], paymentMethod: 'wpay', expectedCreditCost: 0 })
+    expect(mocks.generateDescriptions).toHaveBeenCalledWith({ productId: 20, languages: ['en', 'zh'], paymentMethod: 'wpay', expectedCreditCost: 0 })
     expect(mocks.generateDescription).not.toHaveBeenCalled()
     expect(mocks.getAiPrices).not.toHaveBeenCalled()
     await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { fr: design.product.name }, description: expect.stringContaining('Generated en'), descriptions: { fr: 'Generated fr' } }))
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { zh: design.product.name }, description: expect.stringContaining('Generated en'), descriptions: { zh: 'Generated zh' } }))
   })
 
-  it('generates and saves all seven free languages even when AI is disabled', async () => {
+  it('generates only English and Chinese free descriptions even when AI is disabled', async () => {
     const translations = ['fr', 'de', 'es', 'it', 'pt']
     mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
       descriptionTemplateFree: 'Free English', descriptionTemplateFreeZh: '免费中文',
@@ -750,24 +750,24 @@ describe('multilingual descriptions', () => {
     await flushPromises()
     await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
     await flushPromises()
-    expect(mocks.generateDescriptions).toHaveBeenCalledWith({ productId: 20, languages: ['en', 'zh', ...translations], paymentMethod: 'free', expectedCreditCost: 0 })
+    expect(mocks.generateDescriptions).toHaveBeenCalledWith({ productId: 20, languages: ['en', 'zh'], paymentMethod: 'free', expectedCreditCost: 0 })
     await confirm(wrapper)
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
       payment: expect.objectContaining({ paymentMethod: 'free', price: 0 }),
       description: expect.stringContaining('Free en'),
-      descriptions: Object.fromEntries(['zh', ...translations].map(language => [language, `Free ${language}`])),
+      descriptions: { zh: 'Free zh' },
     }))
     expect(mocks.confirmCost).not.toHaveBeenCalled()
   })
 
-  it('preserves an existing localized name during bulk generation', async () => {
+  it('preserves existing other-language names and descriptions during bulk generation', async () => {
     const wrapper = mountDialog()
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' } } })
+    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' }, descriptions: { fr: 'Bonjour' } } })
     await flushPromises()
     await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
     await flushPromises()
     await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ names: { fr: 'Nom français' } }))
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ names: { fr: 'Nom français', zh: design.product.name }, descriptions: { fr: 'Bonjour', zh: 'Generated zh' } }))
   })
 
   it('marks descriptions by actual content and updates when edited', async () => {
@@ -786,7 +786,7 @@ describe('multilingual descriptions', () => {
   })
 
   it('continues after a failed language and retains successful results', async () => {
-    mocks.generateDescriptions.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { fr: 'French result' }, failedLanguages: ['en'] } } })
+    mocks.generateDescriptions.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { zh: 'Chinese result' }, failedLanguages: ['en'] } } })
     const wrapper = mountDialog()
     await showDialog(wrapper)
     await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
@@ -794,7 +794,7 @@ describe('multilingual descriptions', () => {
     expect(mocks.generateDescriptions).toHaveBeenCalledTimes(1)
     expect(mocks.messageWarning).toHaveBeenCalledWith('goLive.descriptionsPartial')
     await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ descriptions: { fr: 'French result' } }))
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ descriptions: { zh: 'Chinese result' } }))
   })
 
   it('confirms one description price including translations before generating all templates', async () => {
@@ -821,7 +821,7 @@ describe('multilingual descriptions', () => {
     await showDialog(wrapper)
     await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
     await wrapper.get('.product-description-input input').setValue('Manual English')
-    resolve({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { en: 'Stale English', fr: 'French result' }, failedLanguages: [] } } })
+    resolve({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { en: 'Stale English', zh: 'Chinese result' }, failedLanguages: [] } } })
     await flushPromises()
     expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('Manual English')
     expect(mocks.generateDescriptions).toHaveBeenCalledTimes(1)
@@ -832,7 +832,7 @@ describe('multilingual descriptions', () => {
     try {
       mocks.generateDescriptions.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'running', result: null } })
       mocks.getDescriptionGeneration.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'succeeded', result: {
-        descriptions: { en: 'English result', fr: 'French result' }, failedLanguages: [],
+        descriptions: { en: 'English result', zh: 'Chinese result' }, failedLanguages: [],
       } } })
       const wrapper = mountDialog()
       await showDialog(wrapper)

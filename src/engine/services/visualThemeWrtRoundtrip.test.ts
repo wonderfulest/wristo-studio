@@ -29,13 +29,13 @@ function createConfig(): RuntimeDesignConfig {
   urls.push(imageUrl)
   return {
     name: 'Theme roundtrip', version: '1', designId: 'roundtrip', textCase: 0,
-    bitmapMode: false, properties: {}, orderIds: [],
+    bitmapMode: false, properties: { accent: { type: 'color', title: 'Color 1', value: '0xFFFFFF', sortOrder: 0 } }, orderIds: [],
     elements: ['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap']
       .map(eleType => ({ id: eleType, eleType, imageUrl })),
     visualThemes: {
       version: 1, enabled: true, selectionMode: 'user', defaultThemeId: 'lime',
       themes: [{
-        id: 'lime', name: 'Lime Green', assets: {
+        id: 'lime', name: 'Lime Green', colors: { accent: '0x123ABC' }, assets: {
           background: { imageUrl }, hourHand: { imageUrl }, minuteHand: { imageUrl },
           secondHand: { imageUrl }, centerCap: { imageUrl, targetSize: 75, left: 0, top: 123 },
         },
@@ -60,6 +60,7 @@ describe('WRT theme assets without database IDs', () => {
     const zip = await JSZip.loadAsync(await exported.arrayBuffer())
     const saved = JSON.parse(await zip.file('design.json')!.async('string'))
     expect(saved.visualThemes.themes[0].assets.centerCap).toMatchObject({ targetSize: 75, left: 0, top: 123 })
+    expect(saved.visualThemes.themes[0].colors).toEqual({ accent: '0x123ABC' })
     expect(saved.visualThemes.defaultThemeId).toBe('lime')
     expect(saved.visualThemes.themes[0].name).toBe('Lime Green')
     for (const asset of Object.values(saved.visualThemes.themes[0].assets) as any[]) {

@@ -42,6 +42,10 @@ const stubs = {
   ElAlert: true,
   ElEmpty: true,
   ElColorPicker: true,
+  ElInput: {
+    props: ['modelValue'], emits: ['update:modelValue'],
+    template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  },
   ElSegmented: {
     props: ['modelValue', 'options'],
     emits: ['change'],
@@ -80,6 +84,33 @@ describe('VisualThemeSettings', () => {
     themeApi.getThemeRuleDetail.mockResolvedValue({ data: { data: null } })
   })
 
+  it('applies a full code atomically, refreshes it on randomization and switches themes', async () => {
+    const properties = usePropertiesStore()
+    properties.loadProperties({
+      blue: { type: 'color', title: 'Blue', value: '0x0000FF', sortOrder: 2 },
+      red: { type: 'color', title: 'Red', value: '0xFF0000', sortOrder: 1 },
+    })
+    const store = useVisualThemeStore()
+    store.hydrate(config())
+    store.syncColorProperties(properties.allProperties)
+    const wrapper = mountPanel()
+    const input = () => wrapper.get('[data-theme-color-code]')
+    expect((input().element as HTMLInputElement).value).toBe('FF00000000FF')
+    await input().setValue('000000aabbcc')
+    await wrapper.get('[data-theme-code-apply]').trigger('click')
+    expect(store.requireTheme('day').colors).toEqual({ red: '0x000000', blue: '0xAABBCC' })
+    await input().setValue('FFFFFF12345Z')
+    await wrapper.get('[data-theme-code-apply]').trigger('click')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    expect(store.requireTheme('day').colors?.red).toBe('0x000000')
+    await wrapper.get('[data-theme-randomize]').trigger('click')
+    expect((input().element as HTMLInputElement).value).toMatch(/^[0-9A-F]{12}$/)
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    await wrapper.get('[data-theme-select="night"]').trigger('click')
+    expect((input().element as HTMLInputElement).value).toBe('FF00000000FF')
+    wrapper.unmount()
+  })
+
   it('edits theme color values without restoring fallback hand controls', () => {
     expect(panelSource).toContain("t('visualTheme.themeColors')")
     expect(panelSource).not.toContain("t('visualTheme.fallbackHandColors')")
@@ -89,7 +120,7 @@ describe('VisualThemeSettings', () => {
 
   it('offers coordinated randomization only inside a non-empty theme color section', () => {
     expect(panelSource).toContain("t('visualTheme.randomizeColors')")
-    expect(panelSource).toContain('store.randomizeColors(selectedTheme.id)')
+    expect(panelSource).toContain('store.randomizeColors(selectedTheme.value.id)')
     expect(panelSource).toMatch(/v-if="themeColorProperties\.length" class="color-section"/)
   })
 
