@@ -2,6 +2,12 @@ import { computed } from 'vue'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 
 const en = {
+  'searchIndex.sync': 'Sync search index',
+  'searchIndex.syncing': 'Syncing search index…',
+  'searchIndex.success': 'Sync request completed. Search index entry confirmed.',
+  'searchIndex.failed': 'Unable to sync or verify the search index.',
+  'searchIndex.missing': 'No index entry found after syncing. Check app status, public visibility, and whether search indexing is enabled.',
+
   'platform.latestBuildVersion': 'Latest version · v{version}',
   'card.newBuildVersionHint': 'Latest v{version} · Rebuild recommended',
   "faceDetail.previewNumber": "Preview {count}",
@@ -2672,6 +2678,8 @@ const en = {
   'project.duplicateLanguageHint': 'Choose the language for the duplicated application.',
   'project.copyLanguageFailed': 'The application was duplicated, but its language could not be updated.',
   'card.devicePrgMissing': 'No PRG built for the selected device',
+  'faceDetail.latestBuildRecords': 'Latest build records',
+  'faceDetail.noBuildRecord': 'No build record',
   'card.buildPrg': 'Build PRG',
   'card.buildPrgDisabledQueued': 'PRG build task is queued. Please wait.',
   'card.buildPrgDisabledBuilding': 'PRG is building. Please wait.',
@@ -2902,6 +2910,12 @@ function createMessages(overrides: MessageOverrides): Messages {
 
 const zh: Messages = {
   ...en,
+  'searchIndex.sync': '同步搜索索引',
+  'searchIndex.syncing': '正在同步搜索索引…',
+  'searchIndex.success': '同步请求完成，已确认索引存在',
+  'searchIndex.failed': '同步或验证搜索索引失败',
+  'searchIndex.missing': '同步后未找到索引，请检查应用状态、公开可见性及搜索索引开关',
+
   'platform.latestBuildVersion': '最新版本 · v{version}',
   'card.newBuildVersionHint': '最新 v{version} · 建议重新构建',
   "faceDetail.previewNumber": "预览 {count}",
@@ -5561,6 +5575,8 @@ const zh: Messages = {
   'project.duplicateLanguageHint': '选择复制后应用使用的语言。',
   'project.copyLanguageFailed': '应用已复制，但语言更新失败。',
   'card.devicePrgMissing': '当前设备尚未构建 PRG',
+  'faceDetail.latestBuildRecords': '最新构建记录',
+  'faceDetail.noBuildRecord': '暂无构建记录',
   'card.buildPrg': '构建 PRG',
   'card.buildPrgDisabledQueued': 'PRG 构建任务正在排队，请稍候',
   'card.buildPrgDisabledBuilding': 'PRG 正在构建，请稍候',

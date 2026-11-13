@@ -26,6 +26,7 @@ export interface FaceDevice {
   displayName: string
 }
 export interface FaceDetail extends PublishedFace {
+  buildRecords?: Array<{ type: 'prg' | 'iq'; releaseVersion?: string | null; status: string; deviceId?: string | null }>
   bannerImageUrl?: string | null
   publiclyVisible?: boolean
   copyEligible?: boolean

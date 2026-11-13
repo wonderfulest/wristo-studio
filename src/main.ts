@@ -1,3 +1,4 @@
+import { installUserActivity } from './utils/userActivity'
 import { migrateStudioStorage } from '@/engine/services/migrateStudioStorage'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -43,3 +44,5 @@ app.mount(appRoot)
 
 // Migrate every legacy draft, including designs that are not opened this session.
 void migrateStudioStorage(localStorage).catch(error => console.error('Local draft migration will retry on next load:', error))
+
+installUserActivity()

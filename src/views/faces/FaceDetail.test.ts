@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useI18n } from '@/i18n'
 import { nextTick } from 'vue'
 import FaceDetail from './FaceDetail.vue'
+import { rebuildSearchIndex, getSearchIndexDoc } from '@/api/products'
+vi.mock('@/api/products', () => ({ rebuildSearchIndex: vi.fn(), getSearchIndexDoc: vi.fn() }))
 import { designApi } from '@/api/wristo/design'
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: vi.fn() } }))
 import { loadShareRewardProfile } from '@/api/wristo/shareRewards'
@@ -40,6 +42,21 @@ async function setup(path = '/faces/123') {
   return { wrapper, router }
 }
 describe('watch face details', () => {
+  it.each([null, { id: 8 }])('shows read-only build records to non-owners: %j', async user => {
+    auth.userInfo = user
+    vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, buildRecords: [
+      { type: 'prg', releaseVersion: '3.1.10', status: 'complete', deviceId: 'venu3' },
+      { type: 'iq', releaseVersion: '3.1.11', status: 'pending' },
+    ] })
+    const { wrapper } = await setup()
+    const records = wrapper.get('.public-build-records')
+    expect(records.text()).toContain('PRG')
+    expect(records.text()).toContain('3.1.10')
+    expect(records.text()).toContain('IQ')
+    expect(records.text()).toContain('3.1.11')
+    expect(records.find('button, a').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="management"]').exists()).toBe(false)
+  })
   it('offers consumers lifetime membership through the public membership page', async () => {
     auth.userInfo = null
     const { wrapper } = await setup()
@@ -434,4 +451,25 @@ it.each<(Record<string, string> | null)>([null, {}, { zh: '  ' }])('falls back t
   vi.mocked(loadFaceDetail).mockResolvedValue({ ...fixture, description: 'Default description', descriptions })
   const { wrapper } = await setup()
   expect(wrapper.get('.description').text()).toBe('Default description')
+})
+
+describe('administrator search index action', () => {
+  it('does not expose syncing to the application owner', async () => {
+    const { wrapper } = await setup()
+    expect(wrapper.text()).not.toContain('searchIndex.sync')
+  })
+
+  it('syncs the current app and verifies its index for an administrator', async () => {
+    auth.isAdminUser = true
+    vi.mocked(rebuildSearchIndex).mockResolvedValue({ code: 0, msg: 'success', data: true })
+    vi.mocked(getSearchIndexDoc).mockResolvedValue({ code: 0, msg: 'success', data: { id: 123 } })
+    const { wrapper } = await setup()
+    const button = wrapper.findAll('button').find(item => item.text() === 'searchIndex.sync')!
+    expect(button).toBeDefined()
+    await button.trigger('click')
+    await flushPromises()
+    expect(rebuildSearchIndex).toHaveBeenCalledWith(123)
+    expect(getSearchIndexDoc).toHaveBeenCalledWith(123)
+    expect(button.attributes('disabled')).toBeUndefined()
+  })
 })
