@@ -190,10 +190,14 @@ const validationError = computed(() => {
   const message = templateValidationMessage(localValue.value)
   return message ? t(message.key, { token: message.detail || '' }) : ''
 })
+function exampleValue(code: string) {
+  if (code === 'w02' && props.appLanguage === 'zhs') return '局部多云'
+  return DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)?.exampleValue
+}
 const resultValue = computed(() => resolveTokenTemplate(
   localValue.value,
   undefined,
-  (code) => DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)?.exampleValue,
+  exampleValue,
 ))
 const filteredVariableGroups = computed(() => {
   const groups = new Map<string, ExpressionTokenDefinition[]>()
@@ -210,7 +214,7 @@ const targetIsNumeric = computed(() => targetDefinition.value?.valueType === 'nu
 const generatedFormat = computed(() => buildTokenFormat(formatDraft.value))
 const formatExpression = computed(() => currentTarget.value ? `(${currentTarget.value.code}).format("${generatedFormat.value}")` : '')
 const formatPreview = computed(() => currentTarget.value
-  ? resolveTokenTemplate(formatExpression.value, undefined, (code) => DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)?.exampleValue)
+  ? resolveTokenTemplate(formatExpression.value, undefined, exampleValue)
   : '')
 
 watch(

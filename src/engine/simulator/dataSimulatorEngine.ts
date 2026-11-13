@@ -190,9 +190,9 @@ function formatSimulatedDisplay(data: ReturnType<typeof getSimulatedDataByName>,
   return formatDataNumberDisplay(data.display, data.numeric, (propertiesStore as any).dataNumberFormat, (propertiesStore as any).maxFieldLength)
 }
 
-function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>): string {
+function resolveTextTemplate(template: string, propertiesStore: ReturnType<typeof usePropertiesStore>, language: ReturnType<typeof useDesignStore>['appLanguage']): string {
   return resolveTokenTemplate(template, new Date(), (code, format, usage) => {
-    const data = getSimulatedDataByTokenCode(code)
+    const data = getSimulatedDataByTokenCode(code, language)
     if (!data) return undefined
     if (usage === 'numeric') return data.numeric
     const displayNumber = data.unit ? Number(data.display.replace(/,/g, '')) : NaN
@@ -280,7 +280,7 @@ export class DataSimulatorEngine {
       const simulated = simKey === 'sunriseSunset'
         ? getSimulatedDataByName(simKey, now)
         : simKey
-          ? getSimulatedDataByName(simKey)
+          ? getSimulatedDataByName(simKey, undefined, designStore.appLanguage)
           : null
       const displayValue = canonicalMetric.metricSymbol === SECOND_TIME_ZONE_SYMBOL
         ? secondTimeZoneTime(propertiesStore.secondTimeZone, now)
@@ -415,7 +415,7 @@ export class DataSimulatorEngine {
       if (eleType === 'text' || eleType === 'scrollableText' || eleType === 'angledText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
         if (!/\([A-Za-z][A-Za-z0-9_.]*\)/.test(template)) return
-        const nextText = resolveTextTemplate(template, propertiesStore)
+        const nextText = resolveTextTemplate(template, propertiesStore, designStore.appLanguage)
         if (String(obj.text ?? '') !== nextText) {
           obj.set?.('text', nextText)
           changed = true
@@ -426,7 +426,7 @@ export class DataSimulatorEngine {
       if (eleType === 'radialText') {
         const template = String(obj.textTemplate ?? obj.text ?? '')
         if (!/\([A-Za-z][A-Za-z0-9_.]*\)/.test(template)) return
-        const nextText = resolveTextTemplate(template, propertiesStore)
+        const nextText = resolveTextTemplate(template, propertiesStore, designStore.appLanguage)
         if (String(obj.text ?? '') !== nextText) {
           if (typeof obj.updateRadialText === 'function') {
             const previousLeft = obj.left

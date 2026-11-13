@@ -1,3 +1,4 @@
+import type { AppLanguage } from '@/types/localization'
 import { validateElementInteractions } from '@/engine/interaction/elementInteraction'
 import { COMPLICATION_MODES, COMPLICATION_ICON_OPTIONS, normalizeComplicationPresentation } from './complication.presentation'
 import type { PropertiesMap, PropertyItem, DataOptionsMap } from '@/types/properties'
@@ -278,8 +279,12 @@ export function resolveComplicationType(config: { complicationType?: number; com
   }
   return value
 }
-export function complicationPreview(config: { complicationType?: number; complicationProperty?: string; displayMode?: string }, properties: PropertiesMap): string {
+export function complicationPreview(config: { complicationType?: number; complicationProperty?: string; displayMode?: string }, properties: PropertiesMap, language: AppLanguage = 'eng'): string {
   const option = COMPLICATION_OPTIONS.find((item) => item.value === resolveComplicationType(config, properties))!
+  if (language === 'zhs' && config.displayMode !== 'shortcut' && option.value >= 8 && option.value <= 11) {
+    const samples = config.displayMode === 'label' ? ['当前天气', '明日天气', '后天天气', '三天后天气'] : ['晴', '雨', '阴', '晴']
+    return samples[option.value - 8]
+  }
   return config.displayMode === 'label' ? option.label : config.displayMode === 'shortcut' ? '' : option.example
 }
 

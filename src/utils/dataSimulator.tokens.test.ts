@@ -3,7 +3,9 @@ import { getSimulatedDataByTokenCode, setDataSimulatorScenario } from './dataSim
 
 describe('compact token simulation', () => {
   it('previews native weather tokens and preserves missing values', () => {
-    const codes = ['w09', 'w11', 'w11.1', 'w13', 'w14', 'w15', 'w16', 'w17']
+    expect(getSimulatedDataByTokenCode('w02', 'zhs')?.display).toBe('局部多云')
+    expect(getSimulatedDataByTokenCode('w02', 'eng')?.display).toBe('Sunny')
+    const codes = ['w02', 'w09', 'w11', 'w11.1', 'w13', 'w14', 'w15', 'w16', 'w17']
     for (const code of codes) expect(getSimulatedDataByTokenCode(code)?.display).toBeTruthy()
     expect(getSimulatedDataByTokenCode('w13')).toMatchObject({ display: '40', numeric: 40, unit: '%' })
     expect(getSimulatedDataByTokenCode('w15')).toMatchObject({ display: '1013', numeric: 101325, unit: 'hPa' })

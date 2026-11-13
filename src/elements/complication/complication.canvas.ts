@@ -1,3 +1,4 @@
+import { useDesignStore } from '@/stores/designStore'
 import { FabricObject, FabricText, classRegistry, type Canvas } from 'fabric'
 import { usePropertiesStore } from '@/stores/properties'
 import type { PropertiesMap } from '@/types/properties'
@@ -42,7 +43,7 @@ export class ComplicationObject extends FabricObject {
     this.set({ width: normalized.displayWidth, height: normalized.displayHeight })
     try {
       this.source = resolveComplicationType(config, properties)
-      this.text = complicationPreview(config, properties)
+      this.text = complicationPreview(config, properties, useDesignStore().appLanguage)
       this.ratio = complicationProgress(config, this.source)
     } catch {
       this.text = '--'

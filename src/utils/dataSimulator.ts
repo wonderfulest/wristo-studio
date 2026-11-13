@@ -1,3 +1,4 @@
+import type { AppLanguage } from '@/types/localization'
 // 简单数据模拟引擎：根据数据名称返回一个模拟值
 // 参考 Monkey C 中的 DataFetcher/DataProvider，但这里不做缓存和复杂逻辑
 import { resolveTokenTemplate } from '@/engine/expression/textTemplateTokens'
@@ -170,8 +171,11 @@ export function tickSimulatedData(): void {
  *
  * 这里只做非常轻量的映射，用于设计器中的预览效果
  */
-export function getSimulatedDataByName(name: string, now: Date = new Date()): SimulatedData {
+export function getSimulatedDataByName(name: string, now: Date = new Date(), language: AppLanguage = 'eng'): SimulatedData {
   const key = name.trim()
+  if (language === 'zhs' && (key === 'weatherDescription' || key === 'weatherDesc') && activeScenario !== 'missing-data') {
+    return { display: activeScenario === 'long-text' ? '多云可能有雨夹雪' : '局部多云', unit: '' }
+  }
   const scenarioValue = scenarioData(key)
   if (scenarioValue) return scenarioValue
 
@@ -465,12 +469,12 @@ const COMPACT_TOKEN_SIMULATION_KEYS: Readonly<Record<string, string>> = {
   w12: 'windSpeed',
 }
 
-export function getSimulatedDataByTokenCode(code: string): SimulatedData | undefined {
+export function getSimulatedDataByTokenCode(code: string, language: AppLanguage = 'eng'): SimulatedData | undefined {
   const definition = DEFAULT_EXPRESSION_TOKEN_CATALOG.getByCode(code)
   if (!definition) return undefined
   if (code.endsWith('u')) {
     const baseCode = code.slice(0, -1)
-    const base = getSimulatedDataByTokenCode(baseCode)
+    const base = getSimulatedDataByTokenCode(baseCode, language)
     return {
       display: base ? (base.unit || '') : String(definition.exampleValue || ''),
       numeric: null,
@@ -484,7 +488,7 @@ export function getSimulatedDataByTokenCode(code: string): SimulatedData | undef
 
   const simulationKey = COMPACT_TOKEN_SIMULATION_KEYS[code]
   if (simulationKey) {
-    const data = getSimulatedDataByName(simulationKey)
+    const data = getSimulatedDataByName(simulationKey, undefined, language)
     return data.unit && TOKEN_DISPLAY_UNIT_EXAMPLES[code]
       ? { ...data, unit: TOKEN_DISPLAY_UNIT_EXAMPLES[code] }
       : data
