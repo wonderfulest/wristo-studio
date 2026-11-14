@@ -148,6 +148,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     ShortcutsDialog: typeof import('./src/components/dialogs/ShortcutsDialog.vue')['default']
     SidePanel: typeof import('./src/components/panels/SidePanel.vue')['default']
+    SocialShareTasks: typeof import('./src/components/layout/SocialShareTasks.vue')['default']
     StudioCredits: typeof import('./src/components/layout/StudioCredits.vue')['default']
     StyleTagSelector: typeof import('./src/components/common/StyleTagSelector.vue')['default']
     SubmitDesignDialog: typeof import('./src/components/dialogs/SubmitDesignDialog.vue')['default']

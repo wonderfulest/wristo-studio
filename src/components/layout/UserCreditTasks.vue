@@ -20,10 +20,12 @@
         <span v-else>{{ t('credits.taskPaused') }}</span>
       </div>
     </template>
+    <SocialShareTasks :active="active" />
   </section>
 </template>
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from 'vue'
+import SocialShareTasks from './SocialShareTasks.vue'
 import { useI18n } from '@/i18n'
 import { useUserStore } from '@/stores/user'
 import { userRewardsApi, type UserRewardProgress } from '@/api/wristo/userRewards'

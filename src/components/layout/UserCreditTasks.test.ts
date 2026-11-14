@@ -10,7 +10,7 @@ import UserCreditTasks from './UserCreditTasks.vue'
 const data = () => ({ settings: { checkInEnabled: true, checkInCredits: 1, purchaseEnabled: true, purchaseCredits: 3, downloadEnabled: true, downloadCredits: 1, downloadDailyLimit: 5 }, day: '2026-10-05', checkedIn: false, downloadCreditsToday: 0, purchasesRewarded: 0, downloadsRewarded: 0 })
 const wrappers: ReturnType<typeof mount>[] = []
 function setup(active = true) {
-  const w = mount(UserCreditTasks, { props: { active }, global: { directives: { loading: () => {} }, stubs: { ElButton: { props: ['disabled', 'nativeType'], template: '<button :type="nativeType || \'button\'" :disabled="disabled"><slot /></button>' } } } })
+  const w = mount(UserCreditTasks, { props: { active }, global: { directives: { loading: () => {} }, stubs: { SocialShareTasks: true, ElButton: { props: ['disabled', 'nativeType'], template: '<button :type="nativeType || \'button\'" :disabled="disabled"><slot /></button>' } } } })
   wrappers.push(w); return w
 }
 beforeEach(() => {
