@@ -78,3 +78,13 @@ it('shows the new package generation allowances at the default cost', async () =
   wrapper = mount(BuyCredits); await flushPromises()
   expect(wrapper.findAll('[data-watchface-estimate]').map(el => el.text())).toEqual([15,35,100].map(count => expect.stringContaining(`Approximately ${count} watch face generations`)))
 })
+
+it('does not automatically open an old order with a different credit amount', async () => {
+  mocks.createOrder.mockResolvedValue({ data: { ...order, credits: 450 } })
+  const wrapper = mount(BuyCredits); await flushPromises()
+  await wrapper.get('[data-buy="creator"]').trigger('click'); await flushPromises()
+  expect(mocks.createOrder).toHaveBeenCalledWith('creator', expect.any(String), 700)
+  expect(mocks.open).not.toHaveBeenCalled()
+  expect(wrapper.text()).toContain('This existing order contains 450 credits')
+  wrapper.unmount()
+})

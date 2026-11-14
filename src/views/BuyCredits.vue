@@ -24,7 +24,7 @@
     <section v-if="activeOrder" class="payment-status" role="status" aria-live="polite">
       <div><h2>{{ activeOrder.status === 'PAID' ? 'Credits added' : statusLabel(activeOrder.status) }}</h2>
         <p v-if="activeOrder.status === 'PAID'">{{ activeOrder.credits }} credits have been added to your account. Return to your original Studio tab to continue with your design and prompt.</p>
-        <p v-else-if="activeOrder.status === 'PENDING' || activeOrder.status === 'CREATING'">Your balance updates after payment is verified. If you have paid, check again in a moment. Do not pay again.</p>
+        <p v-else-if="activeOrder.status === 'PENDING' || activeOrder.status === 'CREATING'">This order contains {{ activeOrder.credits }} credits. Your balance updates after payment is verified. If you have paid, check again in a moment. Do not pay again.</p>
         <p v-else-if="activeOrder.refundedCredits">{{ activeOrder.refundedCredits }} credits were reversed for this purchase.</p>
         <p v-else>Choose a pack to start a new checkout.</p>
       </div>
@@ -115,11 +115,16 @@ async function buy(pack: CreditPackage) {
     // Load the checkout before creating a payable order, so script failures are safe to retry.
     client = await loadPaddle()
     if (current !== version) return
-    const result = await studioCreditsApi.createOrder(pack.code, requests[pack.code])
+    const result = await studioCreditsApi.createOrder(pack.code, requests[pack.code], pack.credits)
     if (current !== version) return
     if (!result.data) throw Error('Unable to prepare checkout. Please try again.')
     await accept(result.data)
     if (current !== version) return
+    if (result.data.credits !== pack.credits) {
+      error.value = `This existing order contains ${result.data.credits} credits. Review its original amount under Recent purchases before resuming checkout.`
+      await refreshWallet()
+      return
+    }
     await openCheckout(result.data)
     if (result.data.status === 'CREATE_FAILED') error.value = 'Checkout could not be created. Try again or contact support if this continues.'
     pollCount = 0; schedule(current)

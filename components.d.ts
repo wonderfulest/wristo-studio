@@ -143,6 +143,7 @@ declare module 'vue' {
     PropertyKeyField: typeof import('./src/components/properties/common/PropertyKeyField.vue')['default']
     PublishForm: typeof import('./src/components/dialogs/PublishForm.vue')['default']
     RecentFontList: typeof import('./src/components/font-picker/RecentFontList.vue')['default']
+    RewardPointsPanel: typeof import('./src/components/layout/RewardPointsPanel.vue')['default']
     Rgb565ColorSpectrum: typeof import('./src/components/color-picker/Rgb565ColorSpectrum.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

@@ -13,9 +13,11 @@ function setup() {
     ElDialog: { props: ['modelValue'], template: '<section v-if="modelValue"><slot /></section>' },
     ElSelect: { name: 'ElSelect', props: ['modelValue'], emits: ['update:modelValue','change'], template: '<div><slot /></div>' },
     ElOption: true,
+    UserCreditTasks: true,
+    RewardPointsPanel: true,
     ElTable: { props: ['data'], template: '<div>{{ JSON.stringify(data) }}</div>' },
     ElTableColumn: true,
-    ElPagination: { name: 'ElPagination', props: ['currentPage','total'], emits: ['update:currentPage','current-change'], template: '<div />' },
+    ElPagination: { name: 'ElPagination', props: ['currentPage','total'], emits: ['update:current-page','current-change'], template: '<div />' },
     ElButton: { template: '<button><slot /></button>' },
   } } })
   wrappers.push(wrapper); return wrapper
@@ -29,6 +31,17 @@ beforeEach(() => {
 })
 afterEach(() => { wrappers.splice(0).forEach(w => w.unmount()) })
 describe('Studio credits wallet', () => {
+  it('uses the configured gift and never falls back to a fixed amount', async () => {
+    mocks.balance.mockResolvedValue({ code: 0, data: { balance: 100, registrationCredits: 37 } })
+    const w = setup(); await flushPromises(); await w.find('button').trigger('click'); await flushPromises()
+    expect(w.text()).toContain('credits.policy 37')
+    mocks.balance.mockResolvedValue({ code: 0, data: { balance: 100, registrationCredits: 0 } })
+    window.dispatchEvent(new Event('studio-credits-changed')); await flushPromises()
+    expect(w.text()).toContain('credits.policy 0')
+    mocks.balance.mockRejectedValue(new Error('offline'))
+    window.dispatchEvent(new Event('studio-credits-changed')); await flushPromises()
+    expect(w.text()).toContain('credits.policy —')
+  })
   it('loads daily creator rewards and supports reward history filtering', async () => {
     const w=setup(); await flushPromises()
     expect(mocks.creatorRewards).not.toHaveBeenCalled()
@@ -55,7 +68,7 @@ describe('Studio credits wallet', () => {
     expect(mocks.history).toHaveBeenLastCalledWith(1,'')
     expect(w.text()).toContain('REGISTRATION_GIFT')
     const pagination=w.findComponent({ name: 'ElPagination' })
-    pagination.vm.$emit('update:currentPage',2); pagination.vm.$emit('current-change',2)
+    pagination.vm.$emit('update:current-page',2); pagination.vm.$emit('current-change',2)
     await flushPromises(); expect(mocks.history).toHaveBeenLastCalledWith(2,'')
     const filter=w.findComponent({ name:'ElSelect' })
     filter.vm.$emit('update:modelValue','AI_BANNER'); filter.vm.$emit('change','AI_BANNER')

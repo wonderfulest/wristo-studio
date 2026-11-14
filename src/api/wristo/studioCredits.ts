@@ -22,10 +22,10 @@ export const studioCreditsApi = {
   creatorRewards(): Promise<ApiResponse<CreatorRewardProgress>> { return instance.get('/user/studio-credits/creator-rewards') },
   packages(): Promise<ApiResponse<CreditPackage[]>> { return instance.get('/user/studio-credits/packages') },
   orders(): Promise<ApiResponse<CreditOrder[]>> { return instance.get('/user/studio-credits/orders') },
-  createOrder(packageCode: string, requestId: string): Promise<ApiResponse<CreditOrder>> { return instance.post('/user/studio-credits/orders', { packageCode, requestId }) },
+  createOrder(packageCode: string, requestId: string, expectedCredits: number): Promise<ApiResponse<CreditOrder>> { return instance.post('/user/studio-credits/orders', { packageCode, requestId, expectedCredits }) },
   order(id: string): Promise<ApiResponse<CreditOrder>> { return instance.get(`/user/studio-credits/orders/${encodeURIComponent(id)}`) },
   syncOrder(id: string): Promise<ApiResponse<CreditOrder>> { return instance.post(`/user/studio-credits/orders/${encodeURIComponent(id)}/sync`) },
-  balance(): Promise<ApiResponse<{ balance: number }>> { return instance.get('/user/studio-credits') },
+  balance(): Promise<ApiResponse<{ balance: number; registrationCredits: number }>> { return instance.get('/user/studio-credits') },
   history(page: number, type: CreditType | ''): Promise<ApiResponse<CreditPage>> {
     return instance.get('/user/studio-credits/history', { params: { page, pageSize: 20, type: type || undefined } })
   },

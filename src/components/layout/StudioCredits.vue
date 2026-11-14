@@ -14,7 +14,8 @@
       </el-select>
     </div>
     <a href="/credits" target="_blank" rel="noopener">{{ t('credits.add') }}</a>
-    <p class="credits-hint">{{ t('credits.policy') }}</p>
+    <p class="credits-hint">{{ t('credits.policy', { count: registrationCredits ?? '—' }) }}</p>
+    <RewardPointsPanel :active="visible" />
     <UserCreditTasks :active="visible" />
     <div v-if="rewards" class="credits-hint">
       <strong>{{ t('credits.creatorTitle') }}</strong>
@@ -50,12 +51,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import UserCreditTasks from './UserCreditTasks.vue'
+import RewardPointsPanel from './RewardPointsPanel.vue'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
 import { studioCreditsApi, type CreditEntry, type CreditType, type CreatorRewardProgress } from '@/api/wristo/studioCredits'
 const { t } = useI18n()
 const user = useUserStore()
 const balance = ref<number | null>(null)
+const registrationCredits = ref<number | null>(null)
 const visible = ref(false)
 const type = ref<CreditType | ''>('')
 const types: CreditType[] = ['DESIGN_SLOT', 'SHARE_VISIT_REWARD', 'USER_SOCIAL_SHARE', 'USER_CHECK_IN', 'USER_DOWNLOAD', 'USER_PURCHASE', 'USER_PURCHASE_REFUND', 'CREATOR_DOWNLOAD', 'CREATOR_PURCHASE', 'CREATOR_PURCHASE_REFUND', 'PURCHASE', 'PURCHASE_REFUND', 'PURCHASE_REFUND_REVERSAL', 'ADMIN_CREDIT', 'ADMIN_DEBIT', 'REGISTRATION_GIFT', 'AI_TAGS', 'AI_DESCRIPTION', 'AI_BANNER', 'AI_WATCHFACE', 'AI_WATCHFACE_REFUND', 'AI_WATCHFACE_ADJUST', 'AI_WATCHFACE_ADJUST_REFUND']
@@ -74,8 +77,8 @@ async function refreshBalance() {
   if (!user.isAuthenticated) return
   try {
     const response = await studioCreditsApi.balance()
-    if (version === balanceVersion) balance.value = response.data?.balance ?? null
-  } catch { if (version === balanceVersion) balance.value = null }
+    if (version === balanceVersion) { balance.value = response.data?.balance ?? null; registrationCredits.value = response.data?.registrationCredits ?? null }
+  } catch { if (version === balanceVersion) { balance.value = null; registrationCredits.value = null } }
 }
 async function loadHistory() {
   const version = ++historyVersion
@@ -110,7 +113,7 @@ function refresh() { void refreshBalance(); if (visible.value) { void loadHistor
 watch(() => user.isAuthenticated ? user.userInfo?.id : null, () => {
   balanceVersion++; historyVersion++; rewardsVersion++
   rewards.value = null; rewardsError.value = ''
-  balance.value = null; items.value = []; total.value = 0; visible.value = false
+  balance.value = null; registrationCredits.value = null; items.value = []; total.value = 0; visible.value = false
   type.value = ''; page.value = 1; loading.value = false; error.value = ''
   void refreshBalance()
 }, { immediate: true })
