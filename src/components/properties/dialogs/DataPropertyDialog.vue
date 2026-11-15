@@ -132,7 +132,7 @@ import { useDesignStore } from '@/stores/designStore'
 import { filterDataOptionsForAppLanguage } from '@/domain/designLanguageCapabilities'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
-import { resolveMetricIconGlyph } from '@/utils/metricIcon'
+import { resolveDataSelectionIconGlyph } from '@/utils/dataSelectionIcon'
 import {
   createAddableDataOptions,
   createDefaultDataOptions,
@@ -157,7 +157,7 @@ const propertiesStore = usePropertiesStore()
 const designStore = useDesignStore()
 const catalogOptions = computed(() => getDataTypePropertyOptions(designStore.appLanguage))
 const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions.value)
-const iconGlyph = (option) => resolveMetricIconGlyph(option)
+const iconGlyph = (option) => resolveDataSelectionIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
 
 const formData = reactive({
@@ -342,7 +342,7 @@ defineExpose({
 .data-option-row :deep(.el-checkbox__label) { display: flex; align-items: center; white-space: normal; min-width: 0; }
 .data-option-row :deep(.el-radio) { margin-right: 0; flex-shrink: 0; }
 .data-option-row :deep(.el-radio__label) { font-size: 12px; padding-left: 4px; }
-.metric-icon { font-family: var(--studio-data-icon-font), sans-serif !important; font-size: 16px; width: 24px; flex-shrink: 0; text-align: center; margin-right: 6px; }
+.metric-icon { font-family: var(--studio-data-icon-font), sans-serif !important; font-size: 16px; white-space: pre; width: 24px; flex-shrink: 0; text-align: center; margin-right: 6px; }
 @media (max-width: 1000px) { .data-options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .data-options-grid { grid-template-columns: 1fr; } }
 </style>

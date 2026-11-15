@@ -51,14 +51,14 @@
               </template>
             </el-dropdown>
           </div>
-          <span>{{ item.elements.length }} {{ t('watchfaceIcons.uses') }}</span>
         </header>
         <details v-if="item.elements.length">
-          <summary>{{ t('watchfaceIcons.layers') }}</summary>
+          <summary :title="t('watchfaceIcons.layers')">{{ item.elements.length }} {{ t('watchfaceIcons.uses') }}</summary>
           <ul>
             <li v-for="element in item.elements" :key="element.id">{{ layerLabel(element) }}</li>
           </ul>
         </details>
+        <span v-else class="usage-count">0 {{ t('watchfaceIcons.uses') }}</span>
       </article>
     </div>
     <input ref="input" type="file" accept=".png,.svg,image/png,image/svg+xml" hidden @change="picked" />
@@ -297,15 +297,16 @@ async function restore(item: WatchfaceIcon) {
 }
 .icon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
   max-height: 55vh;
   overflow: auto;
   padding: 2px;
   align-items: start;
 }
 .icon-card {
-  padding: 12px;
+  min-width: 0;
+  padding: 8px;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 14px;
   background: var(--el-bg-color);
@@ -319,7 +320,7 @@ async function restore(item: WatchfaceIcon) {
 }
 .preview {
   width: 100%;
-  height: 112px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,7 +341,7 @@ header {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 12px 2px 8px;
+  margin: 4px 2px 0;
 }
 .card-title {
   display: flex;
@@ -359,7 +360,7 @@ header strong {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-header span,
+.usage-count,
 details {
   font-size: 12px;
   color: var(--el-text-color-secondary);
@@ -367,11 +368,15 @@ details {
 summary {
   cursor: pointer;
 }
+.usage-count,
 details {
-  margin: 0 2px 8px;
+  display: block;
+  line-height: 20px;
+  margin: 0 2px;
   overflow-wrap: anywhere;
 }
 ul {
+  margin: 4px 0 0;
   padding-left: 18px;
 }
 .more-actions {
