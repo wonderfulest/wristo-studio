@@ -16,7 +16,17 @@
       <el-form-item :label="t('elementSettings.font')">
         <font-picker v-model="currentModel.fontFamily" :type="FontTypes.ICON_FONT" :use-global-icon-font-strategy="false" @change="updateElement" />
       </el-form-item>
+      <el-form-item :label="t('watchfaceIcons.custom')">
+        <el-select :model-value="currentModel.customIconId || ''" @change="selectCustomIcon" filterable>
+          <el-option value="" :label="t('watchfaceIcons.followData')" />
+          <el-option v-for="asset in customIcons" :key="asset.id" :value="asset.id" :label="asset.name">
+            <img :src="asset.imageUrl" width="20" height="20" style="object-fit: contain; vertical-align: middle; margin-right: 8px" />{{ asset.name }}
+          </el-option>
+        </el-select>
+      </el-form-item>
+      <el-button link type="primary" @click="iconLibraryVisible = true">{{ t('watchfaceIcons.title') }}</el-button>
     </el-form>
+    <WatchfaceIconsDialog v-model="iconLibraryVisible" />
 
     <el-tabs v-model="activeTab" class="icon-tabs">
       <el-tab-pane label="MIP" name="mip">
@@ -111,6 +121,9 @@
 </template>
 
 <script setup lang="ts">
+import WatchfaceIconsDialog from '@/features/watchface-icons/WatchfaceIconsDialog.vue'
+import { iconImagePatch } from '@/features/watchface-icons/watchfaceIcons'
+import { useDesignStore } from '@/stores/designStore'
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import { ref, computed, nextTick, watch } from 'vue'
@@ -151,6 +164,9 @@ const amoledIconAssetStore = useAmoledIconAssetStore()
 const historyStore = useHistoryStore()
 const propertiesStore = usePropertiesStore()
 const fontStore = useFontStore()
+const designStore = useDesignStore()
+const customIcons = computed(() => designStore.watchfaceIcons.filter(item => item.kind === 'custom'))
+const iconLibraryVisible = ref(false)
 const amoledFileInputRef = ref<HTMLInputElement | null>(null)
 const activeTab = ref<'mip' | 'amoled'>('mip')
 const uploadDialogVisible = ref(false)
@@ -189,7 +205,10 @@ const mipPreviewFont = computed(() => {
 const currentAmoledPreviewSource = computed(() => {
   const iconUnicode = currentAmoledCandidate.value?.iconUnicode
   if (!iconUnicode) return ''
+  const customId = currentModel.value.customIconId
+  if (customId) return designStore.watchfaceIcons.find(item => item.id === customId)?.imageUrl || ''
   return amoledIconAssetStore.getDisplayUrl(currentAmoledFontSlug.value, iconUnicode)
+    || designStore.watchfaceIcons.find(item => item.id === `${currentAmoledFontSlug.value}::${iconUnicode}`)?.imageUrl || ''
 })
 const currentPendingAmoledAsset = computed(() => {
   const iconUnicode = currentAmoledCandidate.value?.iconUnicode
@@ -203,7 +222,7 @@ const currentAmoledImageSource = computed(() => {
   if (currentAmoledPreviewSource.value) return currentAmoledPreviewSource.value
   const candidateUnicode = normalizeIconUnicode(currentAmoledCandidate.value?.iconUnicode)
   const modelUnicode = normalizeIconUnicode(model?.amoledIconUnicode || model?.iconUnicode || model?.text)
-  if (candidateUnicode && modelUnicode && candidateUnicode !== modelUnicode) return ''
+  if (!model?.customIconId && candidateUnicode && modelUnicode && candidateUnicode !== modelUnicode) return ''
   return String(model?.amoledImageUrl || '')
 })
 const currentAmoledSvgEditable = computed(() => {
@@ -269,7 +288,8 @@ const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => 
   const fontSlug = String(model.fontFamily || model.iconFont || currentAmoledFontSlug.value || '').trim()
   const existingUnicode = normalizeIconUnicode(model.amoledIconUnicode || model.iconUnicode || model.text)
   const existingImageUrl = iconUnicode && existingUnicode === iconUnicode ? String(model.amoledImageUrl || '') : ''
-  const imageUrl = model.amoledImageUrl === '' ? '' : (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '') || existingImageUrl
+  const libraryAsset = designStore.watchfaceIcons.find(item => item.id === (model.customIconId || `${fontSlug}::${iconUnicode}`))
+  const imageUrl = model.amoledImageUrl === '' ? '' : libraryAsset?.imageUrl || (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '') || existingImageUrl
   const keepAmoled = String(model.iconDisplayType || 'mip') === 'amoled' && Boolean(imageUrl)
 
   return {
@@ -281,6 +301,14 @@ const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => 
     width: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
     height: keepAmoled ? Number(model.iconSize || model.fontSize || currentAmoledImageSize.value) : undefined,
   }
+}
+
+const selectCustomIcon = async (id: string) => {
+  const model = currentModel.value
+  const unicode = currentAmoledCandidate.value?.iconUnicode || normalizeIconUnicode(model.amoledIconUnicode || model.text)
+  const asset = designStore.watchfaceIcons.find(item => item.id === (id || `${currentAmoledFontSlug.value}::${unicode}`))
+  await applyUpdate({ ...iconImagePatch(model, unicode, asset?.imageUrl || ''), customIconId: id })
+  historyStore.saveState('watchface-icon-select')
 }
 
 const updateElement = async () => {
@@ -343,6 +371,7 @@ const removeCurrentAmoledAsset = async () => {
     iconDisplayType: 'mip',
     amoledImageUrl: '',
     imageUrl: '',
+    customIconId: '',
     originX: 'center',
     originY: 'center',
     text: candidate?.iconUnicode || config?.text
@@ -653,7 +682,7 @@ const saveLocalUploads = async () => {
 
   uploadDialogVisible.value = false
   if (savedRows.some((row) => row.iconUnicode === currentAmoledCandidate.value?.iconUnicode)) {
-    await applyUpdate({ amoledImageUrl: currentAmoledPreviewSource.value })
+    await applyUpdate({ customIconId: '', amoledImageUrl: amoledIconAssetStore.getDisplayUrl(currentAmoledFontSlug.value, currentAmoledCandidate.value!.iconUnicode) })
     activeTab.value = 'amoled'
     await applyAmoledDisplay()
   }

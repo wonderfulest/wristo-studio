@@ -178,3 +178,12 @@ it('saves charset-qualified SVG resources with an SVG filename and MIME type', a
   expect(file.name).toBe('asset.svg')
   expect(file.type).toBe('image/svg+xml')
 })
+
+it('persists unused watchface icons and restores their library metadata', async () => {
+  const input = { ...config(), watchfaceIcons: [{ id: 'custom:unused', kind: 'custom', name: 'Smile', imageUrl: 'data:image/png;base64,AgM=' }] }
+  await saveJsonProject('target', input)
+  const saved = update.mock.calls[0][0].configJson
+  expect(saved.watchfaceIcons).toEqual([{ id: 'custom:unused', kind: 'custom', name: 'Smile', imageUrl: 'https://assets.test/persisted' }])
+  expect(restoreJsonProject(saved).watchfaceIcons).toEqual(saved.watchfaceIcons)
+  expect(input.watchfaceIcons[0].imageUrl).toMatch(/^data:/)
+})

@@ -8,6 +8,7 @@ import { syncElementInstancesFromCanvas, updateElementById } from '@/engine/mana
 import { useElementDataStore } from '@/stores/elementDataStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
 import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
 import {
   DATA_NUMBER_FORMAT_AUTO,
@@ -264,6 +265,7 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       return JSON.stringify({
         layoutGroups: useLayoutGroupStore().snapshot(),
+        watchfaceIcons: useDesignStore().watchfaceIcons,
         watchFaceName: baseStore?.watchFaceName,
       })
     } catch {
@@ -354,12 +356,14 @@ export const useHistoryStore = defineStore('history', () => {
     const layoutGroupStore = useLayoutGroupStore()
     if (!snap.designJSON) {
       layoutGroupStore.clear()
+      useDesignStore().setWatchfaceIcons([])
       return
     }
     try {
       const parsed = JSON.parse(snap.designJSON)
       const elements = useElementDataStore().elements.map((snapshot) => snapshot.config)
       layoutGroupStore.hydrate(parsed?.layoutGroups ?? [], elements)
+      useDesignStore().setWatchfaceIcons(parsed?.watchfaceIcons)
       if (typeof parsed?.watchFaceName === 'string') baseStore?.setWatchFaceName?.(parsed.watchFaceName)
     } catch (error) {
       console.warn('[History] restore design snapshot failed', error)

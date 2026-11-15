@@ -24,6 +24,7 @@ export interface DataElementConfig extends BaseTextConfig {
 }
 
 export interface IconElementConfig extends DataElementConfig {
+  customIconId?: string
   eleType: 'icon'
   iconFont: string
   iconSize: number
@@ -80,6 +81,7 @@ export interface MoonElementConfig extends BaseElementConfig {
 
 export interface WeatherElementConfig extends BaseElementConfig {
   eleType: 'weather'
+  amoledImageUrl?: string
   iconUnicode?: string
   fontFamily?: string
   fill?: string

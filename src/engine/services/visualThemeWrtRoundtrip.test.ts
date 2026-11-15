@@ -79,3 +79,16 @@ describe('WRT theme assets without database IDs', () => {
     await expect(buildWrtDesignPackage(config)).rejects.toThrow()
   })
 })
+
+it('embeds an unused custom icon and restores its bytes through WRT', async () => {
+  const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+  const config = createConfig()
+  config.watchfaceIcons = [{ id: 'custom:unused', kind: 'custom', name: 'Unused', imageUrl: (config.elements[0] as any).imageUrl }]
+  const file = await buildWrtDesignPackage(config)
+  const zip = await JSZip.loadAsync(await file.arrayBuffer())
+  const saved = JSON.parse(await zip.file('design.json')!.async('string'))
+  expect(saved.watchfaceIcons[0].imageUrl).toMatch(/^bundle:\/\//)
+  const restored = await readWrtDesignPackage(file)
+  expect(restored.config.watchfaceIcons![0]).toMatchObject({ id: 'custom:unused', name: 'Unused' })
+  expect(await (await fetch(restored.config.watchfaceIcons![0].imageUrl)).text()).toContain('#A2FF01')
+})

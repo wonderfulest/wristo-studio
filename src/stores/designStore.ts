@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { normalizeWatchfaceIcons, type WatchfaceIconAsset } from '@/types/watchfaceIcons'
 import { normalizeAppLanguage, normalizeDataLabelLength, type AppLanguage, type DataLabelLength, type WatchfaceLocalizationConfig } from '@/types/localization'
 
 export type WatchShape = 'circle' | 'rectangle'
@@ -35,6 +36,7 @@ function hasSameNumericValues(left: readonly number[], right: readonly number[])
 
 export const useDesignStore = defineStore('design', {
   state: () => ({
+    watchfaceIcons: [] as WatchfaceIconAsset[],
     id: '' as string,
     watchFaceName: '' as string,
     watchSize: 454,
@@ -51,6 +53,15 @@ export const useDesignStore = defineStore('design', {
   }),
 
   actions: {
+    setWatchfaceIcons(value: unknown): void {
+      this.watchfaceIcons = normalizeWatchfaceIcons(value)
+    },
+    upsertWatchfaceIcon(asset: WatchfaceIconAsset): void {
+      this.setWatchfaceIcons([...this.watchfaceIcons.filter(item => item.id !== asset.id), asset])
+    },
+    removeWatchfaceIcon(id: string): void {
+      this.watchfaceIcons = this.watchfaceIcons.filter(item => item.id !== id)
+    },
     setWatchFaceName(name: string): void {
       this.watchFaceName = name
     },

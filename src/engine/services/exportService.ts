@@ -99,7 +99,7 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
     if (String((element as any)?.eleType ?? '') === 'icon' && (element as any)?.iconDisplayType === 'amoled') {
       const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
       const iconUnicode = normalizeIconUnicode((element as any).amoledIconUnicode)
-      const pending = fontSlug && iconUnicode
+      const pending = !(element as any).customIconId && fontSlug && iconUnicode
         ? amoledIconAssetStore.getPending(fontSlug, iconUnicode)
         : null
       const pendingUrl = String(pending?.objectUrl || pending?.sourceUrl || '').trim()
@@ -266,6 +266,7 @@ export interface GenerateConfigOptions {
   maxFieldLength?: number
   localization?: WatchfaceLocalizationConfig
   visualThemes?: VisualThemesConfig
+  watchfaceIcons?: import('@/types/watchfaceIcons').WatchfaceIconAsset[]
   layoutGroups?: HorizontalLayoutGroupConfig[]
   validateBindings?: boolean
   baseElements?: Array<Record<string, any>>
@@ -378,6 +379,7 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
 
   const config: RuntimeDesignConfig = {
     version: '1.0',
+    watchfaceIcons: JSON.parse(JSON.stringify(options.watchfaceIcons ?? [])),
     properties: normalizedDataProperties.properties,
     dataOptions: normalizedDataProperties.dataOptions,
     designId: designId || '',

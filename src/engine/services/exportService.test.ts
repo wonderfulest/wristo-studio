@@ -722,3 +722,13 @@ describe('visual theme export persistence', () => {
     })
   })
 })
+
+it('does not overwrite an independent custom icon with a pending data-icon replacement', async () => {
+  setActivePinia(createPinia())
+  const { useAmoledIconAssetStore } = await import('@/stores/amoledIconAssetStore')
+  const { resolvePackageAssetUrls } = await import('./exportService')
+  useAmoledIconAssetStore().upsertPending({ fontSlug: 'wristo-icon', iconUnicode: '0063', file: new File(['replacement'], 'replacement.png', { type: 'image/png' }) })
+  const resolved = await resolvePackageAssetUrls({ elements: [{ id: 'custom', eleType: 'icon', fontFamily: 'wristo-icon',
+    customIconId: 'custom:smile', iconDisplayType: 'amoled', amoledIconUnicode: '0063', amoledImageUrl: '/smile.svg' }] } as any)
+  expect((resolved!.elements[0] as any).amoledImageUrl).toBe('/smile.svg')
+})

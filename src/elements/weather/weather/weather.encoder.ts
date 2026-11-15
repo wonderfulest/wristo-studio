@@ -7,6 +7,7 @@ export function encodeWeather(element: FabricElement): WeatherElementConfig {
   const weather = element as FabricElement & Partial<WeatherElementConfig>
   return {
     eleType: 'weather',
+    amoledImageUrl: weather.amoledImageUrl,
     id: String(element.id ?? ''),
     left: parseInt(String(element.left)),
     top: parseInt(String(element.top)),
@@ -22,6 +23,7 @@ export function encodeWeather(element: FabricElement): WeatherElementConfig {
 export function decodeWeather(config: WeatherElementConfig): Partial<FabricElement> {
   return {
     eleType: 'weather',
+    amoledImageUrl: config.amoledImageUrl,
     id: config.id,
     left: config.left,
     top: config.top,

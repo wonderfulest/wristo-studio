@@ -38,6 +38,15 @@ const DEFAULT_FABRIC_PROPS = [
   'wristoImageId',
   'imageUrl',
   'imageId',
+  // Icon identity and display state must survive undo, redo and cloning.
+  'customIconId',
+  'iconDisplayType',
+  'amoledImageUrl',
+  'amoledIconUnicode',
+  'iconFont',
+  'iconSize',
+  'amoledWidth',
+  'amoledHeight',
   'assetId',
   'assetType',
   // Undo/redo and clone restore Fabric objects directly, without the dynamic-image decoder.

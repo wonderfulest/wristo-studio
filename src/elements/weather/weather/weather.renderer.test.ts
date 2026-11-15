@@ -48,6 +48,7 @@ vi.mock('fabric', () => {
   return { Group, Image, Rect, Text, filters: { BlendColor } }
 })
 
+vi.mock('@/stores/designStore', () => ({ useDesignStore: () => ({ watchfaceIcons: [] }) }))
 vi.mock('@/stores/canvasStore', () => ({ useCanvasStore: () => ({ canvas }) }))
 vi.mock('@/stores/layerStore', () => ({ useLayerStore: () => ({ addLayer: vi.fn() }) }))
 vi.mock('@/utils/controlManager', () => ({ applyControlsToObject: vi.fn() }))
@@ -154,4 +155,19 @@ describe('weather font canvas layout', () => {
     expect(group.left).toBe(180)
     expect(group.top).toBe(120)
   })
+})
+
+it('renders custom weather images in original color ahead of bitmap fonts and restores the glyph', async () => {
+  const group = new Group([], { left: 100, top: 120 }) as any
+  Object.assign(group, { id: 'custom-weather', iconUnicode: '101d', fontFamily: 'weather-font', fontSize: 32, fill: '#fff' })
+  canvas.getObjects.mockReturnValue([group])
+  applyCurrentElementPreviewFont.mockReturnValue({ bitmapPreviewAssets: { descriptorUrl: 'a', atlasUrl: 'b', sourceSize: 32 } })
+  await updateWeather(group, { amoledImageUrl: 'custom.png' })
+  const image = group.getObjects().find((o: any) => o.role === 'glyph')
+  expect(image).toBeInstanceOf(Image)
+  expect(image.sourceUrl).toBe('custom.png')
+  expect(image.filters).toEqual([])
+  expect(group.left).toBe(100)
+  await updateWeather(group, { amoledImageUrl: '' })
+  expect(group.getObjects().find((o: any) => o.role === 'glyph')).toBeInstanceOf(Text)
 })

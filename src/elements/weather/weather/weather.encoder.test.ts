@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decodeWeather } from './weather.encoder'
+import { decodeWeather, encodeWeather } from './weather.encoder'
 import { weatherSchema } from './weather.schema'
 
 describe('weather font encoding', () => {
@@ -25,4 +25,9 @@ describe('weather font encoding', () => {
 
     expect((decoded as any).iconUnicode).toBe('101d')
   })
+})
+
+it('preserves the custom weather image through encoding and decoding', () => {
+  const encoded = encodeWeather({ id: 'weather', left: 12, top: 34, iconUnicode: '101d', amoledImageUrl: 'data:image/png;base64,test' } as any)
+  expect((decodeWeather(encoded) as any).amoledImageUrl).toBe('data:image/png;base64,test')
 })

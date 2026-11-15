@@ -10,6 +10,7 @@ import FontPicker from '@/components/font-picker/font-picker.vue'
 import BitmapFontPreview from '@/features/bitmap-font-preview/BitmapFontPreview.vue'
 import { useFontStore } from '@/stores/fontStore'
 import { useAmoledIconAssetStore } from '@/stores/amoledIconAssetStore'
+import { useDesignStore } from '@/stores/designStore'
 import { useHistoryStore } from '@/stores/historyStore'
 
 vi.mock('opentype.js', () => ({
@@ -236,4 +237,23 @@ describe('icon settings panel', () => {
     await vi.waitFor(() => expect(saveState).toHaveBeenCalledWith('icon-display-set:amoled'))
     wrapper.unmount()
   })
+})
+
+it('selects an unused custom icon without changing the data binding and can return to the default', async () => {
+  setActivePinia(createPinia())
+  useDesignStore().upsertWatchfaceIcon({ id: 'custom:smile', name: 'Smile', kind: 'custom', imageUrl: '/smile.svg' })
+  const config = reactive({ eleType: 'icon', id: 'a', fontFamily: 'wristo-icon', fontSize: 30, dataProperty: 'data_1',
+    metricSymbol: 'calories', iconDisplayType: 'mip', amoledIconUnicode: '0063', amoledImageUrl: '', customIconId: '' })
+  const wrapper = shallowMount(IconPanel, { props: { config, applyPatch: patch => { Object.assign(config, patch) } },
+    global: { stubs: {
+      'el-form': { template: '<div><slot /></div>' }, 'el-form-item': { template: '<div><slot /></div>' },
+      'el-select': { emits: ['change'], props: ['modelValue'], template: `<select :value="modelValue" @change="$emit('change', $event.target.value)"><slot /></select>` },
+      'el-option': { props: ['value', 'label'], template: '<option :value="value">{{ label }}</option>' },
+      'el-tabs': true, 'el-dialog': true, 'el-button': true,
+    } } })
+  await wrapper.find('select').setValue('custom:smile')
+  expect(config).toMatchObject({ customIconId: 'custom:smile', amoledImageUrl: '/smile.svg', iconDisplayType: 'amoled', dataProperty: 'data_1' })
+  await wrapper.find('select').setValue('')
+  expect(config).toMatchObject({ customIconId: '', amoledImageUrl: '', iconDisplayType: 'mip', dataProperty: 'data_1' })
+  wrapper.unmount()
 })

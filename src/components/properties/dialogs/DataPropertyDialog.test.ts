@@ -2,39 +2,27 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 describe('DataPropertyDialog contract', () => {
-  it('shows the current data option count in the collapse title', () => {
+  it('shows choices inline with selection count and expandable additional options', () => {
     const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
-
-    expect(source).toContain("{{ t('property.dataOptions') }}（{{ formData.metricSymbols.length }}）")
+    expect(source).toContain("t('asset.selectedCount', { count: formData.metricSymbols.length })")
+    expect(source).toContain('<el-checkbox')
+    expect(source).toContain(':aria-expanded="showMore"')
+    expect(source).not.toContain('<el-select')
+    expect(source).not.toContain('addOptionsVisible')
   })
 
-  it('allows filtering the default data option without creating custom values', () => {
-    const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
-    const defaultValueSelect = source.match(
-      /<el-select\s+[\s\S]*?v-model="formData\.value"[\s\S]*?<\/el-select>/
-    )?.[0]
-
-    expect(defaultValueSelect).toBeDefined()
-    expect(defaultValueSelect).toContain('filterable')
-    expect(defaultValueSelect).not.toContain('allow-create')
-  })
-
-  it('uses pinyin-aware filtering for both data option selectors', () => {
-    const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
-
-    expect(source).toContain(':filter-method="filterDefaultOptions"')
-    expect(source).toContain(':filter-method="filterAddableOptions"')
-    expect(source).toContain('matchesDataOptionSearch(option, defaultOptionsQuery.value)')
-    expect(source).toContain('matchesDataOptionSearch(option, addableOptionsQuery.value)')
-  })
-
-  it('offers the full catalog and batch selection controls', () => {
+  it('searches the full catalog with pinyin-aware matching', () => {
     const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
     expect(source).toContain('getDataTypePropertyOptions()')
-    expect(source).not.toContain('getDataTypePropertyOptions(designStore.appLanguage)')
-    expect(source).toContain('@change="toggleAllFilteredOptions"')
-    expect(source).toContain('appendOrderedOptionIds(pendingOptionValues.value, filteredSymbols)')
-    expect(source).toContain('pendingOptionValues.value.filter(symbol => !filteredSymbols.includes(symbol))')
+    expect(source).toContain('matchesDataOptionSearch(option, optionsQuery.value)')
+    expect(source).toContain('createAddableDataOptions(catalogOptions.value, [])')
+  })
+
+  it('offers inline defaults and repairs the default after deselection', () => {
+    const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
+    expect(source).toContain('<el-radio')
+    expect(source).toContain('v-model="formData.value"')
+    expect(source).toContain('formData.value = resolveDefaultDataOptionValue(resolvedOptions.value, formData.value)')
   })
 
   it('emits symbol references instead of full options', () => {

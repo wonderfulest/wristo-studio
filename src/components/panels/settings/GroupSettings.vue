@@ -197,7 +197,8 @@ const commitHistory = (reason: string) => {
 const buildIconMetricPatch = (element: FabricElement, metric: any, propertyPatch: Record<string, any>) => {
   const iconUnicode = resolveMetricIconUnicode(metric)
   const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
-  const amoledImageUrl = iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : ''
+  const library = useDesignStore().watchfaceIcons.find(item => item.id === ((element as any).customIconId || `${fontSlug}::${iconUnicode}`))
+  const amoledImageUrl = library?.imageUrl || (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '')
   const keepAmoled = String((element as any).iconDisplayType || 'mip') === 'amoled' && Boolean(amoledImageUrl)
   const size = Number((element as any).iconSize || (element as any).fontSize || 30)
 

@@ -318,6 +318,7 @@ export function useDesignLoader(options: UseDesignLoaderOptions) {
           elements: migratedDates.elements
         } as RuntimeDesignConfig)
       : projectedConfig
+    designStore.setWatchfaceIcons(loadConfig.watchfaceIcons)
     propertiesStore.secondTimeZone = normalizeSecondTimeZone(loadConfig.secondTimeZone)
     designStore.setAppLanguage((loadConfig.localization as any)?.appLanguage)
     designStore.setDataLabelLength((loadConfig.localization as any)?.dataLabelLength)

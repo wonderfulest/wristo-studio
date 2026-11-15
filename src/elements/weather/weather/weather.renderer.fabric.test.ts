@@ -5,6 +5,7 @@ const { canvas } = vi.hoisted(() => ({
   canvas: { getObjects: vi.fn(), requestRenderAll: vi.fn() },
 }))
 
+vi.mock('@/stores/designStore', () => ({ useDesignStore: () => ({ watchfaceIcons: [] }) }))
 vi.mock('@/stores/canvasStore', () => ({ useCanvasStore: () => ({ canvas }) }))
 vi.mock('@/stores/layerStore', () => ({ useLayerStore: () => ({ addLayer: vi.fn() }) }))
 vi.mock('@/utils/controlManager', () => ({ applyControlsToObject: vi.fn() }))

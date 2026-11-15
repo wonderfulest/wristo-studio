@@ -213,7 +213,9 @@ export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: str
     if (!['data', 'icon', 'label', 'unit'].includes(eleType)) return null
     if (eleType === 'icon') {
       const iconUnicode = resolveMetricIconUnicode(canonicalMetric)
-      const artwork = packageAmoledIcons.get(normalizeIconUnicode(iconUnicode))
+      const fontSlug = String(element.fontFamily || element.iconFont || 'wristo-icon')
+      const library = useDesignStore().watchfaceIcons.find(item => item.id === (element.customIconId || `${fontSlug}::${iconUnicode}`))
+      const artwork = library ? { url: library.imageUrl } : packageAmoledIcons.get(normalizeIconUnicode(iconUnicode))
       return {
         dataProperty: propertyKey,
         goalProperty: null,
@@ -237,13 +239,15 @@ export const resolveMetricPropertyBindingPatch = (element: any, propertyKey: str
   }
   if (eleType === 'icon') {
     const iconUnicode = resolveMetricIconUnicode(canonicalMetric)
+    const fontSlug = String(element.fontFamily || element.iconFont || 'wristo-icon')
+    const library = useDesignStore().watchfaceIcons.find(item => item.id === (element.customIconId || `${fontSlug}::${iconUnicode}`))
     return {
       goalProperty: propertyKey,
       dataProperty: null,
       metricSymbol: canonicalMetric.metricSymbol,
       text: resolveIconGlyphText(iconUnicode),
-      iconDisplayType: 'mip',
-      amoledImageUrl: null,
+      iconDisplayType: library ? 'amoled' : 'mip',
+      amoledImageUrl: library?.imageUrl ?? null,
       amoledIconUnicode: iconUnicode || null
     }
   }

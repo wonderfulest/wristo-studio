@@ -893,7 +893,7 @@ const buildDesignAssetArchive = async (
   const iconPendingStore = useAmoledIconAssetStore()
   for (const element of iconElements) {
     const item = element as any
-    const pending = iconPendingStore.getPending(String(item.fontFamily || item.iconFont || ''), normalizeIconUnicode(item.amoledIconUnicode))
+    const pending = !item.customIconId && iconPendingStore.getPending(String(item.fontFamily || item.iconFont || ''), normalizeIconUnicode(item.amoledIconUnicode))
     if (pending) { item.amoledImageUrl = pending.objectUrl; item.imageUrl = pending.objectUrl }
   }
 
@@ -1035,7 +1035,7 @@ const buildDesignAssetArchive = async (
       continue
     }
     const fontSlug = String((element as any).fontFamily || (element as any).iconFont || '').trim()
-    const pending = fontSlug ? iconPendingStore.getPending(fontSlug, iconUnicode) : null
+    const pending = !(element as any).customIconId && fontSlug ? iconPendingStore.getPending(fontSlug, iconUnicode) : null
     const source = pending ? undefined : String((element as any).amoledImageUrl || (element as any).imageUrl || '').trim()
     if (!pending && !source) {
       if (manifest.selfContained) manifest.failures?.push({ category: 'icon', sourceUrl: iconUnicode, message: `Missing AMOLED icon asset: ${iconUnicode}` })

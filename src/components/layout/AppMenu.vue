@@ -32,6 +32,7 @@
         <div class="appearance-options">
           <VisualThemeQuickSelect @edit="openVisualThemeEditor" />
           <LayoutQuickSelect />
+          <el-menu-item index="appearance/watchface-icons" @click="watchfaceIconsVisible = true">{{ t('watchfaceIcons.title') }}</el-menu-item>
         </div>
       </el-sub-menu>
       <el-menu-item index="navigation/bitmap-fonts" @click="handleOpenBitmapFonts">
@@ -49,6 +50,7 @@
   </nav>
 
   <!-- Shortcuts and feedback dialogs -->
+  <WatchfaceIconsDialog v-if="watchfaceIconsVisible" v-model="watchfaceIconsVisible" />
   <ShortcutsDialog v-model="shortcutsDialogVisible" />
   <FeedbackDialog ref="feedbackDialog" />
   <PropertiesPanel ref="propertiesPanel" />
@@ -140,7 +142,9 @@
 defineProps<{ disabled?: boolean }>()
 import { showErrorOnce } from '@/utils/errorMessage'
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, defineAsyncComponent } from 'vue'
+const WatchfaceIconsDialog = defineAsyncComponent(() => import('@/features/watchface-icons/WatchfaceIconsDialog.vue'))
+const watchfaceIconsVisible = ref(false)
 import { useRoute, useRouter } from 'vue-router'
 import { nanoid } from 'nanoid'
 import { useBaseStore } from '@/stores/baseStore'

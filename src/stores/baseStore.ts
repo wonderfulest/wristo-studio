@@ -343,6 +343,7 @@ export const useBaseStore = defineStore('baseStore', {
         visualThemes: visualThemeStore.config,
         baseElements: elementDataStore.elements.map((snapshot) => snapshot.config as AnyObject),
         layoutGroups: layoutGroupStore.snapshot(),
+        watchfaceIcons: designStore.watchfaceIcons,
         validateBindings: true,
       })
       if (!config) return false
@@ -413,6 +414,7 @@ export const useBaseStore = defineStore('baseStore', {
         visualThemes: visualThemeStore.config,
         baseElements: elementDataStore.elements.map((snapshot) => snapshot.config as AnyObject),
         layoutGroups: layoutGroupStore.snapshot(),
+        watchfaceIcons: designStore.watchfaceIcons,
         validateBindings: options.validateBindings ?? false,
       })
     },

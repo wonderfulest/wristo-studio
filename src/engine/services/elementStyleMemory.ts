@@ -140,6 +140,7 @@ export const createElementStyleMemory = (): ElementStyleMemory => {
               'dataProperty',
               'goalProperty',
               'iconDisplayType',
+              'customIconId',
               'amoledImageUrl',
               'amoledIconUnicode',
               'text',

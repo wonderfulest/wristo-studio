@@ -1,4 +1,5 @@
 import { Group as FabricGroup, Image as FabricImage, Rect as FabricRect, Text as FabricText, filters, type FabricObject, type GroupProps, type ImageProps, type RectProps, type TextProps } from 'fabric'
+import { useDesignStore } from '@/stores/designStore'
 import { nanoid } from 'nanoid'
 import type { FabricElement } from '@/types/element'
 import type { WeatherElementConfig } from '@/types/elements/data'
@@ -21,6 +22,7 @@ type WeatherGroupLike = FabricGroup & {
   fill?: string
   fontSize?: number
   previewSource?: string
+  amoledImageUrl?: string
   triggerLayout?: (options?: { bubbles?: boolean }) => void
 }
 
@@ -56,15 +58,16 @@ const createGlyphPreview = async (
   fontSize: number,
   fill: string,
   previewSource?: string,
+  customImage?: string,
 ): Promise<FabricObject> => {
   const glyph = createGlyph(iconUnicode, fontFamily, fontSize, fill) as FabricText & { usesBitmapPreview?: boolean }
-  if (glyph.usesBitmapPreview || !previewSource) return glyph as unknown as FabricObject
+  if (!customImage && (glyph.usesBitmapPreview || !previewSource)) return glyph as unknown as FabricObject
   try {
-    const image = await FabricImage.fromURL(previewSource, { crossOrigin: 'anonymous' })
+    const image = await FabricImage.fromURL(customImage || previewSource!, { crossOrigin: 'anonymous' })
     const width = Math.max(1, Number(image.width || 1))
     const height = Math.max(1, Number(image.height || 1))
     const scale = fontSize / Math.max(width, height)
-    image.filters = [new filters.BlendColor({ color: fill, mode: 'tint', alpha: 1 })]
+    image.filters = customImage ? [] : [new filters.BlendColor({ color: fill, mode: 'tint', alpha: 1 })]
     image.applyFilters()
     image.set({
       originX: 'center', originY: 'center', left: 0, top: 0,
@@ -77,6 +80,10 @@ const createGlyphPreview = async (
   } catch {
     return glyph as unknown as FabricObject
   }
+}
+
+function globalImage(font: string, code: string): string | undefined {
+  return useDesignStore().watchfaceIcons?.find(asset => asset.id === `${font}::${code}`)?.imageUrl
 }
 
 export async function createWeather(
@@ -95,7 +102,7 @@ export async function createWeather(
   const iconUnicode = normalizeWeatherIconCode(config.iconUnicode)
   const group = new FabricGroup([
     createGlyphBounds(fontSize) as unknown as FabricObject,
-    await createGlyphPreview(iconUnicode, fontFamily, fontSize, fill, config.previewSource),
+    await createGlyphPreview(iconUnicode, fontFamily, fontSize, fill, config.previewSource, config.amoledImageUrl || globalImage(fontFamily, iconUnicode)),
   ], {
     left: config.left ?? (canvasWidth ? canvasWidth / 2 : 0),
     top: config.top ?? (canvasHeight ? canvasHeight / 2 : 0),
@@ -110,6 +117,7 @@ export async function createWeather(
   group.fontFamily = fontFamily
   group.fontSize = fontSize
   group.fill = fill
+  group.amoledImageUrl = config.amoledImageUrl || globalImage(fontFamily, iconUnicode)
   group.previewSource = config.previewSource
 
   assertElementRenderCurrent(renderContext)
@@ -139,6 +147,10 @@ export async function updateWeather(element: FabricElement, config: Partial<Weat
   const fontSize = Number(config.fontSize ?? group.fontSize ?? weatherSchema.defaultConfig.fontSize)
   const fill = String(config.fill ?? group.fill ?? weatherSchema.defaultConfig.fill)
   const previewSource = config.previewSource ?? group.previewSource
+  const customImage = config.amoledImageUrl !== undefined
+    ? config.amoledImageUrl
+    : globalImage(fontFamily, iconUnicode) || (iconUnicode === group.iconUnicode && fontFamily === group.fontFamily ? group.amoledImageUrl : undefined)
+  group.amoledImageUrl = customImage
   group.iconUnicode = iconUnicode
   group.fontFamily = fontFamily
   group.fontSize = fontSize
@@ -153,7 +165,7 @@ export async function updateWeather(element: FabricElement, config: Partial<Weat
     group.add(bounds as unknown as FabricObject)
   }
 
-  if (!previewSource && glyph instanceof FabricText) {
+  if (!customImage && !previewSource && glyph instanceof FabricText) {
     glyph.set({
       text: resolveIconGlyphText(iconUnicode), fontFamily, fontSize, fill,
       left: fontSize * getWeatherGlyphHorizontalOffset(iconUnicode), top: 0,
@@ -162,7 +174,7 @@ export async function updateWeather(element: FabricElement, config: Partial<Weat
     if (resolved.bitmapPreviewAssets) glyph.set({ left: 0 } as TextProps)
     glyph.initDimensions?.()
   } else {
-    const nextGlyph = await createGlyphPreview(iconUnicode, fontFamily, fontSize, fill, previewSource)
+    const nextGlyph = await createGlyphPreview(iconUnicode, fontFamily, fontSize, fill, previewSource, customImage)
     const glyphLeft = Number(nextGlyph.left ?? 0)
     if (glyph) group.remove(glyph)
     group.add(nextGlyph)

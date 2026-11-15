@@ -14,6 +14,7 @@ vi.mock('@/engine/managers/elementManager', () => ({ addElement: vi.fn(), syncEl
 vi.mock('@/engine/managers/layerManager', () => ({ syncLayersFromCanvas: vi.fn(), applyOrder: vi.fn() }))
 vi.mock('@/engine/layout/studioLayoutController', () => ({ clearLayoutGroupProjections: vi.fn(), reflowAllLayoutGroups: vi.fn() }))
 vi.mock('@/utils/errorMessage', () => ({ showErrorOnce: vi.fn() }))
+import { useDesignStore } from '@/stores/designStore'
 import { useBaseStore } from '@/stores/baseStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { usePropertiesStore } from '@/stores/properties'
@@ -31,6 +32,7 @@ describe('switching to a different cloud project', () => {
       requestRenderAll: vi.fn(),
     }
     useBaseStore().canvas = canvas as any
+    useDesignStore().upsertWatchfaceIcon({ id: 'custom:old', kind: 'custom', name: 'Old', imageUrl: 'data:image/png;base64,a' })
     const defaultTextCase = usePropertiesStore().textCase
     usePropertiesStore().textCase = 2
     packageFonts.set('old-font', { slug: 'old-font' } as any)
@@ -42,6 +44,7 @@ describe('switching to a different cloud project', () => {
     const loader = useDesignLoader({ canvasRef: { value: null } as any, waitCanvasReady: async () => {}, translate: key => key, redirectToDesigns: vi.fn(), onDesignLoaded: onLoaded })
     await loader.loadDesign('new-project')
     expect(objects).toEqual([global])
+    expect(useDesignStore().watchfaceIcons).toEqual([])
     expect(packageFonts.size).toBe(0)
     expect(packageArchiveExtras.files.size).toBe(0)
     expect(packageArchiveExtras.productImages).toEqual([])

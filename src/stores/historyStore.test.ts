@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { useDesignStore } from './designStore'
 import { useHistoryStore } from './historyStore'
 import { usePropertiesStore } from './properties'
 import { useElementDataStore } from './elementDataStore'
@@ -251,4 +252,19 @@ describe('history saveState result', () => {
     expect(properties.secondTimeZone).toEqual({ city: 17, offsetMinutes: 345, label: 'HOME', format: 2 })
   })
 
+})
+
+it('restores unused watchface icons through undo and redo', async () => {
+  setActivePinia(createPinia())
+  const canvas = { ...createCanvas(), loadFromJSON: async () => undefined }
+  const history = useHistoryStore()
+  history.attachCanvas(canvas as any, baseStore as any)
+  history.saveInitial()
+  const asset = { id: 'custom:1', kind: 'custom' as const, name: 'Smile', imageUrl: 'data:image/png;base64,test' }
+  useDesignStore().upsertWatchfaceIcon(asset)
+  expect(history.saveState('add-icon')).toBe(true)
+  await history.undo()
+  expect(useDesignStore().watchfaceIcons).toEqual([])
+  await history.redo()
+  expect(useDesignStore().watchfaceIcons).toEqual([asset])
 })

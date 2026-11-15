@@ -48,89 +48,35 @@
         <div class="section-header">
           <h3 class="section-title">{{ t('property.dataOptions') }}</h3>
           <div class="section-actions">
-            <el-button type="primary" link :disabled="addableOptions.length === 0" @click="openAddOptions">
-              {{ t('property.addOption') }}
-            </el-button>
             <el-button type="primary" link @click="restoreSystemDefaults">
               {{ t('property.restoreSystemDefaults') }}
             </el-button>
           </div>
         </div>
-        <el-form-item 
-          :label="t('property.defaultValue')"
-          prop="value"
-        >
-          <el-select 
-            v-model="formData.value" 
-            filterable
-            :filter-method="filterDefaultOptions"
-            :placeholder="t('property.selectDataType')"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="option in filteredDefaultValueOptions"
-              :key="option.value"
-              :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
-              :value="option.value"
-            >
-              <div class="metric-option">
+        <el-input v-model="optionsQuery" :placeholder="t('common.search')" clearable class="options-search" />
+        <div class="options-summary">{{ t('asset.selectedCount', { count: formData.metricSymbols.length }) }}</div>
+        <el-form-item prop="metricSymbols"
+          :rules="[{ required: true, message: t('property.atLeastOneOption'), trigger: 'change' }]">
+          <div class="data-options-grid">
+            <div v-for="option in visibleOptions" :key="option.metricSymbol" class="data-option-row"
+              :class="{ 'is-selected': formData.metricSymbols.includes(option.metricSymbol) }">
+              <el-checkbox :model-value="formData.metricSymbols.includes(option.metricSymbol)"
+                @change="checked => toggleOption(option.metricSymbol, checked)">
                 <span class="metric-icon">{{ iconGlyph(option) }}</span>
-                <span class="metric-label">{{ optionDisplayLabel(option) }} ({{ option.metricSymbol }})</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-
-        <div v-if="selectedOption" class="selected-option-card">
-          <span class="selected-option-icon">{{ iconGlyph(selectedOption) }}</span>
-          <div class="selected-option-copy">
-            <div class="selected-option-title">{{ optionDisplayLabel(selectedOption) }}</div>
-            <div class="selected-option-meta">{{ selectedOption.metricSymbol }}</div>
+                <span :title="option.metricSymbol">{{ optionDisplayLabel(option) }}</span>
+              </el-checkbox>
+              <el-radio v-if="formData.metricSymbols.includes(option.metricSymbol) && option.category === 'field'"
+                v-model="formData.value" :value="option.metricSymbol" :label="option.metricSymbol"
+                :aria-label="optionDisplayLabel(option) + ' — ' + t('property.defaultValue')">
+                {{ t('property.defaultValue') }}
+              </el-radio>
+            </div>
           </div>
-        </div>
-
-        <el-collapse v-model="activeOptions" class="options-collapse">
-          <el-collapse-item name="options">
-            <template #title>
-              <span>{{ t('property.dataOptions') }}（{{ formData.metricSymbols.length }}）</span>
-            </template>
-            <el-form-item 
-              prop="metricSymbols"
-              :rules="[
-                { required: true, message: t('property.atLeastOneOption'), trigger: 'change' }
-              ]"
-            >
-              <div class="options-list">
-                <div v-for="(option, index) in resolvedOptions" :key="option.metricSymbol" class="option-item">
-                  <div class="option-content">
-                    <div class="option-info">
-                      <span class="metric-icon">{{ iconGlyph(option) }}</span>
-                      <span class="metric-label">{{ optionDisplayLabel(option) }}</span>
-                      <span class="metric-symbol">({{ option.metricSymbol }})</span>
-                    </div>
-                  </div>
-                  <div class="option-actions">
-                    <el-tooltip :content="t('common.moveUp')" placement="top" :disabled="index === 0">
-                      <el-button type="primary" link :disabled="index === 0" @click="moveOption(index, 'up')">
-                        <el-icon><ArrowUp /></el-icon>
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip :content="t('common.moveDown')" placement="top" :disabled="index === formData.metricSymbols.length - 1">
-                      <el-button type="primary" link :disabled="index === formData.metricSymbols.length - 1" @click="moveOption(index, 'down')">
-                        <el-icon><ArrowDown /></el-icon>
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip :content="t('common.delete')" placement="top">
-                      <el-button type="danger" link @click="deleteOption(index)">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </el-tooltip>
-                  </div>
-                </div>
-              </div>
-            </el-form-item>
-          </el-collapse-item>
-        </el-collapse>
+        </el-form-item>
+        <el-button v-if="!optionsQuery.trim() && extraOptionsCount > 0" type="primary" link
+          :aria-expanded="showMore" @click="showMore = !showMore">
+          {{ showMore ? t('common.collapse') : t('common.more') + ' (' + extraOptionsCount + ')' }}
+        </el-button>
       </div>
 
       <div class="form-section">
@@ -167,67 +113,12 @@
     </template>
   </el-dialog>
 
-  <el-dialog
-    v-model="addOptionsVisible"
-    :title="t('property.addDataOptions')"
-    width="560px"
-    append-to-body
-    destroy-on-close
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-  >
-    <div class="add-options-toolbar">
-      <el-checkbox
-        :model-value="allFilteredOptionsSelected"
-        :indeterminate="someFilteredOptionsSelected && !allFilteredOptionsSelected"
-        :disabled="filteredAddableOptions.length === 0"
-        @change="toggleAllFilteredOptions"
-      >
-        {{ t('property.selectAllMatching') }}
-      </el-checkbox>
-      <span>{{ t('asset.selectedCount', { count: pendingOptionValues.length }) }}</span>
-      <el-button link :disabled="pendingOptionValues.length === 0" @click="pendingOptionValues = []">
-        {{ t('asset.clearSelection') }}
-      </el-button>
-    </div>
-    <el-select
-      v-model="pendingOptionValues"
-      multiple
-      collapse-tags
-      collapse-tags-tooltip
-      :max-collapse-tags="3"
-      filterable
-      :filter-method="filterAddableOptions"
-      :placeholder="t('property.selectDataTypesToAdd')"
-      style="width: 100%"
-    >
-      <el-option
-        v-for="option in filteredAddableOptions"
-        :key="option.metricSymbol"
-        :label="optionDisplayLabel(option) + ' (' + option.metricSymbol + ')'"
-        :value="option.metricSymbol"
-      >
-        <div class="metric-option">
-          <span class="metric-icon">{{ iconGlyph(option) }}</span>
-          <span class="metric-label">{{ optionDisplayLabel(option) }} ({{ option.metricSymbol }})</span>
-        </div>
-      </el-option>
-    </el-select>
-
-    <template #footer>
-      <el-button @click="addOptionsVisible = false">{{ t('common.cancel') }}</el-button>
-      <el-button type="primary" :disabled="pendingOptionValues.length === 0" @click="confirmAddOptions">
-        {{ t('common.confirm') }}
-      </el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup>
 import { showErrorOnce } from '@/utils/errorMessage'
 
 import { computed, ref, reactive } from 'vue'
-import { ArrowUp, ArrowDown, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 import '@/assets/styles/propertyDialog.css'
@@ -247,23 +138,15 @@ import {
   resolveDataOptionsBySymbols,
   restoreSystemDataOptions
 } from './dataPropertyOptions'
-import {
-  appendOrderedOptionIds,
-  moveOrderedOptionId,
-  removeOrderedOptionId,
-  resolveOrderedDefaultValue,
-} from './orderedPropertyOptions'
 import { matchesDataOptionSearch } from './dataOptionSearch'
 
 const { locale, t } = useI18n()
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
-const activeOptions = ref([])
-const addOptionsVisible = ref(false)
-const pendingOptionValues = ref([])
-const defaultOptionsQuery = ref('')
-const addableOptionsQuery = ref('')
+const showMore = ref(false)
+const optionsQuery = ref('')
+const extraOptionSymbols = ref([])
 const dataCatalogStore = useDataCatalogStore()
 const propertiesStore = usePropertiesStore()
 const catalogOptions = computed(() => getDataTypePropertyOptions())
@@ -287,28 +170,35 @@ const resolvedOptions = computed(() => resolveDataOptionsBySymbols(
   formData.metricSymbols
 ))
 const defaultValueOptions = computed(() => createDefaultDataOptions(resolvedOptions.value))
-const filteredDefaultValueOptions = computed(() => defaultValueOptions.value
-  .filter(option => matchesDataOptionSearch(option, defaultOptionsQuery.value)))
-const selectedOption = computed(() => defaultValueOptions.value.find((option) => option.value === formData.value) || null)
-const addableOptions = computed(() => createAddableDataOptions(catalogOptions.value, resolvedOptions.value))
-const filteredAddableOptions = computed(() => addableOptions.value
-  .filter(option => matchesDataOptionSearch(option, addableOptionsQuery.value)))
-const someFilteredOptionsSelected = computed(() => filteredAddableOptions.value
-  .some(option => pendingOptionValues.value.includes(option.metricSymbol)))
-const allFilteredOptionsSelected = computed(() => filteredAddableOptions.value.length > 0
-  && filteredAddableOptions.value.every(option => pendingOptionValues.value.includes(option.metricSymbol)))
-const toggleAllFilteredOptions = (checked) => {
-  const filteredSymbols = filteredAddableOptions.value.map(option => option.metricSymbol)
-  pendingOptionValues.value = checked
-    ? appendOrderedOptionIds(pendingOptionValues.value, filteredSymbols)
-    : pendingOptionValues.value.filter(symbol => !filteredSymbols.includes(symbol))
+// Preserve selected legacy options even when absent from the active catalog.
+const allOptions = computed(() => {
+  const bySymbol = new Map(createAddableDataOptions(catalogOptions.value, []).map(option => [option.metricSymbol, option]))
+  resolvedOptions.value.forEach(option => bySymbol.set(option.metricSymbol, option))
+  return [...bySymbol.values()]
+})
+const primarySymbols = computed(() => new Set([
+  ...cloneSystemDataOptions().map(option => option.metricSymbol),
+  ...extraOptionSymbols.value,
+]))
+const extraOptionsCount = computed(() => allOptions.value.filter(option => !primarySymbols.value.has(option.metricSymbol)).length)
+const visibleOptions = computed(() => allOptions.value.filter(option => {
+  if (optionsQuery.value.trim()) return matchesDataOptionSearch(option, optionsQuery.value)
+  return showMore.value || primarySymbols.value.has(option.metricSymbol)
+}))
+const toggleOption = (symbol, checked) => {
+  if (checked) {
+    if (!formData.metricSymbols.includes(symbol)) formData.metricSymbols.push(symbol)
+    if (!extraOptionSymbols.value.includes(symbol)) extraOptionSymbols.value.push(symbol)
+  } else {
+    formData.metricSymbols = formData.metricSymbols.filter(value => value !== symbol)
+  }
+  formData.value = resolveDefaultDataOptionValue(resolvedOptions.value, formData.value)
 }
-const filterDefaultOptions = (query) => { defaultOptionsQuery.value = query }
-const filterAddableOptions = (query) => { addableOptionsQuery.value = query }
 
 const initFormData = (data = null) => {
-  defaultOptionsQuery.value = ''
-  addableOptionsQuery.value = ''
+  optionsQuery.value = ''
+  showMore.value = false
+  extraOptionSymbols.value = []
   isEdit.value = !!data
   if (data) {
     const legacyOptions = createEditDataOptions(data.options, catalogOptions.value)
@@ -339,6 +229,7 @@ const initFormData = (data = null) => {
       errorMessage: ''
     })
   }
+  extraOptionSymbols.value = [...formData.metricSymbols]
 }
 
 const emit = defineEmits(['confirm'])
@@ -408,31 +299,6 @@ const restoreSystemDefaults = async () => {
   }
 }
 
-const openAddOptions = () => {
-  pendingOptionValues.value = []
-  addableOptionsQuery.value = ''
-  addOptionsVisible.value = true
-}
-
-const confirmAddOptions = () => {
-  const selectedValues = new Set(pendingOptionValues.value.map(String))
-  const selectedSymbols = addableOptions.value
-    .filter((option) => selectedValues.has(option.metricSymbol))
-    .map((option) => option.metricSymbol)
-  formData.metricSymbols = appendOrderedOptionIds(formData.metricSymbols, selectedSymbols)
-  pendingOptionValues.value = []
-  addOptionsVisible.value = false
-}
-
-const deleteOption = (index) => {
-  formData.metricSymbols = removeOrderedOptionId(formData.metricSymbols, index)
-  formData.value = resolveOrderedDefaultValue(createDefaultDataOptions(resolvedOptions.value), formData.value)
-}
-
-const moveOption = (index, direction) => {
-  formData.metricSymbols = moveOrderedOptionId(formData.metricSymbols, index, direction)
-}
-
 defineExpose({
   show: (data = null) => {
     initFormData(data)
@@ -442,51 +308,16 @@ defineExpose({
 </script>
 
 <style scoped>
-.add-options-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.section-actions {
-  display: flex;
-  align-items: center;
-}
-
-.metric-option {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  width: 100%;
-}
-
-.metric-icon {
-  font-family: var(--studio-data-icon-font), sans-serif !important;
-  font-size: 16px;
-  width: 24px;
-  text-align: center;
-}
-
-.selected-option-icon {
-  font-family: var(--studio-data-icon-font), sans-serif !important;
-}
-
-.metric-label {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metric-symbol {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-left: 4px;
-}
-</style> 
+.section-actions { display: flex; align-items: center; }
+.options-search { margin-bottom: 12px; }
+.options-summary { margin-bottom: 12px; color: var(--el-text-color-secondary); }
+.data-options-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.data-option-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--el-border-color-lighter); border-radius: 8px; min-width: 0; }
+.data-option-row.is-selected { background: var(--el-color-primary-light-9); border-color: var(--el-color-primary-light-5); }
+.data-option-row :deep(.el-checkbox) { margin-right: 0; min-width: 0; flex: 1; height: auto; }
+.data-option-row :deep(.el-checkbox__label) { display: flex; align-items: center; white-space: normal; min-width: 0; }
+.data-option-row :deep(.el-radio) { margin-right: 0; flex-shrink: 0; }
+.data-option-row :deep(.el-radio__label) { font-size: 12px; padding-left: 4px; }
+.metric-icon { font-family: var(--studio-data-icon-font), sans-serif !important; font-size: 16px; width: 24px; flex-shrink: 0; text-align: center; margin-right: 6px; }
+@media (max-width: 640px) { .data-options-grid { grid-template-columns: 1fr; } }
+</style>

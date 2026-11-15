@@ -6,6 +6,7 @@ import type { VisualThemesConfig } from '@/types/visualTheme'
 import type { HorizontalLayoutGroupConfig } from '@/types/layoutGroup'
 
 export interface RuntimeDesignConfig {
+  watchfaceIcons?: import('@/types/watchfaceIcons').WatchfaceIconAsset[]
   studioResources?: import('@/engine/services/jsonProject').JsonProjectResources
   version: string
   properties: PropertiesMap

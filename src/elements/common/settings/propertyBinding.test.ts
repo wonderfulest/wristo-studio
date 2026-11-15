@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { activeObjects, addProperty, getMetricByOptions, registerDataOptions, saveState } = vi.hoisted(() => ({
+const { activeObjects, addProperty, getMetricByOptions, registerDataOptions, saveState, watchfaceIcons } = vi.hoisted(() => ({
   activeObjects: [] as any[],
+  watchfaceIcons: [] as any[],
   addProperty: vi.fn(),
   getMetricByOptions: vi.fn(),
   registerDataOptions: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('@/stores/dataCatalogStore', () => {
     valueCode: 1,
     metricSymbol: ':FIELD_TYPE_STEPS',
     category: 'field',
+    iconUnicode: '0063',
     unitKey: 'distance',
     label: { eng: 'DIST', zhs: '距离' },
     defaultValue: '8.5',
@@ -48,14 +50,15 @@ vi.mock('@/stores/dataCatalogStore', () => {
     }),
   }
 })
-vi.mock('@/stores/designStore', () => ({ useDesignStore: () => ({ appLanguage: 'zhs' }) }))
+vi.mock('@/stores/designStore', () => ({ useDesignStore: () => ({ appLanguage: 'zhs', watchfaceIcons }) }))
 
-import { bindMetricPropertyToSelection, canBindMetricPropertyToSelection, createQuickMetricProperty, isMetricBindableElement } from './propertyBinding'
+import { resolveMetricPropertyBindingPatch, bindMetricPropertyToSelection, canBindMetricPropertyToSelection, createQuickMetricProperty, isMetricBindableElement } from './propertyBinding'
 
 describe('metric property binding support', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     activeObjects.splice(0)
+    watchfaceIcons.splice(0)
   })
 
   it('checks element structure without resolving a metric property', () => {
@@ -111,3 +114,10 @@ describe('metric property binding support', () => {
   })
 })
 // @vitest-environment jsdom
+
+it.each(['data', 'goal'] as const)('uses an unused saved icon replacement when binding a %s property', type => {
+  watchfaceIcons.splice(0, watchfaceIcons.length, { id: 'wristo-icon::0063', kind: 'override', imageUrl: '/replacement.svg' })
+  getMetricByOptions.mockReturnValue({ metricSymbol: ':FIELD_TYPE_STEPS' })
+  expect(resolveMetricPropertyBindingPatch({ eleType: 'icon', fontFamily: 'wristo-icon' }, 'metric_1', type))
+    .toMatchObject({ iconDisplayType: 'amoled', amoledImageUrl: '/replacement.svg', amoledIconUnicode: '0063' })
+})

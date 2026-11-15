@@ -83,6 +83,8 @@
       </el-form-item>
     </el-form>
 
+    <el-button link type="primary" @click="iconLibraryVisible = true">{{ t('watchfaceIcons.title') }}</el-button>
+    <WatchfaceIconsDialog v-model="iconLibraryVisible" />
     <div class="weather-actions">
       <el-button size="small" class="refresh-button" @click="fetchConditions">
         {{ t('elementSettings.refresh') }}
@@ -119,6 +121,7 @@
 </template>
 
 <script setup lang="ts">
+import WatchfaceIconsDialog from '@/features/watchface-icons/WatchfaceIconsDialog.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Aim } from '@element-plus/icons-vue'
@@ -150,6 +153,7 @@ const { t } = useI18n()
 const canvasStore = useCanvasStore()
 const fontStore = useFontStore()
 const userStore = useUserStore()
+const iconLibraryVisible = ref(false)
 const weatherFontSelectRef = ref()
 const fontFamily = ref(weatherSchema.defaultConfig.fontFamily)
 const fill = ref(weatherSchema.defaultConfig.fill)
