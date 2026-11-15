@@ -1,3 +1,5 @@
+import { useDesignStore } from '@/stores/designStore'
+import { resolveWatchfaceIconImage } from '@/features/watchface-icons/watchfaceIcons'
 import type { FabricElement } from '@/types/element'
 import type { IconElementConfig } from '@/types/elements'
 import type { ElementRenderContext } from '@/engine/runtime/elementRenderContext'
@@ -11,7 +13,7 @@ import { useElementDataStore } from '@/stores/elementDataStore'
 import type { MinimalFabricLike } from '@/types/layer'
 import { encodeTopBaseForElement } from '@/utils/baselineUtil'
 import { resolveIconGlyphText } from '@/utils/iconGlyph'
-import { resolveMetricIconGlyph } from '@/utils/metricIcon'
+import { resolveMetricIconGlyph, resolveMetricIconUnicode } from '@/utils/metricIcon'
 import { getDisplayState, normalizeDisplayStates } from '@/utils/displayStates'
 import { applyControlsToObject } from '@/utils/controlManager'
 import type { ElementUpdateContext } from '@/engine/registry/elementRegistry'
@@ -176,6 +178,7 @@ export async function createIcon(
 
   type IconProps = TextProps & IconElementConfig
   const metric = usePropertiesStore().getMetricByOptions(config)
+  config = { ...config, ...resolveWatchfaceIconImage(config, useDesignStore().watchfaceIcons, resolveMetricIconUnicode(metric)) }
   const resolvedFontFamily = resolveIconFontFamily(config as any)
 
   const fallbackSize = Number((config as any).iconSize ?? (config as any).fontSize ?? 24)
@@ -226,6 +229,8 @@ export async function createIcon(
     }, (element as any).text)
   }
 
+  ;(element as any).amoledImageUrl ??= config.amoledImageUrl
+  ;(element as any).amoledIconUnicode ??= config.amoledIconUnicode
   assertElementRenderCurrent(renderContext)
   canvas.add(element as unknown as FabricObject)
   layerStore.addLayer(element as unknown as MinimalFabricLike)
@@ -456,9 +461,9 @@ export async function updateIcon(element: FabricElement, config: Partial<IconEle
     dataProperty: config.dataProperty,
     goalProperty: config.goalProperty,
     iconDisplayType: nextDisplayType,
-    amoledImageUrl: config.amoledImageUrl,
-    imageUrl: config.amoledImageUrl,
-    amoledIconUnicode: config.amoledIconUnicode,
+    amoledImageUrl: config.amoledImageUrl ?? (obj as any).amoledImageUrl,
+    imageUrl: config.amoledImageUrl ?? (obj as any).amoledImageUrl ?? (obj as any).imageUrl,
+    amoledIconUnicode: config.amoledIconUnicode ?? (obj as any).amoledIconUnicode,
     amoledWidth: nextDisplayType === 'amoled' ? nextIconPixelSize : undefined,
     amoledHeight: nextDisplayType === 'amoled' ? nextIconPixelSize : undefined,
     displayStates: config.displayStates ? normalizeDisplayStates(config.displayStates) : undefined,

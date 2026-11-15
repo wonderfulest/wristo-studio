@@ -290,7 +290,7 @@ const getMetricIconPatch = (model: Record<string, any>): Record<string, any> => 
   const existingImageUrl = iconUnicode && existingUnicode === iconUnicode ? String(model.amoledImageUrl || '') : ''
   const libraryAsset = designStore.watchfaceIcons.find(item => item.id === (model.customIconId || `${fontSlug}::${iconUnicode}`))
   const imageUrl = model.amoledImageUrl === '' ? '' : libraryAsset?.imageUrl || (iconUnicode ? amoledIconAssetStore.getDisplayUrl(fontSlug, iconUnicode) : '') || existingImageUrl
-  const keepAmoled = String(model.iconDisplayType || 'mip') === 'amoled' && Boolean(imageUrl)
+  const keepAmoled = Boolean(imageUrl) && (Boolean(libraryAsset) || String(model.iconDisplayType || 'mip') === 'amoled')
 
   return {
     metricSymbol: (metric as any)?.metricSymbol,
@@ -660,6 +660,12 @@ const saveLocalUploads = async () => {
         fontSlug: currentAmoledFontSlug.value,
         iconUnicode,
         file: row.file
+      })
+      designStore.upsertWatchfaceIcon({
+        id: `${currentAmoledFontSlug.value}::${iconUnicode}`, kind: 'override',
+        name: currentAmoledCandidate.value?.label || iconUnicode,
+        fontSlug: currentAmoledFontSlug.value, unicode: iconUnicode,
+        imageUrl: amoledIconAssetStore.getDisplayUrl(currentAmoledFontSlug.value, iconUnicode),
       })
       savedRows.push({
         file: row.file,

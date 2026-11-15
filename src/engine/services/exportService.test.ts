@@ -732,3 +732,17 @@ it('does not overwrite an independent custom icon with a pending data-icon repla
     customIconId: 'custom:smile', iconDisplayType: 'amoled', amoledIconUnicode: '0063', amoledImageUrl: '/smile.svg' }] } as any)
   expect((resolved!.elements[0] as any).amoledImageUrl).toBe('/smile.svg')
 })
+
+it('exports a library image as an AMOLED icon even when the layer still has the default MIP mode', async () => {
+  setActivePinia(createPinia())
+  const { generateConfig } = await import('./exportService')
+  const { registerElement } = await import('@/engine/registry/elementRegistry')
+  registerElement('icon', { add: vi.fn() as any, encode: (element: any) => ({ ...element }) })
+  const image = { id: 'wristo-icon::0063', kind: 'override', name: 'Heart', fontSlug: 'wristo-icon', unicode: '0063', imageUrl: '/heart.png' } as const
+  const config = generateConfig({
+    canvas: { getObjects: () => [{ id: 'heart', eleType: 'icon', fontFamily: 'wristo-icon', fontSize: 30, iconDisplayType: 'mip', amoledIconUnicode: '0063' }] } as any,
+    properties: {}, designId: 'test', watchFaceName: 'Test', textCase: 0, bitmapMode: false, watchfaceIcons: [image],
+  })
+  expect(config?.elements[0]).toMatchObject({ iconDisplayType: 'amoled', amoledImageUrl: '/heart.png', iconSize: 30 })
+  expect(config?.watchfaceIcons).toEqual([image])
+})

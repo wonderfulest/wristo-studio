@@ -106,3 +106,15 @@ export async function readIconImage(file: File): Promise<string> {
   })
   return source
 }
+
+/** Resolve a saved replacement for a default glyph; an empty URL means explicit removal. */
+export function resolveWatchfaceIconImage(config: Record<string, any>, assets: readonly WatchfaceIconAsset[], unicode: string) {
+  if (config.amoledImageUrl === '') return {}
+  const font = String(config.fontFamily || config.iconFont || 'wristo-icon').trim()
+  const asset = assets.find(item => item.id === (config.customIconId || `${font}::${normalizeIconUnicode(unicode)}`))
+  const storedUnicode = normalizeIconUnicode(config.amoledIconUnicode)
+  const ownImage = !storedUnicode || storedUnicode === normalizeIconUnicode(unicode) || config.customIconId
+    ? config.amoledImageUrl || config.imageUrl : ''
+  const image = asset?.imageUrl || ownImage
+  return image ? iconImagePatch(config, unicode, image) : {}
+}

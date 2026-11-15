@@ -180,3 +180,17 @@ it('applies a batch to all references with one saved history state', async () =>
   expect(ElMessage.error).not.toHaveBeenCalled()
   wrapper.unmount()
 })
+
+it('retains a legacy layer-only heart image in the library when uploading another icon', async () => {
+  const data = useElementDataStore()
+  data.upsertElement({ id: 'heart', eleType: 'icon', fontFamily: 'wristo-icon', amoledIconUnicode: '0063', amoledImageUrl: '/heart.png', iconDisplayType: 'mip' } as any)
+  data.upsertElement({ id: 'battery', eleType: 'icon', fontFamily: 'wristo-icon', iconUnicode: '0064' } as any)
+  const wrapper = shallowMount(Dialog, { props: { modelValue: true }, global: { stubs: { 'el-dialog': { template: '<div><slot /></div>' } } } })
+  wrapper.findComponent(IconBatchImport).vm.$emit('apply', [{ key: 'wristo-icon::0064', image: '/battery.png' }])
+  await flushPromises()
+  expect(useDesignStore().watchfaceIcons).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: 'wristo-icon::0063', imageUrl: '/heart.png' }),
+    expect.objectContaining({ id: 'wristo-icon::0064', imageUrl: '/battery.png' })
+  ]))
+  wrapper.unmount()
+})

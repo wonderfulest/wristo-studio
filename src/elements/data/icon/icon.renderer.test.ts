@@ -8,6 +8,8 @@ const { canvas, originalTextRender, upsertElement } = vi.hoisted(() => {
     objects: [] as any[],
     add(object: any) { object.canvas = canvas; canvas.objects.push(object) },
     getObjects() { return canvas.objects },
+    remove(object: any) { canvas.objects = canvas.objects.filter((item: any) => item !== object) },
+    getActiveObjects() { return [] },
     setActiveObject: vi.fn(),
     renderAll: vi.fn(),
     requestRenderAll: vi.fn(),
@@ -155,4 +157,15 @@ describe('icon bitmap font rendering', () => {
     expect(canvas.objects).toEqual([icon])
     expect(icon.left).toBe(96)
   })
+})
+
+it('preserves uploaded image metadata when switching to MIP without resupplying the URL', async () => {
+  setActivePinia(createPinia())
+  useDataCatalogStore().snapshot = { dataTypeOptions: [{ category: 'field', metricSymbol: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT', iconUnicode: '0067' }] } as any
+  usePropertiesStore().loadProperties({ data_1: { type: 'data', value: ':FIELD_TYPE_PRECIPITATION_CHANCE_CURRENT' } } as any)
+  const icon: any = { id: 'rain', eleType: 'icon', type: 'image', dataProperty: 'data_1', fontFamily: 'wristo-icon', fontSize: 30,
+    iconDisplayType: 'amoled', amoledImageUrl: '/rain.png', imageUrl: '/rain.png', amoledIconUnicode: '0067' }
+  canvas.objects = [icon]
+  await updateIcon(icon, { iconDisplayType: 'mip' })
+  expect(canvas.objects[0]).toMatchObject({ iconDisplayType: 'mip', amoledImageUrl: '/rain.png', imageUrl: '/rain.png', amoledIconUnicode: '0067' })
 })

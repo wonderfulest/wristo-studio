@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/utils/amoledIconCandidates', () => ({ getAmoledIconCandidateFromElement: () => null }))
-import { collectAvailableIcons, collectWatchfaceIcons, iconImagePatch, readIconImage } from './watchfaceIcons'
+import { resolveWatchfaceIconImage, collectAvailableIcons, collectWatchfaceIcons, iconImagePatch, readIconImage } from './watchfaceIcons'
 const icon = (id: string, fontFamily = 'wristo-icon', extra = {}) => ({ id, eleType: 'icon', config: { id, eleType: 'icon', fontFamily, iconUnicode: '0063', ...extra } }) as any
 
 describe('watchface icons', () => {
@@ -33,4 +33,15 @@ it('includes all weather codes for each used weather font and keeps replacements
   expect(icons.find(i => i.key === 'weather-font::102d')?.elements).toEqual([weather])
   expect(iconImagePatch(weather.config, '102d', 'custom.png')).toEqual({ amoledImageUrl: 'custom.png' })
   expect(iconImagePatch(weather.config, '102d', '')).toEqual({ amoledImageUrl: '' })
+})
+
+it('prefers an uploaded library image over the default glyph and respects explicit removal', () => {
+  const asset = { id: 'wristo-icon::0063', kind: 'override', name: 'Heart', fontSlug: 'wristo-icon', unicode: '0063', imageUrl: '/heart.png' } as const
+  expect(resolveWatchfaceIconImage({ fontFamily: 'wristo-icon', iconDisplayType: 'mip' }, [asset], '0063')).toMatchObject({ iconDisplayType: 'amoled', amoledImageUrl: '/heart.png' })
+  expect(resolveWatchfaceIconImage({ fontFamily: 'wristo-icon', amoledImageUrl: '' }, [asset], '0063')).toEqual({})
+})
+
+it('keeps legacy uploaded images usable without a separate library entry', () => {
+  expect(resolveWatchfaceIconImage({ iconDisplayType: 'mip', amoledImageUrl: '/heart.png', amoledIconUnicode: '0063' }, [], '0063')).toMatchObject({ iconDisplayType: 'amoled', amoledImageUrl: '/heart.png' })
+  expect(resolveWatchfaceIconImage({ amoledImageUrl: '/heart.png', amoledIconUnicode: '0063' }, [], '0064')).toEqual({})
 })

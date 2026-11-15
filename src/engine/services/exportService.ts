@@ -1,3 +1,5 @@
+import { resolveWatchfaceIconImage } from '@/features/watchface-icons/watchfaceIcons'
+import { resolveMetricIconUnicode } from '@/utils/metricIcon'
 import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
 import { showErrorOnce } from '@/utils/errorMessage'
 import { findInvalidUnicodePaths } from './unicodeValidation'
@@ -479,6 +481,14 @@ export function generateConfig(options: GenerateConfigOptions): RuntimeDesignCon
         for (const field of ['left', 'top', 'topBase'] as const) {
           if (Object.prototype.hasOwnProperty.call(layoutBase, field)) encodeConfig[field] = layoutBase[field]
         }
+      }
+      if (eleType === 'icon') {
+        const icon = encodeConfig as any
+        const binding = properties[icon.dataProperty || icon.goalProperty]
+        const metric = catalogOptions.find(option => binding?.value != null && (option.metricSymbol === binding.value || option.valueCode === binding.value))
+          || catalogOptions.find(option => option.metricSymbol === icon.metricSymbol)
+        Object.assign(icon, resolveWatchfaceIconImage(icon, config.watchfaceIcons || [],
+          resolveMetricIconUnicode(metric, icon.amoledIconUnicode, icon.iconUnicode, (element as any).text)))
       }
       if (eleType === 'date') {
         Object.assign(encodeConfig, resolveDatePropertyConfig(encodeConfig as any, properties))

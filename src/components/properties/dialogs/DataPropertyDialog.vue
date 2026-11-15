@@ -3,7 +3,7 @@
     v-model="dialogVisible"
     class="property-dialog"
     :title="t('property.dataSelect')"
-    width="720px"
+    width="1100px"
     :close-on-click-modal="false"
     :destroy-on-close="true"
   >
@@ -54,7 +54,7 @@
           </div>
         </div>
         <el-input v-model="optionsQuery" :placeholder="t('common.search')" clearable class="options-search" />
-        <div class="options-summary">{{ t('asset.selectedCount', { count: formData.metricSymbols.length }) }}</div>
+        <div class="options-summary">{{ t('asset.selectedCount', { count: formData.metricSymbols.length }) }} · {{ t('property.firstDataOptionDefault') }}</div>
         <el-form-item prop="metricSymbols"
           :rules="[{ required: true, message: t('property.atLeastOneOption'), trigger: 'change' }]">
           <div class="data-options-grid">
@@ -65,11 +65,14 @@
                 <span class="metric-icon">{{ iconGlyph(option) }}</span>
                 <span :title="option.metricSymbol">{{ optionDisplayLabel(option) }}</span>
               </el-checkbox>
-              <el-radio v-if="formData.metricSymbols.includes(option.metricSymbol) && option.category === 'field'"
-                v-model="formData.value" :value="option.metricSymbol" :label="option.metricSymbol"
-                :aria-label="optionDisplayLabel(option) + ' — ' + t('property.defaultValue')">
-                {{ t('property.defaultValue') }}
-              </el-radio>
+              <div v-if="formData.metricSymbols.includes(option.metricSymbol)" class="option-order-actions">
+                <el-button link :disabled="formData.metricSymbols[0] === option.metricSymbol"
+                  :aria-label="optionDisplayLabel(option) + ' — ' + t('property.moveUp')"
+                  @click="moveOption(option.metricSymbol, -1)">↑</el-button>
+                <el-button link :disabled="formData.metricSymbols.at(-1) === option.metricSymbol"
+                  :aria-label="optionDisplayLabel(option) + ' — ' + t('property.moveDown')"
+                  @click="moveOption(option.metricSymbol, 1)">↓</el-button>
+              </div>
             </div>
           </div>
         </el-form-item>
@@ -125,6 +128,8 @@ import '@/assets/styles/propertyDialog.css'
 import { useI18n } from '@/i18n'
 import { getDataTypePropertyOptions, useDataCatalogStore } from '@/stores/dataCatalogStore'
 import { usePropertiesStore } from '@/stores/properties'
+import { useDesignStore } from '@/stores/designStore'
+import { filterDataOptionsForAppLanguage } from '@/domain/designLanguageCapabilities'
 import PropertyKeyField from '@/components/properties/common/PropertyKeyField.vue'
 import { getNextMetricPropertyDefaults } from '@/elements/common/settings/propertyBinding'
 import { resolveMetricIconGlyph } from '@/utils/metricIcon'
@@ -149,7 +154,8 @@ const optionsQuery = ref('')
 const extraOptionSymbols = ref([])
 const dataCatalogStore = useDataCatalogStore()
 const propertiesStore = usePropertiesStore()
-const catalogOptions = computed(() => getDataTypePropertyOptions())
+const designStore = useDesignStore()
+const catalogOptions = computed(() => getDataTypePropertyOptions(designStore.appLanguage))
 const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions.value)
 const iconGlyph = (option) => resolveMetricIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
@@ -173,8 +179,10 @@ const defaultValueOptions = computed(() => createDefaultDataOptions(resolvedOpti
 // Preserve selected legacy options even when absent from the active catalog.
 const allOptions = computed(() => {
   const bySymbol = new Map(createAddableDataOptions(catalogOptions.value, []).map(option => [option.metricSymbol, option]))
-  resolvedOptions.value.forEach(option => bySymbol.set(option.metricSymbol, option))
-  return [...bySymbol.values()]
+  filterDataOptionsForAppLanguage(resolvedOptions.value, designStore.appLanguage)
+    .forEach(option => bySymbol.set(option.metricSymbol, option))
+  const selected = formData.metricSymbols.map(symbol => bySymbol.get(symbol)).filter(Boolean)
+  return [...selected, ...[...bySymbol.values()].filter(option => !formData.metricSymbols.includes(option.metricSymbol))]
 })
 const primarySymbols = computed(() => new Set([
   ...cloneSystemDataOptions().map(option => option.metricSymbol),
@@ -192,7 +200,17 @@ const toggleOption = (symbol, checked) => {
   } else {
     formData.metricSymbols = formData.metricSymbols.filter(value => value !== symbol)
   }
-  formData.value = resolveDefaultDataOptionValue(resolvedOptions.value, formData.value)
+  formData.value = formData.metricSymbols[0]
+}
+
+const moveOption = (symbol, direction) => {
+  const index = formData.metricSymbols.indexOf(symbol)
+  const target = index + direction
+  if (index < 0 || target < 0 || target >= formData.metricSymbols.length) return
+  const symbols = [...formData.metricSymbols]
+  ;[symbols[index], symbols[target]] = [symbols[target], symbols[index]]
+  formData.metricSymbols = symbols
+  formData.value = symbols[0]
 }
 
 const initFormData = (data = null) => {
@@ -229,6 +247,13 @@ const initFormData = (data = null) => {
       errorMessage: ''
     })
   }
+  // Existing designs keep their default by moving it to the first position.
+  const defaultIndex = formData.metricSymbols.indexOf(formData.value)
+  if (defaultIndex > 0) {
+    formData.metricSymbols.splice(defaultIndex, 1)
+    formData.metricSymbols.unshift(formData.value)
+  }
+  formData.value = formData.metricSymbols[0]
   extraOptionSymbols.value = [...formData.metricSymbols]
 }
 
@@ -291,9 +316,7 @@ const restoreSystemDefaults = async () => {
     )
     const restored = restoreSystemDataOptions(catalogOptions.value, formData.value)
     formData.metricSymbols = restored.options.map(option => option.metricSymbol)
-    formData.value = formData.metricSymbols.includes(formData.value)
-      ? formData.value
-      : formData.metricSymbols[0]
+    formData.value = formData.metricSymbols[0]
   } catch {
     // Canceling keeps the current form options and default value unchanged.
   }
@@ -308,10 +331,11 @@ defineExpose({
 </script>
 
 <style scoped>
+.option-order-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .section-actions { display: flex; align-items: center; }
 .options-search { margin-bottom: 12px; }
 .options-summary { margin-bottom: 12px; color: var(--el-text-color-secondary); }
-.data-options-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.data-options-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
 .data-option-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--el-border-color-lighter); border-radius: 8px; min-width: 0; }
 .data-option-row.is-selected { background: var(--el-color-primary-light-9); border-color: var(--el-color-primary-light-5); }
 .data-option-row :deep(.el-checkbox) { margin-right: 0; min-width: 0; flex: 1; height: auto; }
@@ -319,5 +343,6 @@ defineExpose({
 .data-option-row :deep(.el-radio) { margin-right: 0; flex-shrink: 0; }
 .data-option-row :deep(.el-radio__label) { font-size: 12px; padding-left: 4px; }
 .metric-icon { font-family: var(--studio-data-icon-font), sans-serif !important; font-size: 16px; width: 24px; flex-shrink: 0; text-align: center; margin-right: 6px; }
+@media (max-width: 1000px) { .data-options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .data-options-grid { grid-template-columns: 1fr; } }
 </style>

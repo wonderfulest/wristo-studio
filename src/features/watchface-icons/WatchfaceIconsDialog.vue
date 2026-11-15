@@ -145,8 +145,18 @@ async function drop(item: WatchfaceIcon, event: DragEvent) {
   const file = event.dataTransfer?.files[0]
   if (file && (item.custom || item.unicode)) await upload(item, file)
 }
+// Older single uploads lived only on layers. Preserve them independently before
+// any replacement can change their rendered object or metric binding.
+function preserveExistingImages() {
+  for (const icon of managedIcons.value) {
+    if (design.watchfaceIcons.some(asset => asset.id === icon.key)) continue
+    design.upsertWatchfaceIcon({ id: icon.key, kind: icon.custom ? 'custom' : 'override', name: icon.label,
+      imageUrl: source(icon), fontSlug: icon.fontSlug, unicode: icon.unicode })
+  }
+}
 async function apply(item: WatchfaceIcon, image: string, deleting = false, record = true) {
   await history.runAtomicMutation('watchface-icons', async () => {
+    if (image) preserveExistingImages()
     for (const element of item.elements) {
       const config = element.config as any
       let unicode = item.unicode
