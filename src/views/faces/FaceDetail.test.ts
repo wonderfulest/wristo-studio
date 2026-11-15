@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useI18n } from '@/i18n'
 import { nextTick } from 'vue'
 import FaceDetail from './FaceDetail.vue'
-import { rebuildSearchIndex, getSearchIndexDoc } from '@/api/products'
-vi.mock('@/api/products', () => ({ rebuildSearchIndex: vi.fn(), getSearchIndexDoc: vi.fn() }))
+import { startProductSync, getProductSync } from '@/api/products'
+vi.mock('@/api/products', () => ({ startProductSync: vi.fn(), getProductSync: vi.fn() }))
 import { designApi } from '@/api/wristo/design'
 vi.mock('@/api/wristo/design', () => ({ designApi: { getDesignByUid: vi.fn() } }))
 import { loadShareRewardProfile } from '@/api/wristo/shareRewards'
@@ -15,7 +15,7 @@ import { remixFace, updateFaceSharing } from './permissions'
 import { getDesignSharing, updateDesignSharing } from '@/api/wristo/designSharing'
 vi.mock('@/api/wristo/designSharing', () => ({ getDesignSharing: vi.fn(), updateDesignSharing: vi.fn() }))
 vi.mock('@/i18n', async () => { const actual = await vi.importActual<typeof import('@/i18n')>('@/i18n'); const { ref } = await import('vue'); const locale = ref('en'); return { ...actual, useI18n: () => ({ locale, t: (key: string, params?: Record<string, string | number>) => key.startsWith('faceDetail.') ? actual.translate(key, locale.value as 'en' | 'zh', params) : key }) } })
-const auth = vi.hoisted(() => ({ isStudioConsumer: true, isAdminUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number; premium?: { active: boolean; lifetime: boolean; expiresAt: string | null } } | null }))
+const auth = vi.hoisted(() => ({ isStudioConsumer: true, isAdminUser: false, isMerchantUser: false, isAuthenticated: false, userInfo: { id: 7 } as { id: number; premium?: { active: boolean; lifetime: boolean; expiresAt: string | null } } | null }))
 vi.mock('@/stores/theme', () => ({ useThemeStore: () => ({ currentTheme: 'light' }) }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => auth }))
 vi.mock('./permissions', () => ({ updateFaceSharing: vi.fn(), remixFace: vi.fn() }))
@@ -26,7 +26,7 @@ vi.mock('@/components/layout/GlobalHeader.vue', () => ({ default: { template: '<
 vi.mock('./catalog', async () => ({ ...await vi.importActual<any>('./catalog'), loadFaceDetail: vi.fn() }))
 const fixture = { appId: 123, ownerId: 7, publiclyVisible: false, allowRemix: false, name: 'Test face', designId: 'actual-design', price: 0, description: '<script>unsafe()</script>', devices: [], previewImageUrl: '/test.png' }
 const wrappers: ReturnType<typeof mount>[] = []
-beforeEach(() => { (useI18n().locale as { value: string }).value = 'en'; auth.isStudioConsumer = true; auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
+beforeEach(() => { auth.isMerchantUser = false; vi.mocked(getProductSync).mockResolvedValue({ code: 0, msg: 'success', data: null });  (useI18n().locale as { value: string }).value = 'en'; auth.isStudioConsumer = true; auth.isAuthenticated = false; vi.mocked(loadShareRewardProfile).mockReset(); auth.isAdminUser = false; auth.userInfo = { id: 7 }; vi.mocked(getDesignSharing).mockReset().mockResolvedValue({ publiclyVisible: false, allowRemix: false }); vi.mocked(updateDesignSharing).mockReset(); vi.mocked(remixFace).mockReset(); vi.mocked(loadFaceDetail).mockReset().mockResolvedValue({ ...fixture }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 async function setup(path = '/faces/123') {
   const router = createRouter({ history: createMemoryHistory(), routes: [
@@ -453,23 +453,26 @@ it.each<(Record<string, string> | null)>([null, {}, { zh: '  ' }])('falls back t
   expect(wrapper.get('.description').text()).toBe('Default description')
 })
 
-describe('administrator search index action', () => {
-  it('does not expose syncing to the application owner', async () => {
+describe('one-click synchronization access', () => {
+  it('hides the action from ordinary owners', async () => {
     const { wrapper } = await setup()
-    expect(wrapper.text()).not.toContain('searchIndex.sync')
+    expect(wrapper.find('.face-sync').exists()).toBe(false)
   })
-
-  it('syncs the current app and verifies its index for an administrator', async () => {
+  it('allows administrators to synchronize the current app', async () => {
     auth.isAdminUser = true
-    vi.mocked(rebuildSearchIndex).mockResolvedValue({ code: 0, msg: 'success', data: true })
-    vi.mocked(getSearchIndexDoc).mockResolvedValue({ code: 0, msg: 'success', data: { id: 123 } })
+    vi.mocked(startProductSync).mockResolvedValue({ code: 0, msg: 'success', data: { id: 'job', appId: 123, status: 'succeeded', steps: [], startedAt: 1 } })
     const { wrapper } = await setup()
-    const button = wrapper.findAll('button').find(item => item.text() === 'searchIndex.sync')!
-    expect(button).toBeDefined()
-    await button.trigger('click')
+    await wrapper.get('.sync-button').trigger('click')
     await flushPromises()
-    expect(rebuildSearchIndex).toHaveBeenCalledWith(123)
-    expect(getSearchIndexDoc).toHaveBeenCalledWith(123)
-    expect(button.attributes('disabled')).toBeUndefined()
+    expect(startProductSync).toHaveBeenCalledWith(123)
+    expect(wrapper.get('.sync-button').attributes('disabled')).toBeUndefined()
+  })
+  it('allows merchant owners and hides the action for other merchants', async () => {
+    auth.isMerchantUser = true
+    const { wrapper } = await setup()
+    expect(wrapper.find('.face-sync').exists()).toBe(true)
+    auth.userInfo = { id: 99 }
+    const other = await setup()
+    expect(other.wrapper.find('.face-sync').exists()).toBe(false)
   })
 })

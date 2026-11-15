@@ -36,7 +36,7 @@
             <a class="membership-button" href="https://www.wristo.io/membership" target="_blank" rel="noopener noreferrer">{{ t('faceDetail.joinMembership') }} <Icon icon="material-symbols:arrow-forward-rounded" /></a>
           </div>
           <div class="primary-actions">
-            <button v-if="userStore.isAdminUser && face.appId" class="secondary-button" :disabled="searchSyncLoading" @click="syncSearchIndex">{{ t(searchSyncLoading ? 'searchIndex.syncing' : 'searchIndex.sync') }}</button>
+            <FaceSyncButton v-if="face.appId && (userStore.isAdminUser || (userStore.isMerchantUser && isOwner))" :key="`${face.appId}-${userStore.userInfo?.id}`" :app-id="face.appId" @updated="refreshManagedFace" />
             <RouterLink v-if="canEdit && face.designId && !informationTarget" class="studio-edit-button" :to="{ path: '/design', query: { id: face.designId } }"><Icon icon="material-symbols:edit-outline" /> {{ t('faceDetail.editInBuilder') }}</RouterLink>
             <button v-else-if="!canEdit && face.designId && face.allowRemix" class="primary-button" :disabled="remixing" @click="remix">{{ remixing ? t('faceDetail.creatingYourCopy') : t('faceDetail.remixInBuilder') }}</button>
             <p v-else-if="!canEdit || !face.designId" class="source-unavailable">{{ t('faceDetail.thisWatchFaceIsNotAvailableInTheBuilder') }}</p>
@@ -99,8 +99,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { rebuildSearchIndex, getSearchIndexDoc } from '@/api/products'
+import FaceSyncButton from './FaceSyncButton.vue'
 import AppBuildVersion from '@/components/layout/AppBuildVersion.vue'
 import { useI18n } from '@/i18n'
 const { t, locale } = useI18n()
@@ -161,25 +160,6 @@ function sectionFromRoute(): 'overview' | PublishSection {
 }
 watch(() => route.query.section, () => { activeSection.value = sectionFromRoute() })
 const userStore = useUserStore()
-const searchSyncLoading = ref(false)
-async function syncSearchIndex() {
-  const appId = face.value?.appId
-  if (!userStore.isAdminUser || !appId || searchSyncLoading.value) return
-  searchSyncLoading.value = true
-  try {
-    const result = await rebuildSearchIndex(appId)
-    if (result.code !== 0) throw new Error(result.msg || t('searchIndex.failed'))
-    const doc = await getSearchIndexDoc(appId)
-    if (doc.code !== 0) throw new Error(doc.msg || t('searchIndex.failed'))
-    if (doc.data) ElMessage.success(t('searchIndex.success'))
-    else ElMessage.warning(t('searchIndex.missing'))
-  } catch (error: any) {
-    ElMessage.error(error?.message || t('searchIndex.failed'))
-  } finally {
-    searchSyncLoading.value = false
-  }
-}
-
 const isOwner = computed(() => userStore.userInfo?.id != null && face.value?.ownerId != null && String(userStore.userInfo.id) === String(face.value.ownerId))
 const canEdit = computed(() => isOwner.value || userStore.isAdminUser)
 const remixing = ref(false)
