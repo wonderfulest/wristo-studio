@@ -13,9 +13,9 @@ describe('Garmin official payment rules', () => {
     expect(isGarminPayment('garmin_pay')).toBe(false)
   })
 
-  it('forces Garmin and free trial durations to zero', () => {
+  it('preserves free and WPay durations while disabling Garmin trials', () => {
     expect(normalizeTrialLasts('garmin', 12)).toBe(0)
-    expect(normalizeTrialLasts('free', 12)).toBe(0)
+    expect(normalizeTrialLasts('free', 12)).toBe(12)
     expect(normalizeTrialLasts('wpay', 12)).toBe(12)
   })
 

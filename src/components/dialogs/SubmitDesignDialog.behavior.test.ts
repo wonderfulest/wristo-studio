@@ -261,6 +261,19 @@ describe('SubmitDesignDialog style tag behavior', () => {
     }
   })
 
+  it.each([-1, 0, 0.25, 12])('submits the saved free code delay %s', async (trialLasts) => {
+    mocks.getDesignByUid.mockResolvedValueOnce({ code: 0, data: {
+      ...designDetail,
+      product: { ...designDetail.product, trialLasts, payment: { paymentMethod: 'free', price: 0 } },
+    } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect(wrapper.find('[label="payment.codeDelayHours"]').exists()).toBe(true)
+    await confirm(wrapper)
+    expect(mocks.submitDesign).toHaveBeenCalledWith(expect.objectContaining({ paymentMethod: 'free', trialLasts }))
+    wrapper.unmount()
+  })
+
   it('identifies ordinary submissions separately from PRG builds', async () => {
     const wrapper = mountDialog()
     await showDialog(wrapper)

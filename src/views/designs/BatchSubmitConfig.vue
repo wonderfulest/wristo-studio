@@ -17,11 +17,11 @@
         <el-form-item :label="label('price', 'submitDesign.price')">
           <el-input-number :model-value="values.price" :min="1.99" :max="5.99" :precision="3" :step="0.2" :placeholder="placeholder('price')" @update:model-value="edit('price', $event ?? NaN)" />
         </el-form-item>
-        <el-form-item :label="label('trialLasts', 'submitDesign.trialDuration')">
-          <el-input-number :model-value="values.trialLasts" :min="0" :max="720" :precision="2" :step="0.25" :placeholder="placeholder('trialLasts')" @update:model-value="edit('trialLasts', $event ?? NaN)" />
-          <p class="config-hint">{{ t('submitDesign.trialTip') }}</p>
-        </el-form-item>
       </template>
+      <el-form-item v-if="values.paymentMethod !== 'garmin'" :label="label('trialLasts', values.paymentMethod === 'free' ? 'payment.codeDelayHours' : 'submitDesign.trialDuration')">
+        <el-input-number :model-value="values.trialLasts" :min="-1" :max="720" :precision="2" :step="0.25" :placeholder="placeholder('trialLasts')" @update:model-value="edit('trialLasts', $event ?? NaN)" />
+        <p class="config-hint">{{ t(values.paymentMethod === 'free' ? 'payment.codeDelayTip' : 'submitDesign.trialTip') }}</p>
+      </el-form-item>
       <el-form-item :label="label('targetDeviceIds', 'submitDesign.devices')">
         <el-select :model-value="values.targetDeviceIds || []" multiple filterable clearable collapse-tags collapse-tags-tooltip :placeholder="placeholder('targetDeviceIds')" @update:model-value="edit('targetDeviceIds', $event)">
           <el-option v-for="device in devices" :key="device.deviceId" :value="device.deviceId" :label="`${device.displayName} (${device.deviceId})`" />

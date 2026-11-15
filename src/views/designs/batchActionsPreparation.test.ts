@@ -41,7 +41,7 @@ it('respects cancellation timing and uses the current device for PRG', async () 
  await (await prepare('cancelPrg')).run!(); expect(api.cancelPrgPackageTask).toHaveBeenCalledWith('one', 'venu3', 3)
 })
 
-it.each([0, 0.25, 720])('reuses saved trial duration %s when repackaging', async (trialLasts) => {
+it.each([-1, 0, 0.25, 720])('reuses saved trial duration %s when repackaging', async (trialLasts) => {
  detail.product.trialLasts = trialLasts
  const ready = await prepare('submit')
  expect(ready.reason).toBeUndefined()
@@ -49,7 +49,7 @@ it.each([0, 0.25, 720])('reuses saved trial duration %s when repackaging', async
  await ready.run!()
  expect(api.submitDesign).toHaveBeenCalledWith(expect.objectContaining({ paymentMethod: 'wpay', price: 3.99, trialLasts, targetDeviceIds: ['venu3'] }))
 })
-it.each([undefined, null, -1, 721])('does not invent missing or invalid saved trial duration %s', async (trialLasts) => {
+it.each([undefined, null, -2, -0.5, 721])('does not invent missing or invalid saved trial duration %s', async (trialLasts) => {
  detail.product.trialLasts = trialLasts
  expect((await prepare('submit')).reason).toBe('batchActions.missingConfig')
  expect(api.submitDesign).not.toHaveBeenCalled()
@@ -83,13 +83,13 @@ it('does not change a published payment method through a shared edit', async () 
  expect(ready.reason).toBe('payment.methodLockedAfterPublish')
  expect(ready.run).toBeUndefined()
 })
-it('free submissions omit paid fields even with shared paid values', async () => {
+it('free submissions preserve code delay while omitting paid price', async () => {
  const ready = await prepareBatchAction(item, 'submit', { device: '', enabled: false, weight: 0, submitConfig: { paymentMethod: 'free', price: 4.99, trialLasts: 1 } }, k => k)
  await ready.run!()
  const payload = api.submitDesign.mock.calls[0][0]
  expect(payload.paymentMethod).toBe('free')
  expect(payload).not.toHaveProperty('price')
- expect(payload).not.toHaveProperty('trialLasts')
+ expect(payload.trialLasts).toBe(1)
 })
 
 it('allows administrators to change a published payment method through a shared edit', async () => {
@@ -98,4 +98,16 @@ it('allows administrators to change a published payment method through a shared 
  expect(ready.reason).toBeUndefined()
  await ready.run!()
  expect(api.submitDesign.mock.calls[0][0].paymentMethod).toBe('free')
+})
+
+it.each([-1, 0, 0.25, 720])('reuses free code delay %s when repackaging', async (trialLasts) => {
+ detail.product.payment = { paymentMethod: 'free', price: 0 }
+ detail.product.trialLasts = trialLasts
+ await (await prepare('submit')).run!()
+ expect(api.submitDesign).toHaveBeenCalledWith(expect.objectContaining({ paymentMethod: 'free', trialLasts }))
+})
+it.each([-2, -0.5, 721, NaN])('rejects invalid free code delay %s', async (trialLasts) => {
+ detail.product.payment = { paymentMethod: 'free', price: 0 }
+ detail.product.trialLasts = trialLasts
+ expect((await prepare('submit')).run).toBeUndefined()
 })

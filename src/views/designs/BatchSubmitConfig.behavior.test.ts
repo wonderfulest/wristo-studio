@@ -56,3 +56,14 @@ it('ignores a response after the form is unmounted', async () => {
  resolve({ code: 0, data: { product: {} } }); await flushPromises()
  expect(onReady.mock.calls).toEqual([[false]])
 })
+
+it('shows and edits the code delay for free apps', async () => {
+ api.getDesignByUid.mockImplementation(async () => ({ code: 0, data: { product: { payment: { paymentMethod: 'free', price: 0 }, trialLasts: 0.5 } } }))
+ setup(); await flushPromises()
+ expect(wrapper.text()).toContain('payment.codeDelayHours')
+ const inputs = wrapper.findAllComponents({ name: 'ElInputNumber' })
+ expect(inputs).toHaveLength(1)
+ expect(inputs[0].props('modelValue')).toBe(0.5)
+ inputs[0].vm.$emit('update:modelValue', 0)
+ expect(wrapper.emitted('update')?.at(-1)).toEqual([{ trialLasts: 0 }])
+})

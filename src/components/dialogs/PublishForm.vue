@@ -270,17 +270,17 @@
           {{ t('submitDesign.paidMerchantOnly') }}
         </span>
       </el-form-item>
-      <el-form-item v-if="form.paymentMethod === 'wpay'" :label="t('goLive.trialDurationHours')">
+      <el-form-item v-if="form.paymentMethod === 'wpay' || form.paymentMethod === 'free'" :label="t(form.paymentMethod === 'free' ? 'payment.codeDelayHours' : 'goLive.trialDurationHours')">
         <el-input-number 
           v-model="form.trialLasts" 
           :disabled="loading"
-          :min="0" 
+          :min="-1"
           :max="720" 
           :precision="2"
           :step="0.25"
         />
         <div class="form-tip-margin">
-          {{ t('goLive.trialDurationTip') }}
+          {{ t(form.paymentMethod === 'free' ? 'payment.codeDelayTip' : 'goLive.trialDurationTip') }}
         </div>
       </el-form-item>
       <el-form-item v-if="form.paymentMethod !== 'free'" :label="t('goLive.priceUsd')">
@@ -763,12 +763,10 @@ const handlePaymentMethodChange = (value: string) => {
   if (value !== 'free' && !canPublishPaid.value) {
     form.paymentMethod = 'free'
     form.price = 0
-    form.trialLasts = 0
     return
   }
   if (value === 'free') {
     form.price = 0
-    form.trialLasts = 0
     return
   }
   if (isGarminPayment(value)) {
@@ -777,7 +775,7 @@ const handlePaymentMethodChange = (value: string) => {
     return
   }
   form.price = form.price || 2.39
-  form.trialLasts = form.trialLasts || 0.25
+  form.trialLasts = form.trialLasts ?? 0.25
 }
 
 // 加载设计数据
@@ -849,6 +847,10 @@ const handleConfirm = async (publish = true) => {
     return false
   })
   if (valid === false) return
+  if (!isGarminPayment(form.paymentMethod) && (!Number.isFinite(form.trialLasts) || (form.trialLasts < 0 && form.trialLasts !== -1) || form.trialLasts > 720)) {
+    messageStore.error(t('submitDesign.trialRange'))
+    return
+  }
   if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 1.99 || form.price > 5.99)) {
     messageStore.error(t('submitDesign.priceRange'))
     return

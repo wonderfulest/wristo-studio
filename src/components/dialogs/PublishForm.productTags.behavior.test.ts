@@ -1042,3 +1042,19 @@ it('resolves another author’s selected bundle and saves edited published payme
   }))
   wrapper.unmount()
 })
+
+it.each([-1, 0, 0.25, 12])('loads and saves free code delay %s through publishing', async (trialLasts) => {
+  vi.clearAllMocks()
+  mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })
+  mocks.getBundles.mockResolvedValue({ code: 0, data: [] })
+  mocks.publish.mockResolvedValue({ code: 0, data: true })
+  const wrapper = mountDialog()
+  ;(wrapper.vm as any).show({ ...design, product: { ...design.product, trialLasts, payment: { paymentMethod: 'free', price: 0 } } })
+  await flushPromises()
+  const model = wrapper.getComponent(ElFormStub).props('model')
+  expect(model.trialLasts).toBe(trialLasts)
+  model.trialLasts = 2
+  await confirm(wrapper)
+  expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ payment: expect.objectContaining({ paymentMethod: 'free', price: 0, trialLasts: 2 }) }))
+  wrapper.unmount()
+})

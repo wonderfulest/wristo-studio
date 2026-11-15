@@ -25,11 +25,11 @@ describe('Garmin official payment UI contract', () => {
   )
 
   it.each(['SubmitDesignDialog', 'PublishForm'])(
-    '%s only shows trial duration for WPay',
+    '%s shows duration for both WPay and free apps',
     (name) => {
       const source = readDialog(name)
       const trialField = source.match(/<(?:el-form-item|div)\b[^>]*>(?:(?!<(?:el-form-item|div)\b)[\s\S])*?v-model="form(?:\.payment)?\.trialLasts"/)
-      expect(trialField?.[0]).toMatch(/v-if="form(?:\.payment)?\.paymentMethod === 'wpay'"/)
+      expect(trialField?.[0]).toMatch(/v-if="form(?:\.payment)?\.paymentMethod === 'wpay' \|\| form(?:\.payment)?\.paymentMethod === 'free'"/)
     },
   )
 

@@ -66,11 +66,11 @@ export async function prepareBatchAction(item: DesignListItem, action: BatchActi
       if (isPaymentMethodLocked(product?.lastGoLive, options.isAdmin) && method !== product?.payment?.paymentMethod) return skip('payment.methodLockedAfterPublish')
       if (!['free', 'wpay', 'garmin', 'kpay'].includes(method)) return skip('batchActions.missingConfig')
       if (method !== 'free' && (!Number.isFinite(payment.price) || payment.price < 1.99 || payment.price > 5.99)) return skip('submitDesign.priceRange')
-      if (method !== 'free' && (!Number.isFinite(trialLasts) || trialLasts < 0 || trialLasts > 720)) return skip('batchActions.missingConfig')
+      if (method !== 'garmin' && (!Number.isFinite(trialLasts) || (trialLasts < 0 && trialLasts !== -1) || trialLasts > 720)) return skip('batchActions.missingConfig')
       if (method === 'kpay' && !payment.kpayId) return skip('submitDesign.kpayRequired')
       if (d.originalType === 'non_original' && (!d.sourcePlatform || !d.sourceId)) return skip('batchActions.missingConfig')
       if (d.sourcePlatform && d.sourceId && await checked(designApi.checkSourceDuplicate({ designUid: d.designUid, sourcePlatform: d.sourcePlatform, sourceId: d.sourceId }))) return skip('designSource.duplicate')
-      const payload: DesignSubmitDTO = { designUid: d.designUid, expectedVersion: d.version, name: d.name, originalType: d.originalType || 'original', sourcePlatform: d.sourcePlatform || undefined, sourceId: d.sourceId || undefined, paymentMethod: method, targetDeviceIds: [...targetDeviceIds], ...(method !== 'free' ? { price: payment.price, trialLasts, kpayId: payment.kpayId } : {}) }
+      const payload: DesignSubmitDTO = { designUid: d.designUid, expectedVersion: d.version, name: d.name, originalType: d.originalType || 'original', sourcePlatform: d.sourcePlatform || undefined, sourceId: d.sourceId || undefined, paymentMethod: method, trialLasts: method === 'garmin' ? 0 : trialLasts, targetDeviceIds: [...targetDeviceIds], ...(method !== 'free' ? { price: payment.price, kpayId: payment.kpayId } : {}) }
       run = () => checked(designApi.submitDesign(payload)); break
     }
   }

@@ -75,20 +75,20 @@
       </el-form-item>
       
       <el-form-item 
-        :label="t('submitDesign.trialDuration')" 
+        :label="t(form.paymentMethod === 'free' ? 'payment.codeDelayHours' : 'submitDesign.trialDuration')"
         prop="trialLasts"
-        v-if="form.paymentMethod === 'wpay'"
+        v-if="form.paymentMethod === 'wpay' || form.paymentMethod === 'free'"
       >
         <el-input-number 
           v-model="form.trialLasts" 
-          :min="0" 
+          :min="-1"
           :max="720" 
           :precision="2"
           :step="0.25"
           :placeholder="t('submitDesign.enterTrialHours')"
           style="width: 100%"
         />
-        <div class="form-tip">{{ t('submitDesign.trialTip') }}</div>
+        <div class="form-tip">{{ t(form.paymentMethod === 'free' ? 'payment.codeDelayTip' : 'submitDesign.trialTip') }}</div>
       </el-form-item>
       <el-form-item v-if="dialogMode === 'submit'" :label="t('submitDesign.devices')">
         <div class="packaging-devices">
@@ -223,7 +223,7 @@ const rules = computed(() => ({
       trigger: 'blur' 
     }
   ],
-  trialLasts: form.paymentMethod === 'wpay' ? [
+  trialLasts: form.paymentMethod === 'wpay' || form.paymentMethod === 'free' ? [
     { 
       required: true,
       message: t('submitDesign.enterTrialRequired'), 
@@ -231,7 +231,7 @@ const rules = computed(() => ({
     },
     { 
       type: 'number', 
-      min: 0, 
+      min: -1,
       max: 720, 
       message: t('submitDesign.trialRange'), 
       trigger: 'blur' 
@@ -250,18 +250,16 @@ const handlePaymentMethodChange = (value: string) => {
   if (value !== 'free' && !canPublishPaid.value) {
     form.paymentMethod = 'free'
     form.price = 0
-    form.trialLasts = 0
     return
   }
   if (value === 'free') {
     form.price = 0
-    form.trialLasts = 0
   } else if (isGarminPayment(value)) {
     form.price = form.price || 2.39
     form.trialLasts = 0
   } else if (value === 'kpay' || value === 'wpay') {
     form.price = form.price || 2.39
-    form.trialLasts = form.trialLasts || 0.25
+    form.trialLasts = form.trialLasts ?? 0.25
   }
 }
 
@@ -297,20 +295,19 @@ const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submi
       })
       
       if (product) {
-        form.trialLasts = product.trialLasts
+        form.trialLasts = product.trialLasts ?? 0
       }
       // If product contains payment info, prefill
       if (product?.payment) {
         const payment = product.payment
         form.paymentMethod = payment.paymentMethod === 'free' || !canPublishPaid.value ? 'free' : payment.paymentMethod
         if (form.paymentMethod === 'free') {
-          // Free mode: price and trial last should be 0
+          // Free apps share the product duration field with WPay.
           form.price = 0
-          form.trialLasts = 0
         } else {
           // Paid modes: use provided price / trialLasts with sensible defaults
           form.price = payment.price ?? 2.39
-          form.trialLasts = normalizeTrialLasts(form.paymentMethod, payment.trialLasts ?? 0.25)
+          form.trialLasts = normalizeTrialLasts(form.paymentMethod, product.trialLasts ?? payment.trialLasts ?? 0.25)
         }
       }
       if (dialogMode.value === 'submit') {
@@ -366,6 +363,10 @@ const handleConfirm = async () => {
       messageStore.error(t('submitDesign.selectDeviceRequired'))
       return
     }
+    if (!isGarminPayment(form.paymentMethod) && (!Number.isFinite(form.trialLasts) || (form.trialLasts < 0 && form.trialLasts !== -1) || form.trialLasts > 720)) {
+      messageStore.error(t('submitDesign.trialRange'))
+      return
+    }
     if (form.paymentMethod !== 'free' && (!Number.isFinite(form.price) || form.price < 1.99 || form.price > 5.99)) {
       messageStore.error(t('submitDesign.priceRange'))
       return
@@ -383,6 +384,7 @@ const handleConfirm = async () => {
       expectedVersion: currentDesign.value?.version,
       ...(dialogMode.value === 'submit' ? { targetDeviceIds: [...selectedDeviceIds.value] } : {}),
       paymentMethod: form.paymentMethod,
+      trialLasts: normalizeTrialLasts(form.paymentMethod, form.trialLasts),
       originalType: resolvedOriginalType,
       sourcePlatform: resolvedOriginalType === 'non_original' ? form.sourcePlatform || undefined : undefined,
       sourceId: resolvedOriginalType === 'non_original' ? form.sourceId.trim() || undefined : undefined,

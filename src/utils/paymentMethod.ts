@@ -6,7 +6,7 @@ export const isGarminPayment = (paymentMethod?: string | null) =>
   paymentMethod === GARMIN_PAYMENT_METHOD
 
 export const normalizeTrialLasts = (paymentMethod: string, trialLasts?: number | null) =>
-  paymentMethod === 'free' || isGarminPayment(paymentMethod) ? 0 : Number(trialLasts || 0)
+  isGarminPayment(paymentMethod) ? 0 : Number(trialLasts || 0)
 
 export const isPaymentMethodLocked = (lastGoLive?: number | string | null, isAdmin = false) =>
   !isAdmin && lastGoLive !== null && lastGoLive !== undefined && lastGoLive !== ''
