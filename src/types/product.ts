@@ -154,6 +154,7 @@ export interface ProductPaymentDto {
 
 /** 产品上线数据传输对象 */
 export interface GoToLiveDto {
+  pointsRedemption?: { enabled: boolean; points: number | null }
   /** 设计名称与产品名称共用 */
   name?: string
   names?: Record<string, string>

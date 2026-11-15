@@ -59,20 +59,23 @@
           :rules="[{ required: true, message: t('property.atLeastOneOption'), trigger: 'change' }]">
           <div class="data-options-grid">
             <div v-for="option in visibleOptions" :key="option.metricSymbol" class="data-option-row"
-              :class="{ 'is-selected': formData.metricSymbols.includes(option.metricSymbol) }">
+              :class="{
+                'is-selected': formData.metricSymbols.includes(option.metricSymbol),
+                'is-dragging': draggedSymbol === option.metricSymbol,
+                'is-drop-target': dropTargetSymbol === option.metricSymbol
+              }"
+              :draggable="formData.metricSymbols.includes(option.metricSymbol)"
+              @dragstart="startOptionDrag($event, option.metricSymbol)"
+              @dragover="dragOverOption($event, option.metricSymbol)"
+              @dragleave="dropTargetSymbol === option.metricSymbol && (dropTargetSymbol = null)"
+              @drop="dropOption($event, option.metricSymbol)"
+              @dragend="clearOptionDrag">
               <el-checkbox :model-value="formData.metricSymbols.includes(option.metricSymbol)"
                 @change="checked => toggleOption(option.metricSymbol, checked)">
                 <span class="metric-icon">{{ iconGlyph(option) }}</span>
-                <span :title="option.metricSymbol">{{ optionDisplayLabel(option) }}</span>
+                <span :title="optionDisplayLabel(option)">{{ optionShortLabel(option) }}</span>
               </el-checkbox>
-              <div v-if="formData.metricSymbols.includes(option.metricSymbol)" class="option-order-actions">
-                <el-button link :disabled="formData.metricSymbols[0] === option.metricSymbol"
-                  :aria-label="optionDisplayLabel(option) + ' — ' + t('property.moveUp')"
-                  @click="moveOption(option.metricSymbol, -1)">↑</el-button>
-                <el-button link :disabled="formData.metricSymbols.at(-1) === option.metricSymbol"
-                  :aria-label="optionDisplayLabel(option) + ' — ' + t('property.moveDown')"
-                  @click="moveOption(option.metricSymbol, 1)">↓</el-button>
-              </div>
+
             </div>
           </div>
         </el-form-item>
@@ -152,6 +155,8 @@ const isEdit = ref(false)
 const showMore = ref(false)
 const optionsQuery = ref('')
 const extraOptionSymbols = ref([])
+const draggedSymbol = ref(null)
+const dropTargetSymbol = ref(null)
 const dataCatalogStore = useDataCatalogStore()
 const propertiesStore = usePropertiesStore()
 const designStore = useDesignStore()
@@ -159,6 +164,15 @@ const catalogOptions = computed(() => getDataTypePropertyOptions(designStore.app
 const cloneSystemDataOptions = () => createSystemDataOptions(catalogOptions.value)
 const iconGlyph = (option) => resolveDataSelectionIconGlyph(option)
 const optionDisplayLabel = (option) => resolveDataOptionSettingsLabel(option, locale.value)
+const optionShortLabel = (option) => {
+  const label = optionDisplayLabel(option)
+  let shortened = label
+  // Remove nested Chinese or English parenthetical notes from the card only.
+  while (/[（(][^（）()]*[）)]/.test(shortened)) {
+    shortened = shortened.replace(/\s*[（(][^（）()]*[）)]/g, '')
+  }
+  return shortened.trim() || label
+}
 
 const formData = reactive({
   title: '',
@@ -203,17 +217,46 @@ const toggleOption = (symbol, checked) => {
   formData.value = formData.metricSymbols[0]
 }
 
-const moveOption = (symbol, direction) => {
-  const index = formData.metricSymbols.indexOf(symbol)
-  const target = index + direction
-  if (index < 0 || target < 0 || target >= formData.metricSymbols.length) return
-  const symbols = [...formData.metricSymbols]
-  ;[symbols[index], symbols[target]] = [symbols[target], symbols[index]]
-  formData.metricSymbols = symbols
-  formData.value = symbols[0]
+const clearOptionDrag = () => {
+  draggedSymbol.value = null
+  dropTargetSymbol.value = null
+}
+
+const startOptionDrag = (event, symbol) => {
+  if (!formData.metricSymbols.includes(symbol)) {
+    event.preventDefault()
+    return
+  }
+  draggedSymbol.value = symbol
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', symbol)
+  }
+}
+
+const dragOverOption = (event, symbol) => {
+  if (!draggedSymbol.value || !formData.metricSymbols.includes(symbol)) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  dropTargetSymbol.value = symbol === draggedSymbol.value ? null : symbol
+}
+
+const dropOption = (event, symbol) => {
+  const from = formData.metricSymbols.indexOf(draggedSymbol.value)
+  const to = formData.metricSymbols.indexOf(symbol)
+  if (from >= 0 && to >= 0) {
+    event.preventDefault()
+    const symbols = [...formData.metricSymbols]
+    const [moved] = symbols.splice(from, 1)
+    symbols.splice(to, 0, moved)
+    formData.metricSymbols = symbols
+    formData.value = symbols[0]
+  }
+  clearOptionDrag()
 }
 
 const initFormData = (data = null) => {
+  clearOptionDrag()
   optionsQuery.value = ''
   showMore.value = false
   extraOptionSymbols.value = []
@@ -331,12 +374,15 @@ defineExpose({
 </script>
 
 <style scoped>
-.option-order-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .section-actions { display: flex; align-items: center; }
 .options-search { margin-bottom: 12px; }
 .options-summary { margin-bottom: 12px; color: var(--el-text-color-secondary); }
 .data-options-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
 .data-option-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--el-border-color-lighter); border-radius: 8px; min-width: 0; }
+.data-option-row[draggable="true"] { cursor: grab; }
+.data-option-row[draggable="true"] :deep(.el-checkbox__label) { cursor: grab; }
+.data-option-row.is-dragging { opacity: 0.45; }
+.data-option-row.is-drop-target { outline: 2px solid var(--el-color-primary); outline-offset: 1px; }
 .data-option-row.is-selected { background: var(--el-color-primary-light-9); border-color: var(--el-color-primary-light-5); }
 .data-option-row :deep(.el-checkbox) { margin-right: 0; min-width: 0; flex: 1; height: auto; }
 .data-option-row :deep(.el-checkbox__label) { display: flex; align-items: center; white-space: normal; min-width: 0; }

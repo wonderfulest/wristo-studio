@@ -9,6 +9,13 @@ import type {
 import type { Bundle } from '@/types/api/bundle'
 import type { Product as ProductVo, GenerateDescriptionDto } from '@/types/api/product'
 
+export interface PointsRedemptionConfig {
+  enabled: boolean
+  points: number | null
+  effectivePoints: number
+  itemId: number | null
+}
+
 export interface DescriptionGenerationJob {
   id: string
   productId: number
@@ -27,6 +34,9 @@ export interface BannerGenerationJob {
  * 产品相关API接口
  */
 export const productsApi = {
+  getPointsRedemption(appId: number): Promise<ApiResponse<PointsRedemptionConfig>> {
+    return instance.get(`/dsn/products/${appId}/points-redemption`)
+  },
   unpublish(appId: number): Promise<ApiResponse<boolean>> {
     return instance.post(`/admin/products/${appId}/unpublish`)
   },

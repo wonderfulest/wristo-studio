@@ -11,7 +11,7 @@ function setup(appLanguage = 'eng') {
   const emit = vi.fn()
   const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
     .split('<script setup>')[1].split('</script>')[0].replace(/^import[\s\S]*?from [^\n]+\n/gm, '').replace(/^import [^\n]+\n/gm, '')
-  const state = runInNewContext(`${source}\n;({ formData, formRef, initFormData, visibleOptions, moveOption, toggleOption, handleConfirm, restoreSystemDefaults })`, {
+  const state = runInNewContext(`${source}\n;({ formData, formRef, initFormData, visibleOptions, startOptionDrag, dropOption, toggleOption, handleConfirm, restoreSystemDefaults })`, {
     ...helpers, computed, reactive, ref, filterDataOptionsForAppLanguage,
     useDesignStore: () => ({ appLanguage }),
     useI18n: () => ({ locale: ref('en'), t: (key: string) => key }),
@@ -32,7 +32,8 @@ describe('data option ordering', () => {
     state.initFormData({ metricSymbols: ['C', 'A'], value: 'A' })
     expect(state.formData.metricSymbols).toEqual(['A', 'C'])
     expect(state.visibleOptions.value.map((o: any) => o.metricSymbol)).toEqual(['A', 'C', 'B', 'D'])
-    state.moveOption('C', -1)
+    state.startOptionDrag({}, 'C')
+    state.dropOption({ preventDefault: vi.fn() }, 'A')
     expect(state.formData.value).toBe('C')
     state.toggleOption('C', false)
     expect(state.formData.value).toBe('A')
@@ -43,7 +44,8 @@ describe('data option ordering', () => {
   it('emits the displayed order and first item as the generated project default', async () => {
     const state = setup()
     state.initFormData({ metricSymbols: ['C', 'A', 'B'], value: 'C' })
-    state.moveOption('A', -1)
+    state.startOptionDrag({}, 'A')
+    state.dropOption({ preventDefault: vi.fn() }, 'C')
     state.formRef.value = { validate: vi.fn().mockResolvedValue(true) }
     await state.handleConfirm()
     expect(state.emit).toHaveBeenCalledWith('confirm', expect.objectContaining({

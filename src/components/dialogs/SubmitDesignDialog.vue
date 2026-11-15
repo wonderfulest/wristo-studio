@@ -295,7 +295,7 @@ const show = async (design: Pick<Design, 'designUid'>, options?: { mode?: 'submi
       })
       
       if (product) {
-        form.trialLasts = product.trialLasts ?? 0
+        form.trialLasts = product.trialLasts ?? 0.25
       }
       // If product contains payment info, prefill
       if (product?.payment) {

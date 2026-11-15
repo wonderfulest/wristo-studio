@@ -8,6 +8,7 @@ import type { ProductTag } from '@/types/api/productTag'
 
 const mocks = vi.hoisted(() => ({
   isAdmin: false,
+  getPointsRedemption: vi.fn(),
   updateAppUuid: vi.fn(),
   unpublish: vi.fn(),
   regenerateAppUuid: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabili
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: mocks.generateProductTags }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
+    getPointsRedemption: mocks.getPointsRedemption,
     getBundles: mocks.getBundles,
     saveDetails: mocks.saveDetails,
     publish: mocks.publish,
@@ -151,7 +153,8 @@ const stubs = {
     emits: ['update:modelValue'],
     template: '<div><input :value="modelValue" :disabled="disabled" :readonly="readonly" @input="$emit(\'update:modelValue\', $event.target.value)"/><slot name="append"/></div>'
   },
-  ElInputNumber: true,
+  ElSwitch: { props: ['modelValue', 'disabled'], emits: ['update:modelValue'], template: '<input type="checkbox" :checked="modelValue" :disabled="disabled" @change="$emit(\'update:modelValue\', $event.target.checked)" />' },
+  ElInputNumber: { props: ['modelValue', 'disabled'], emits: ['update:modelValue'], template: '<input type="number" :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value === \'\' ? undefined : Number($event.target.value))" />' },
   ElRadioGroup: { props: ['disabled'], template: '<div class="payment-radio-group" :aria-disabled="disabled"><slot/></div>' },
   ElRadio: { template: '<span><slot/></span>' },
   ElRadioButton: { template: '<span><slot/></span>' },
@@ -191,6 +194,7 @@ const confirm = async (wrapper: ReturnType<typeof mountDialog>) => {
 
 beforeEach(() => {
     vi.resetAllMocks()
+    mocks.getPointsRedemption.mockResolvedValue({ code: 0, data: { enabled: false, points: null, effectivePoints: 50, itemId: null } })
     mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: { descriptionTemplate: '[[${app_ai_description}]]' } })
     mocks.confirmCost.mockResolvedValue('confirm')
     mocks.isAdmin = false
@@ -1057,4 +1061,52 @@ it.each([-1, 0, 0.25, 12])('loads and saves free code delay %s through publishin
   await confirm(wrapper)
   expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ payment: expect.objectContaining({ paymentMethod: 'free', price: 0, trialLasts: 2 }) }))
   wrapper.unmount()
+})
+
+
+describe('PublishForm points redemption', () => {
+  it('requires an amount when enabling redemption and saves it with the product', async () => {
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect(wrapper.find('[data-testid="redemption-points"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="points-enabled"]').setValue(true)
+    await confirm(wrapper)
+    expect(mocks.publish).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('payment.pointsInvalid')
+    await wrapper.get('[data-testid="redemption-points"]').setValue(75)
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ pointsRedemption: { enabled: true, points: 75 } }))
+  })
+
+  it('preserves inherited settings when unchanged and saves a disabled switch', async () => {
+    mocks.getPointsRedemption.mockResolvedValue({ code: 0, data: { enabled: true, points: null, effectivePoints: 50, itemId: 1 } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    expect((wrapper.get('[data-testid="redemption-points"]').element as HTMLInputElement).value).toBe('50')
+    await confirm(wrapper)
+    expect(mocks.publish.mock.calls[0][0]).not.toHaveProperty('pointsRedemption')
+    await wrapper.get('[data-testid="points-enabled"]').setValue(false)
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ pointsRedemption: { enabled: false, points: 50 } }))
+  })
+
+  it('blocks saving when settings cannot be loaded', async () => {
+    mocks.getPointsRedemption.mockRejectedValue(new Error('offline'))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+    expect(mocks.publish).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('payment.pointsLoadFailed')
+  })
+
+  it('ignores a stale response after switching products', async () => {
+    let resolveOld!: (value: unknown) => void
+    mocks.getPointsRedemption.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve }))
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await showDialog(wrapper)
+    resolveOld({ code: 0, data: { enabled: true, points: 100, effectivePoints: 100, itemId: 1 } })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="redemption-points"]').exists()).toBe(false)
+  })
 })

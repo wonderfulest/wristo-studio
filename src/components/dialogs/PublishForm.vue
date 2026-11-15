@@ -270,6 +270,18 @@
           {{ t('submitDesign.paidMerchantOnly') }}
         </span>
       </el-form-item>
+      <el-form-item :label="t('payment.pointsRedemption')">
+        <el-switch v-model="form.pointsEnabled" data-testid="points-enabled" :disabled="loading || pointsLoading || pointsLoadFailed" />
+        <div v-if="pointsLoadFailed" class="form-tip" role="alert">
+          {{ t('payment.pointsLoadFailed') }}
+          <el-button link @click="loadPointsRedemption(form.appId)">{{ t('payment.pointsRetry') }}</el-button>
+        </div>
+      </el-form-item>
+      <el-form-item v-if="form.pointsEnabled" :label="t('payment.pointsRequired')" required>
+        <el-input-number v-model="form.redemptionPoints" data-testid="redemption-points"
+          :disabled="loading || pointsLoading || pointsLoadFailed" :min="0" :max="100000" :precision="0" :step="1" />
+        <div class="form-tip">{{ t('payment.pointsTip') }}</div>
+      </el-form-item>
       <el-form-item v-if="form.paymentMethod === 'wpay' || form.paymentMethod === 'free'" :label="t(form.paymentMethod === 'free' ? 'payment.codeDelayHours' : 'goLive.trialDurationHours')">
         <el-input-number 
           v-model="form.trialLasts" 
@@ -557,6 +569,8 @@ const form = reactive({
   youtubeUrl: '',
   tagIds: [] as number[],
   bundleIds: [] as number[],
+  pointsEnabled: false,
+  redemptionPoints: undefined as number | undefined,
   paymentMethod: 'free',
   trialLasts: 0.25,
   price: 2.39,
@@ -778,6 +792,32 @@ const handlePaymentMethodChange = (value: string) => {
   form.trialLasts = form.trialLasts ?? 0.25
 }
 
+const pointsLoading = ref(false)
+const pointsLoadFailed = ref(false)
+let pointsRevision = 0
+let originalPoints = ''
+const pointsSnapshot = () => JSON.stringify([form.pointsEnabled, form.redemptionPoints])
+const loadPointsRedemption = async (appId: number) => {
+  const revision = ++pointsRevision
+  pointsLoading.value = true
+  pointsLoadFailed.value = false
+  form.pointsEnabled = false
+  form.redemptionPoints = undefined
+  originalPoints = ''
+  try {
+    const response = await productsApi.getPointsRedemption(appId)
+    if (revision !== pointsRevision) return
+    if (response.code !== 0 || !response.data) throw new Error('Unable to load redemption configuration')
+    form.pointsEnabled = response.data.enabled
+    form.redemptionPoints = response.data.itemId == null ? undefined : response.data.points ?? response.data.effectivePoints
+    originalPoints = pointsSnapshot()
+  } catch {
+    if (revision === pointsRevision) pointsLoadFailed.value = true
+  } finally {
+    if (revision === pointsRevision) pointsLoading.value = false
+  }
+}
+
 // 加载设计数据
 const loadDesign = (design: Design) => {
   sourceAppId.value = null
@@ -786,6 +826,7 @@ const loadDesign = (design: Design) => {
   // 设置表单数据
   form.garminAppUuid = design.product.garminAppUuid || ''
   form.appId = design.product.appId
+  void loadPointsRedemption(design.product.appId)
   form.name = design.product.name
   form.names = { ...(design.product.names || {}) }
   delete form.names.en
@@ -835,6 +876,16 @@ const loadDesign = (design: Design) => {
 const handleConfirm = async (publish = true) => {
   if (!currentDesign.value || loading.value || generatingBanner.value || lifecycleBusy.value) return
   if (!membershipGate.requirePublish()) return
+  if (pointsLoading.value || pointsLoadFailed.value) {
+    emit('section-change', 'distribution')
+    messageStore.error(t('payment.pointsLoadFailed'))
+    return
+  }
+  if (form.pointsEnabled && (!Number.isInteger(form.redemptionPoints) || form.redemptionPoints! < 0 || form.redemptionPoints! > 100000)) {
+    emit('section-change', 'distribution')
+    messageStore.error(t('payment.pointsInvalid'))
+    return
+  }
 
   if (productTagsLoadFailed.value) {
     emit('section-change', 'listing')
@@ -912,11 +963,15 @@ const handleConfirm = async (publish = true) => {
       tagIds: form.tagIds,
       bundleIds: form.bundleIds
     }
+    if (pointsSnapshot() !== originalPoints) {
+      data.pointsRedemption = { enabled: form.pointsEnabled, points: form.redemptionPoints ?? null }
+    }
     if (form.productImages.length > 0) {
       data.productImages = toProductImageSelections(form.productImages)
     }
     if (publish) await productsApi.publish(data)
     else await productsApi.saveDetails(data)
+    originalPoints = pointsSnapshot()
     messageStore.success(t('goLive.productUpdated'))
     emit('success')
   } finally {

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Design } from '@/types/api/design'
 
 const mocks = vi.hoisted(() => ({
+  getPointsRedemption: vi.fn(),
   getAiCapabilities: vi.fn(),
   getAiPrices: vi.fn(),
   getProductTagsPage: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.getAiCapabili
 vi.mock('@/api/wristo/productTags', () => ({ getProductTagsPage: mocks.getProductTagsPage, getProductTagGeneration: mocks.getProductTagGeneration, generateProductTags: vi.fn() }))
 vi.mock('@/api/wristo/products', () => ({
   productsApi: {
+    getPointsRedemption: mocks.getPointsRedemption,
     getBundles: mocks.getBundles,
     publish: mocks.publish,
     saveDetails: mocks.saveDetails,
@@ -180,6 +182,7 @@ const confirmBanner = async (wrapper: ReturnType<typeof mountDialog>) => {
 describe('PublishForm product image behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getPointsRedemption.mockResolvedValue({ code: 0, data: { enabled: false, points: null, effectivePoints: 50, itemId: null } })
     mocks.getLatestBannerGeneration.mockResolvedValue({ code: 0, data: null })
     mocks.getAiPrices.mockResolvedValue({ code: 0, data: { TAGS: 2, DESCRIPTION: 3, BANNER: 7 } })
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: true, DESCRIPTION: true, BANNER: true } })
