@@ -200,12 +200,12 @@ const handleChange = async (file: UploadFile) => {
       throw new Error(t('image.invalidResponse'))
     }
 
-    const imageUrl = image.previewUrl || image.formats?.thumbnail?.url || image.url
+    const imageUrl = image.url
     const next = [...props.modelValue, {
       id: image.id,
       type: props.imageType,
       imageUrl,
-      previewUrl: imageUrl,
+      previewUrl: image.previewUrl || image.formats?.thumbnail?.url,
       downloadUrl: image.url,
       image,
     }]

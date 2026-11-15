@@ -8,7 +8,7 @@ import type { DesignListItem, DesignSubmitDTO } from '@/types/api/design'
 
 export const batchActions = ['transfer', 'submit', 'prg', 'cancelIq', 'cancelPrg', 'public', 'remix', 'weight', 'delete'] as const
 export type BatchAction = typeof batchActions[number]
-export interface BatchOptions { target?: number; device: string; enabled: boolean; weight: number; submitConfig?: BatchSubmitConfig }
+export interface BatchOptions { isAdmin?: boolean; target?: number; device: string; enabled: boolean; weight: number; submitConfig?: BatchSubmitConfig }
 export interface PreparedAction { design: DesignListItem; reason?: string; run?: () => Promise<unknown> }
 const active = (status?: string) => ['init', 'pending', 'processing', 'queued', 'running', 'cancel_requested'].includes(status || '')
 const checked = async (promise: Promise<any>) => {
@@ -63,7 +63,7 @@ export async function prepareBatchAction(item: DesignListItem, action: BatchActi
       const trialLasts = config.trialLasts ?? product?.trialLasts
       if (!payment?.paymentMethod || !d.name?.trim()) return skip('batchActions.missingConfig')
       const method = payment.paymentMethod
-      if (isPaymentMethodLocked(product?.lastGoLive) && method !== product?.payment?.paymentMethod) return skip('payment.methodLockedAfterPublish')
+      if (isPaymentMethodLocked(product?.lastGoLive, options.isAdmin) && method !== product?.payment?.paymentMethod) return skip('payment.methodLockedAfterPublish')
       if (!['free', 'wpay', 'garmin', 'kpay'].includes(method)) return skip('batchActions.missingConfig')
       if (method !== 'free' && (!Number.isFinite(payment.price) || payment.price < 1.99 || payment.price > 5.99)) return skip('submitDesign.priceRange')
       if (method !== 'free' && (!Number.isFinite(trialLasts) || trialLasts < 0 || trialLasts > 720)) return skip('batchActions.missingConfig')

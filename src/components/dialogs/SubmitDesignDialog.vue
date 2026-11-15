@@ -160,7 +160,7 @@ const userStore = useUserStore()
 const { t } = useI18n()
 const canPublishPaid = computed(() => userStore.isMerchantUser)
 const canSelectDesignSource = computed(() => userStore.isMerchantUser || userStore.isAdminUser)
-const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
+const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive, userStore.isAdminUser))
 const dialogTitle = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('submitDesign.title'))
 const confirmText = computed(() => dialogMode.value === 'prg-build' ? t('card.buildPrg') : t('common.submit'))
 

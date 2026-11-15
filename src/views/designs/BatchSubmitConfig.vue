@@ -12,7 +12,6 @@
           <el-option value="garmin" :label="t('payment.garminOfficial')" />
           <el-option v-if="values.paymentMethod === 'kpay'" value="kpay" label="KPay" />
         </el-select>
-        <p class="config-hint">{{ t('payment.methodLockedAfterPublish') }}</p>
       </el-form-item>
       <template v-if="values.paymentMethod !== 'free'">
         <el-form-item :label="label('price', 'submitDesign.price')">

@@ -665,7 +665,7 @@ const messageStore = useMessageStore()
 const userStore = useUserStore()
 const emit = defineEmits(['success', 'section-change'])
 const canPublishPaid = computed(() => userStore.isMerchantUser)
-const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive))
+const paymentMethodLocked = computed(() => isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive, userStore.isAdminUser))
 const availableBundles = computed(() => {
   const byId = new Map<number, Bundle>()
   for (const bundle of [...bundles.value, ...(currentDesign.value?.product?.bundles || [])]) {

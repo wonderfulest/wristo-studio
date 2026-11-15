@@ -23,7 +23,8 @@ export const normalizeProductImage = (input: any): ProductImageItem | null => {
   const imageId = Number(input.imageId ?? input.image?.id ?? input.id ?? 0)
   const image = input.image
   const previewUrl = input.previewUrl || image?.formats?.thumbnail?.url || image?.previewUrl
-  const imageUrl = previewUrl || input.imageUrl || image?.url || input.downloadUrl
+  // Use original artwork for the gallery; thumbnails can lose fine details and color.
+  const imageUrl = input.downloadUrl || image?.url || input.imageUrl || previewUrl
   if (!Number.isFinite(imageId) || imageId <= 0 || !imageUrl) return null
   return {
     id: imageId,

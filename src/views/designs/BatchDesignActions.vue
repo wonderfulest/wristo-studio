@@ -74,7 +74,7 @@ const reason = (error: any) => error?.response?.data?.msg || error?.msg || error
 const preview = async () => {
   if (!props.isAdmin || busy.value || !valid.value) return
   setBusy(true); completed.value = 0; prepared.value = []
-  const options = { target: target.value, device: props.deviceId, enabled: enabled.value, weight: weight.value, submitConfig: { ...submitConfig.value } }
+  const options = { isAdmin: props.isAdmin, target: target.value, device: props.deviceId, enabled: enabled.value, weight: weight.value, submitConfig: { ...submitConfig.value } }
   try {
     for (const design of batch.value) {
       if (disposed || !props.isAdmin) break

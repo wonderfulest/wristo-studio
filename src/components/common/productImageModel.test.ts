@@ -15,8 +15,14 @@ describe('product image model', () => {
       image: { id: 301, url: '/original.png', formats: { thumbnail: { url: '/thumb.png' } } },
     })
 
-    expect(item).toMatchObject({ id: 301, relationId: 91, type: 'share', imageUrl: '/thumb.png' })
+    expect(item).toMatchObject({ id: 301, relationId: 91, type: 'share', imageUrl: '/original.png' })
     expect(groupProductImages([item!]).social).toEqual([item])
+  })
+
+  it('prefers original download URLs over lossy previews and preserves thumbnail metadata', () => {
+    expect(normalizeProductImage({ id: 1, imageUrl: '/thumb.png', previewUrl: '/thumb.png', downloadUrl: '/original.png' })).toMatchObject({ imageUrl: '/original.png', previewUrl: '/thumb.png', downloadUrl: '/original.png' })
+    expect(normalizeProductImage({ id: 2, imageUrl: '/original.png', previewUrl: '/thumb.png' })?.imageUrl).toBe('/original.png')
+    expect(normalizeProductImage({ id: 3, previewUrl: '/thumb.png' })?.imageUrl).toBe('/thumb.png')
   })
 
   it('preserves pinterest images in the social gallery and selection payload', () => {

@@ -12,7 +12,7 @@ describe('Garmin official payment UI contract', () => {
       expect(source).toContain('label="garmin"')
       expect(source).toContain('v-if="userStore.isAdminUser"')
       expect(source).toContain("t('payment.garminOfficial')")
-      expect(source).toContain('paymentMethodLocked')
+      expect(source).toContain('isPaymentMethodLocked(currentDesign.value?.product?.lastGoLive, userStore.isAdminUser)')
       expect(source).toContain("t('payment.methodLockedAfterPublish')")
     },
   )

@@ -91,3 +91,11 @@ it('free submissions omit paid fields even with shared paid values', async () =>
  expect(payload).not.toHaveProperty('price')
  expect(payload).not.toHaveProperty('trialLasts')
 })
+
+it('allows administrators to change a published payment method through a shared edit', async () => {
+ detail.product.lastGoLive = 123
+ const ready = await prepareBatchAction(item, 'submit', { isAdmin: true, device: '', enabled: false, weight: 0, submitConfig: { paymentMethod: 'free' } }, k => k)
+ expect(ready.reason).toBeUndefined()
+ await ready.run!()
+ expect(api.submitDesign.mock.calls[0][0].paymentMethod).toBe('free')
+})
