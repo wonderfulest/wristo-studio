@@ -23,6 +23,24 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it.each([
+    ['owner', 7, false, false, true],
+    ['merchant', 8, true, false, true],
+    ['administrator', 8, false, true, true],
+    ['other user', 8, false, false, false],
+    ['visitor', null, false, false, false],
+  ])('shows failure log actions beside build status for %s', async (_, currentUserId, isMerchantUser, isAdminUser, visible) => {
+    const { wrapper } = await setup({ management: true, currentUserId, isMerchantUser, isAdminUser,
+      design: { ...design, product: { ...design.product,
+        prgPackagingLog: { id: 9, deviceId: 'venu3', packagingStatus: 'failed', hasBuildLog: true },
+        packagingLog: { id: 10, packagingStatus: 'failed', hasBuildLog: true },
+      } },
+    })
+    expect(wrapper.findAll('.build-task-log')).toHaveLength(visible ? 2 : 0)
+    if (visible) expect(wrapper.get('.build-task-log').text()).toContain('editDesign.viewBuildLog')
+    wrapper.unmount()
+  })
+
   it('shows a missing-device PRG state without download when only another device has a release', async () => {
     const { wrapper } = await setup({ management: true, design: { ...design, product: { ...design.product,
       prgRelease: { id: 42, deviceId: 'fenix847mm', prgUrl: 'https://example.com/other.prg' },

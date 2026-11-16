@@ -251,6 +251,15 @@
               <span class="package-rank">{{ row.value }}</span>
               <span v-if="row.timing" class="package-timing">{{ row.timing }}</span>
               <el-button
+                v-if="row.canViewBuildLog"
+                class="build-task-log"
+                size="small"
+                :aria-label="`${row.label} · ${t('editDesign.viewBuildLog')}`"
+                @click.stop="openBuildLog(row.logId)"
+              >
+                {{ t('editDesign.viewBuildLog') }}
+              </el-button>
+              <el-button
                 v-if="showPackageDownload && row.canDownload && row.tone === 'ready'"
                 :data-onboarding="row.key === 'prg' ? 'download' : undefined"
                 class="build-task-download"
@@ -735,6 +744,7 @@ const canBuildIq = computed(() => isAdminUser.value || (
   && design.value.user?.id != null
   && String(design.value.user.id) === String(currentUserId.value)
 ))
+const canViewBuildLogs = computed(() => canBuildIq.value || isMerchantUser.value)
 const showBuildIqButton = computed(() => {
   return canBuildIq.value && shouldShowBuildIqButton(design.value.product)
 })
@@ -827,7 +837,7 @@ const packageRows = computed(() => {
       tone: packageTone(currentPrgLog, !!currentPrgRelease?.prgUrl),
       isPackaging: currentPrgLog?.rank === 0,
       logId: currentPrgLog?.id,
-      canViewBuildLog: shouldShowBuildLog(currentPrgLog),
+      canViewBuildLog: canViewBuildLogs.value && shouldShowBuildLog(currentPrgLog),
       canDownload: !!currentPrgRelease?.prgUrl,
       downloadUrl: currentPrgRelease?.prgUrl,
     })
@@ -854,7 +864,7 @@ const packageRows = computed(() => {
       tone: packageTone(iqLog, !!product.release?.packageUrl),
       isPackaging: iqLog?.rank === 0,
       logId: iqLog?.id,
-      canViewBuildLog: shouldShowBuildLog(iqLog),
+      canViewBuildLog: canViewBuildLogs.value && shouldShowBuildLog(iqLog),
       canDownload: !!product.release?.packageUrl,
       downloadUrl: product.release?.packageUrl,
     })
