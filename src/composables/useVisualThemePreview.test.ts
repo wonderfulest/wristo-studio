@@ -3,6 +3,7 @@ import { defineComponent, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { useBaseStore } from '@/stores/baseStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
@@ -132,4 +133,18 @@ describe('useVisualThemePreview', () => {
     expect(messages.error).toHaveBeenCalledWith('visualTheme.previewFailed')
     wrapper.unmount()
   })
+})
+
+it('reapplies themed frames after editing a base animation rule', async () => {
+  const wrapper = mount(Harness)
+  const store = useVisualThemeStore()
+  store.hydrate(config())
+  const elements = useElementDataStore()
+  elements.upsertElement({ id: 'animal', eleType: 'dynamicImage', items: [] } as any)
+  await nextTick()
+  controller.preview.mockClear()
+  elements.patchElement('animal', { items: [{ id: 'frame', imageUrl: 'base.png' }] } as any)
+  await nextTick()
+  expect(controller.preview).toHaveBeenCalledTimes(1)
+  wrapper.unmount()
 })

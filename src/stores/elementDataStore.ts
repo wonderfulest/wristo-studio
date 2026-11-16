@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import type { ElementType, FabricElement } from '@/types/element'
+import type { DynamicImageElementConfig } from '@/types/elements/dynamicImage'
 import type { AnyElementConfig } from '@/types/elements'
 import { normalizeFontSizePatch } from '@/utils/fontSize'
+import { useVisualThemeStore } from './visualThemeStore'
 
 export type ElementConfigSnapshot = {
   id: string
@@ -38,6 +40,9 @@ export const useElementDataStore = defineStore('elementData', {
       if (!config || !config.id || !config.eleType) return
       const id = String(config.id)
       const eleType = config.eleType as ElementType
+      if (this.elementMap[id]?.eleType === 'dynamicImage' && config.eleType === 'dynamicImage') {
+        useVisualThemeStore().retainDynamicImageFrames(id, (config as DynamicImageElementConfig).items.map(item => String(item.id)))
+      }
       const snapshot: ElementConfigSnapshot = {
         id,
         eleType,
@@ -50,6 +55,9 @@ export const useElementDataStore = defineStore('elementData', {
       const key = String(id)
       const existing = this.elementMap[key]
       if (!existing) return
+      if (existing.eleType === 'dynamicImage' && 'items' in patch && Array.isArray(patch.items)) {
+        useVisualThemeStore().retainDynamicImageFrames(key, patch.items.map(item => String(item.id)))
+      }
       const nextConfig: AnyElementConfig = {
         ...(existing.config as AnyElementConfig),
         ...(normalizeFontSizePatch(patch) as AnyElementConfig),
@@ -68,6 +76,9 @@ export const useElementDataStore = defineStore('elementData', {
     },
 
     removeElement(id: string) {
+      if (this.elementMap[String(id)]?.eleType === 'dynamicImage') {
+        useVisualThemeStore().retainDynamicImageFrames(String(id), [])
+      }
       delete this.elementMap[String(id)]
     },
 

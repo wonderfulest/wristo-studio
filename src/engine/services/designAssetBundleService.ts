@@ -2,7 +2,7 @@ import { clearJsonProjectFiles, isJsonProject, restoreJsonProject, hydrateJsonPr
 import { hasBitmapFontColon } from './bitmapFontValidation'
 import { createPackageAssetReads, hashPackageBlob } from './packageAssetReads'
 import { validateComplicationConfig } from '@/elements/complication/complication.catalog'
-import { BITMAP_DATA_FEATURE, hasBitmapData, GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
+import { VISUAL_THEME_DYNAMIC_IMAGES_FEATURE, hasVisualThemeDynamicImages, BITMAP_DATA_FEATURE, hasBitmapData, GOAL_PROGRESS_IMAGES_FEATURE, hasGoalProgressImages, validateWrtCapabilities } from './wrtCapabilities'
 import { validateDynamicImage } from '@/elements/decoration/dynamicImage/dynamicImage.validation'
 import type { WrtImportProgress } from './wrtImportProgress'
 import { translate } from '@/i18n'
@@ -498,20 +498,21 @@ const collectElementAssetRefs = (element: AnyElementConfig, index: number) => {
 
 export const collectVisualThemeAssetRefs = (visualThemes: VisualThemesConfig | undefined) => {
   if (!visualThemes) return []
-  return visualThemes.themes.flatMap((theme) =>
-    (['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'] as const)
+  return visualThemes.themes.flatMap((theme) => [
+    ...(['background', 'hourHand', 'minuteHand', 'secondHand', 'centerCap'] as const)
       .flatMap((slot) => {
         const source = theme.assets[slot]?.imageUrl?.trim()
         if (!source) return []
-        return [{
-          elementId: `theme-${theme.id}-${slot}`,
-          elementType: slot === 'background' ? 'background' : slot,
-          field: slot,
-          source,
-          category: slot === 'background' ? 'background' : 'hands',
-        }]
+        return [{ elementId: `theme-${theme.id}-${slot}`, elementType: slot,
+          field: slot, source, category: slot === 'background' ? 'background' : 'hands' }]
       }),
-  )
+    ...Object.entries(theme.dynamicImages ?? {}).flatMap(([elementId, items]) =>
+      Object.entries(items).flatMap(([itemId, asset]) => {
+        const source = asset.imageUrl?.trim()
+        return source ? [{ elementId: `theme-${theme.id}-${elementId}-${itemId}`,
+          elementType: 'dynamicImage', field: 'imageUrl', source, category: 'image' }] : []
+      })),
+  ])
 }
 
 export const collectFontSlugs = (config: RuntimeDesignConfig): string[] => {
@@ -902,7 +903,7 @@ const buildDesignAssetArchive = async (
   const slug = slugifyDesignName(config.name, designUid || 'watchface')
   const manifest: DesignAssetManifest = {
     version: packageOptions.version || 2,
-    requiredFeatures: [...(hasGoalProgressImages(config) ? [GOAL_PROGRESS_IMAGES_FEATURE] : []), ...(hasBitmapData(config) ? [BITMAP_DATA_FEATURE] : [])],
+    requiredFeatures: [...(hasVisualThemeDynamicImages(config) ? [VISUAL_THEME_DYNAMIC_IMAGES_FEATURE] : []), ...(hasGoalProgressImages(config) ? [GOAL_PROGRESS_IMAGES_FEATURE] : []), ...(hasBitmapData(config) ? [BITMAP_DATA_FEATURE] : [])],
     selfContained: packageOptions.format === WRT_FORMAT ? true : undefined,
     format: packageOptions.format,
     generatedAt: new Date().toISOString(),
@@ -1243,7 +1244,7 @@ export async function buildWrtDesignPackage(
   }
   return buildDesignAssetArchive(config, options, {
     format: WRT_FORMAT,
-    version: (hasGoalProgressImages(config) || hasBitmapData(config)) ? 3 : WRT_VERSION,
+    version: (hasGoalProgressImages(config) || hasBitmapData(config) || hasVisualThemeDynamicImages(config)) ? 3 : WRT_VERSION,
     fileNameSuffix: '.wrt',
     mimeType: 'application/vnd.wristo.design-package+zip',
   })

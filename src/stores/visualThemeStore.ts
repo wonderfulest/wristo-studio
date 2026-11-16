@@ -149,6 +149,28 @@ export const useVisualThemeStore = defineStore('visualTheme', {
       else delete theme.assets[slot]
     },
 
+    updateDynamicImageAsset(themeId: string, elementId: string, itemId: string, asset: VisualThemeAssetRef | null): void {
+      const theme = this.requireTheme(themeId)
+      if (asset) {
+        theme.dynamicImages ??= {}
+        theme.dynamicImages[elementId] ??= {}
+        theme.dynamicImages[elementId][itemId] = clone(asset)
+      } else if (theme.dynamicImages?.[elementId]) {
+        delete theme.dynamicImages[elementId][itemId]
+        if (!Object.keys(theme.dynamicImages[elementId]).length) delete theme.dynamicImages[elementId]
+        if (!Object.keys(theme.dynamicImages).length) delete theme.dynamicImages
+      }
+    },
+
+    retainDynamicImageFrames(elementId: string, itemIds: string[]): void {
+      const retained = new Set(itemIds)
+      for (const theme of this.themes) {
+        for (const itemId of Object.keys(theme.dynamicImages?.[elementId] ?? {})) {
+          if (!retained.has(itemId)) this.updateDynamicImageAsset(theme.id, elementId, itemId, null)
+        }
+      }
+    },
+
     updateColor(themeId: string, propertyKey: string, color: string): void {
       const theme = this.requireTheme(themeId)
       if (!theme.colors) theme.colors = {}

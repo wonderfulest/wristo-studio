@@ -10,6 +10,15 @@ import { resolveDynamicImageSelection } from './dynamicImage.selection'
 import { calculateDynamicImageStretch } from './dynamicImage.fit'
 import { encodeDynamicImage } from './dynamicImage.encoder'
 
+function persistDynamicImage(element: FabricElement, items?: DynamicImageElementConfig['items']) {
+  const store = useElementDataStore()
+  const base = store.getElementConfig(String(element.id)) as DynamicImageElementConfig | null
+  const encoded = encodeDynamicImage(element)
+  // A canvas frame may be a theme projection. Only an explicit frame edit changes the base.
+  encoded.items = JSON.parse(JSON.stringify(items ?? base?.items ?? encoded.items))
+  store.patchElement(String(element.id), encoded as any)
+}
+
 function applyFit(element: FabricElement) {
   const value = element as any
   const sourceWidth = Math.max(1, Number(value.width ?? 1))
@@ -72,7 +81,7 @@ export async function createDynamicImage(config: DynamicImageElementConfig, rend
   ;(element as any).on?.('modified', () => {
     ;(element as any).frameWidth = (element as any).getScaledWidth?.() ?? (element as any).frameWidth
     ;(element as any).frameHeight = (element as any).getScaledHeight?.() ?? (element as any).frameHeight
-    useElementDataStore().upsertElement(encodeDynamicImage(element) as any)
+    persistDynamicImage(element)
   })
   if (selection.kind !== 'none') applyFit(element)
   useElementDataStore().upsertElement(config)
@@ -92,5 +101,5 @@ export async function updateDynamicImage(
   if (patch.height !== undefined) (element as any).frameHeight = patch.height
   await updateImage(element, patch as any, { persist: false })
   await refreshDynamicImage(element)
-  if (context.persist !== false) useElementDataStore().patchElement(String(element.id), encodeDynamicImage(element) as any)
+  if (context.persist !== false) persistDynamicImage(element, patch.items)
 }

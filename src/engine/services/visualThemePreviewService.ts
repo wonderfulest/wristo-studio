@@ -1,4 +1,5 @@
 import { resolveThemeColor } from './visualThemeService'
+import { resolveDynamicImagePatch } from './visualThemeDynamicImages'
 import type { PropertiesMap } from '@/types/properties'
 import type { VisualTheme, VisualThemeAssetSlot, VisualThemesConfig } from '@/types/visualTheme'
 import {
@@ -104,6 +105,7 @@ export function createVisualThemePreviewController(dependencies: VisualThemePrev
       const patch = theme
         ? {
             ...resolveAssetPatch(base, theme),
+            ...resolveDynamicImagePatch(base, theme),
             ...resolveColorPatch(base, canvasElement, theme, properties),
           }
         : { ...clone(base), ...(base.eleType === 'centerCap' ? { left: base.left, top: base.top } : {}) }

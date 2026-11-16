@@ -1,9 +1,9 @@
 import { reactive } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ updateImage: vi.fn(), patchElement: vi.fn(), requestRenderAll: vi.fn() }))
+const mocks = vi.hoisted(() => ({ updateImage: vi.fn(), getElementConfig: vi.fn(), patchElement: vi.fn(), requestRenderAll: vi.fn() }))
 vi.mock('@/elements/decoration/image/image.renderer', () => ({ createImage: vi.fn(), updateImage: mocks.updateImage }))
 vi.mock('@/stores/expressionPreviewStore', () => ({ useExpressionPreviewStore: () => ({ tokenValues: {} }) }))
-vi.mock('@/stores/elementDataStore', () => ({ useElementDataStore: () => ({ patchElement: mocks.patchElement }) }))
+vi.mock('@/stores/elementDataStore', () => ({ useElementDataStore: () => ({ patchElement: mocks.patchElement, getElementConfig: mocks.getElementConfig }) }))
 vi.mock('@/stores/canvasStore', () => ({ useCanvasStore: () => ({ canvas: { requestRenderAll: mocks.requestRenderAll } }) }))
 import { refreshDynamicImage, updateDynamicImage } from './dynamicImage.renderer'
 const makeBird = (): any => ({ id: 'bird', eleType: 'dynamicImage', goalProperty: 'goal_1', selectionMode: 'goalProgress', progress: 0,
@@ -43,4 +43,13 @@ describe('goal image canvas updates', () => {
   const bird=makeBird();await refreshDynamicImage(bird);bird.items[0].imageUrl='rest-v2.png';await refreshDynamicImage(bird)
   expect(bird.imageUrl).toBe('rest-v2.png')
  })
+})
+
+it('keeps base frames when a themed element is resized', async () => {
+  const bird = makeBird()
+  const base = structuredClone(bird.items)
+  mocks.getElementConfig.mockReturnValue({ items: base })
+  await updateDynamicImage(bird, { items: bird.items.map((item: any) => ({ ...item, imageUrl: 'theme-' + item.imageUrl })) }, { persist: false })
+  await updateDynamicImage(bird, { width: 200 })
+  expect(mocks.patchElement).toHaveBeenLastCalledWith('bird', expect.objectContaining({ width: 200, items: base }))
 })

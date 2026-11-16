@@ -56,6 +56,7 @@ export function useVisualThemePreview() {
       () => visualThemeStore.config,
       () => visualThemeStore.previewThemeId,
       () => propertiesStore.allProperties,
+      () => elementDataStore.elements.filter(snapshot => snapshot.eleType === 'dynamicImage').map(snapshot => (snapshot.config as any).items),
     ],
     () => {
       if (visualThemeStore.config?.enabled) {

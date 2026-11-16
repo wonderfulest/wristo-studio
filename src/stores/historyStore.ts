@@ -10,6 +10,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { usePropertiesStore } from '@/stores/properties'
 import { useDesignStore } from '@/stores/designStore'
 import { useLayoutGroupStore } from '@/stores/layoutGroupStore'
+import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import {
   DATA_NUMBER_FORMAT_AUTO,
   DEFAULT_MAX_FIELD_LENGTH,
@@ -266,6 +267,8 @@ export const useHistoryStore = defineStore('history', () => {
       return JSON.stringify({
         layoutGroups: useLayoutGroupStore().snapshot(),
         watchfaceIcons: useDesignStore().watchfaceIcons,
+        visualThemes: useVisualThemeStore().config ?? null,
+        visualThemePreviewId: useVisualThemeStore().previewThemeId,
         watchFaceName: baseStore?.watchFaceName,
       })
     } catch {
@@ -364,6 +367,13 @@ export const useHistoryStore = defineStore('history', () => {
       const elements = useElementDataStore().elements.map((snapshot) => snapshot.config)
       layoutGroupStore.hydrate(parsed?.layoutGroups ?? [], elements)
       useDesignStore().setWatchfaceIcons(parsed?.watchfaceIcons)
+      if (Object.prototype.hasOwnProperty.call(parsed, 'visualThemes')) {
+        const themeStore = useVisualThemeStore()
+        themeStore.hydrate(parsed.visualThemes ?? undefined, elements as unknown as Array<Record<string, unknown>>)
+        if (parsed.visualThemePreviewId === null || themeStore.themes.some(theme => theme.id === parsed.visualThemePreviewId)) {
+          themeStore.setPreviewTheme(parsed.visualThemePreviewId)
+        }
+      }
       if (typeof parsed?.watchFaceName === 'string') baseStore?.setWatchFaceName?.(parsed.watchFaceName)
     } catch (error) {
       console.warn('[History] restore design snapshot failed', error)

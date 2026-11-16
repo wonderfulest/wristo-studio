@@ -126,6 +126,11 @@ export function normalizeVisualThemesConfig(config: VisualThemesConfig): VisualT
         ]),
       ) as VisualTheme['assets'],
       colors: { ...(theme.colors ?? {}) },
+      ...(theme.dynamicImages ? { dynamicImages: Object.fromEntries(
+        Object.entries(theme.dynamicImages).map(([elementId, items]) => [elementId,
+          Object.fromEntries(Object.entries(items).map(([itemId, asset]) => [itemId, cloneAssetRef(asset)])),
+        ]),
+      ) } : {}),
     })),
   }
 }
@@ -248,6 +253,22 @@ export function validateVisualThemes(
         && !isPositiveInteger(asset.targetSize)
       ) {
         errors.push(`Theme "${themeName}" centerCap targetSize must be a positive integer.`)
+      }
+    }
+
+    for (const [elementId, items] of Object.entries(theme.dynamicImages ?? {})) {
+      const base = resolvedBaseElements.find(element => String(element.id) === elementId && element.eleType === 'dynamicImage')
+      if (hasBaseContext && !base) errors.push(`Theme "${themeName}" dynamic image "${elementId}" does not exist.`)
+      for (const [itemId, asset] of Object.entries(items)) {
+        const label = `Theme "${themeName}" dynamic image "${elementId}" frame "${itemId}"`
+        if (hasBaseContext && !(base?.items as Array<{ id: string }> | undefined)?.some(item => String(item.id) === itemId)) {
+          errors.push(`${label} does not exist.`)
+        }
+        if (asset?.assetId != null && !isPositiveInteger(asset.assetId)) errors.push(`${label} assetId must be a positive integer.`)
+        if (!isPositiveInteger(asset?.assetId) && !asset?.imageUrl?.trim()) errors.push(`${label} requires an image asset.`)
+        if (asset?.imageUrl?.trim().toLowerCase().startsWith('blob:') && !isPositiveInteger(asset.assetId) && !options.allowEmbeddedBlobAssets) {
+          errors.push(`${label} requires a persistent assetId.`)
+        }
       }
     }
 

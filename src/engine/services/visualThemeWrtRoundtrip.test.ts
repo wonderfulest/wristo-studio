@@ -45,6 +45,27 @@ function createConfig(): RuntimeDesignConfig {
 }
 
 describe('WRT theme assets without database IDs', () => {
+  it('roundtrips theme frame bytes and declares the new capability', async () => {
+    const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
+    const source = createConfig()
+    const imageUrl = source.visualThemes!.themes[0].assets.background!.imageUrl!
+    source.elements.push({ id: 'turtle', eleType: 'dynamicImage', items: [
+      { id: 'rest', imageUrl, expression: { source: 'true', resultType: 'boolean', version: 1, ast: { type: 'literal', valueType: 'boolean', value: true } } },
+    ] } as any)
+    source.visualThemes!.themes[0].dynamicImages = { turtle: { rest: { assetId: null, imageUrl } } }
+    const file = await buildWrtDesignPackage(source)
+    const zip = await JSZip.loadAsync(await file.arrayBuffer())
+    const manifest = JSON.parse(await zip.file('manifest.json')!.async('string'))
+    expect(manifest.version).toBe(3)
+    expect(manifest.requiredFeatures).toContain('visual-theme-dynamic-images-v1')
+    const imported = await readWrtDesignPackage(file)
+    const ref = imported.config.visualThemes!.themes[0].dynamicImages!.turtle.rest
+    expect(ref.imageUrl).toMatch(/^blob:/)
+    expect(await (await fetch(ref.imageUrl!)).text()).toContain('#A2FF01')
+    const again = await readWrtDesignPackage(await buildWrtDesignPackage(imported.config))
+    expect(await (await fetch(again.config.visualThemes!.themes[0].dynamicImages!.turtle.rest.imageUrl!)).text()).toContain('#A2FF01')
+  })
+
   it('imports, validates and re-exports embedded theme bytes without persistent asset IDs', async () => {
     const { buildWrtDesignPackage, readWrtDesignPackage } = await import('./designAssetBundleService')
     const { validateRuntimeConfigForExport } = await import('./exportService')

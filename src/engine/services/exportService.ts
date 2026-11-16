@@ -139,7 +139,15 @@ export async function resolvePackageAssetUrls(config: RuntimeDesignConfig | null
             if (!asset || !assetId || String(asset.imageUrl || '').trim()) return
             assets[slot] = { ...asset, imageUrl: await resolveAnalogAssetUrl(assetId) }
           }))
-          return { ...theme, assets }
+          const dynamicImages = theme.dynamicImages ? Object.fromEntries(await Promise.all(
+            Object.entries(theme.dynamicImages).map(async ([elementId, items]) => [elementId,
+              Object.fromEntries(await Promise.all(Object.entries(items).map(async ([itemId, asset]) => [itemId,
+                asset.assetId && !asset.imageUrl?.trim()
+                  ? { ...asset, imageUrl: await resolveAnalogAssetUrl(asset.assetId) } : { ...asset },
+              ]))),
+            ]),
+          )) : undefined
+          return { ...theme, assets, ...(dynamicImages ? { dynamicImages } : {}) }
         })),
       }
     : undefined
@@ -282,6 +290,7 @@ function restoreVisualThemeBaseFields(
   if (!base) return encoded
   const output = encoded as unknown as Record<string, any>
   const eleType = String(output.eleType ?? base.eleType ?? '')
+  if (eleType === 'dynamicImage' && Array.isArray(base.items)) output.items = JSON.parse(JSON.stringify(base.items))
   const assetSlot = (Object.entries(VISUAL_THEME_ASSET_ELEMENT_TYPES)
     .find(([, assetElementType]) => assetElementType === eleType)?.[0]) as VisualThemeAssetSlot | undefined
   if (assetSlot) {

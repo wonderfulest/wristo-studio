@@ -92,6 +92,11 @@
             @update-asset="(slot, asset) => store.updateAsset(selectedTheme!.id, slot, asset)"
           />
 
+          <VisualThemeDynamicImages
+            :theme="selectedTheme" :elements="dynamicImageElements"
+            @update="(elementId, itemId, asset) => store.updateDynamicImageAsset(selectedTheme!.id, elementId, itemId, asset)"
+          />
+
           <section v-if="themeColorProperties.length" class="color-section">
             <div class="color-section-header">
               <h4>{{ t('visualTheme.themeColors') }}</h4>
@@ -130,6 +135,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VisualThemeAssetFields from './VisualThemeAssetFields.vue'
+import VisualThemeDynamicImages from './VisualThemeDynamicImages.vue'
 import { getThemeRuleDetail } from '@/api/wristo/themes'
 import {
   canEnableThemeOwner,
@@ -203,6 +209,7 @@ const copyColorCode = async () => {
     ElMessage.warning(t('visualTheme.codeCopyFailed'))
   }
 }
+const dynamicImageElements = computed(() => elementDataStore.elements.filter(element => element.eleType === 'dynamicImage').map(element => element.config))
 const baseCenterCap = computed(() => elementDataStore.elements.find(element => element.eleType === 'centerCap')?.config)
 const availableAssetSlots = computed<VisualThemeAssetSlot[]>(() => {
   const elementTypes = new Set(elementDataStore.elements.map((snapshot) => snapshot.eleType))

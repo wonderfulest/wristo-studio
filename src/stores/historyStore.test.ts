@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { useVisualThemeStore } from './visualThemeStore'
 import { useDesignStore } from './designStore'
 import { useHistoryStore } from './historyStore'
 import { usePropertiesStore } from './properties'
@@ -267,4 +268,23 @@ it('restores unused watchface icons through undo and redo', async () => {
   expect(useDesignStore().watchfaceIcons).toEqual([])
   await history.redo()
   expect(useDesignStore().watchfaceIcons).toEqual([asset])
+})
+
+it('restores theme frame overrides when undoing frame deletion', async () => {
+  setActivePinia(createPinia())
+  const canvas = { ...createCanvas(), loadFromJSON: async () => undefined }
+  const history = useHistoryStore(), elements = useElementDataStore(), themes = useVisualThemeStore()
+  history.attachCanvas(canvas as any, baseStore as any)
+  elements.upsertElement({ id: 'animal', eleType: 'dynamicImage', items: [{ id: 'rest', imageUrl: 'base.png' }] } as any)
+  themes.hydrate({ version: 1, enabled: true, selectionMode: 'user', defaultThemeId: 'blue', themes: [
+    { id: 'blue', name: 'Blue', assets: {}, dynamicImages: { animal: { rest: { assetId: 3, imageUrl: 'blue.png' } } } },
+  ] })
+  history.saveInitial()
+  elements.patchElement('animal', { items: [] } as any)
+  expect(themes.themes[0].dynamicImages).toBeUndefined()
+  expect(history.saveState('delete-frame')).toBe(true)
+  await history.undo()
+  expect(themes.themes[0].dynamicImages?.animal.rest.imageUrl).toBe('blue.png')
+  await history.redo()
+  expect(themes.themes[0].dynamicImages).toBeUndefined()
 })

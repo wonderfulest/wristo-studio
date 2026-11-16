@@ -23,6 +23,8 @@ export interface VisualTheme {
   id: string
   name: string
   assets: Partial<Record<VisualThemeAssetSlot, VisualThemeAssetRef>>
+  /** Frame asset overrides keyed by base dynamicImage element ID, then item ID. */
+  dynamicImages?: Record<string, Record<string, VisualThemeAssetRef>>
   colors?: Record<string, string>
 }
 

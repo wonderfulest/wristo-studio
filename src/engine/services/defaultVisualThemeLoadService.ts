@@ -4,6 +4,7 @@ import {
   VISUAL_THEME_COLOR_BINDINGS,
 } from './visualThemeElementFields'
 import type { RuntimeDesignConfig } from '@/types/app/config'
+import { resolveDynamicImagePatch } from './visualThemeDynamicImages'
 import type { AnyElementConfig } from '@/types/elements'
 import type { VisualThemeAssetRef, VisualThemeAssetSlot } from '@/types/visualTheme'
 
@@ -23,6 +24,7 @@ export function restoreVisualThemeBaseFieldsForPersistence(
     const output = clone(element) as unknown as Record<string, unknown>
     const base = baseById.get(String(element.id))
     if (!base) return output as unknown as AnyElementConfig
+    if (base.eleType === 'dynamicImage' && Array.isArray(base.items)) output.items = clone(base.items)
 
     const slot = (Object.entries(VISUAL_THEME_ASSET_ELEMENT_TYPES)
       .find(([, eleType]) => eleType === output.eleType)?.[0]) as VisualThemeAssetSlot | undefined
@@ -76,6 +78,7 @@ export function projectDefaultVisualThemeForLoad(
   }
 
   for (const element of elements) {
+    Object.assign(element, resolveDynamicImagePatch(element, theme))
     for (const [colorField, propertyField] of VISUAL_THEME_COLOR_BINDINGS) {
       const propertyKey = element[propertyField]
       if (typeof propertyKey !== 'string') continue
