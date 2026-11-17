@@ -37,3 +37,27 @@ it('persists the selected font for every selected element before recording histo
   expect(commitHistory).toHaveBeenCalledOnce()
   expect(elements.map(element => encodeText(element as any).fontFamily)).toEqual(['new-font', 'new-font'])
 })
+
+it.each([
+  ['updateFontSize', 'syncPrimaryColorState', { fontSize: 48, iconSize: 48 }],
+  ['updatePrimaryColorBinding', 'updateFontFamily', { fill: '#ff0000', fillProperty: null }],
+])('routes %s through each icon renderer before saving history', async (name, next, expectedPatch) => {
+  const source = readFileSync('src/components/panels/settings/GroupSettings.vue', 'utf8')
+  const handler = source.split(`const ${name} = `)[1].split(`\nconst ${next}`)[0]
+  const js = ts.transpile(`const handler = ${handler}`, { target: ts.ScriptTarget.ES2022 })
+  const elements = ['first', 'second'].map(id => ({ id, eleType: 'icon', set: vi.fn() }))
+  const updateElement = vi.fn(async () => { await Promise.resolve() })
+  const commitHistory = vi.fn(() => expect(updateElement).toHaveBeenCalledTimes(2))
+  const run = new Function('props', 'fontSize', 'textColor', 'sharedFillProperty', 'buildPrimaryColorBindingPatch', 'elementDataStore', 'baseStore', 'commitHistory', 'elementManager', `${js}; return handler`)(
+    { elements }, { value: 48 }, { value: '' }, { value: '' }, () => expectedPatch,
+    { patchElement: vi.fn() }, { canvas: { renderAll: vi.fn() } }, commitHistory, { updateElement },
+  )
+  await run({ color: '#ff0000', propertyKey: null })
+  for (const element of elements) expect(updateElement).toHaveBeenCalledWith(element, expectedPatch)
+  expect(commitHistory).toHaveBeenCalledOnce()
+})
+
+it('keeps icon font selection scoped to the selected elements', () => {
+  const source = readFileSync('src/components/panels/settings/GroupSettings.vue', 'utf8')
+  expect(source.match(/<font-picker[\s\S]*?\/>/)?.[0]).toContain(':use-global-icon-font-strategy="false"')
+})

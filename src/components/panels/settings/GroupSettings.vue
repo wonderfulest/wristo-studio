@@ -52,6 +52,7 @@
           v-model="fontFamily"
           :type="fontType"
           :types="fontTypes"
+          :use-global-icon-font-strategy="false"
           :date-content-language="metricTextFontLanguage"
           @change="updateFontFamily"
         />
@@ -428,12 +429,14 @@ const metricTextFontLanguage = computed<DateContentLanguage | undefined>(() => {
   return undefined
 })
 
-const updateFontSize = () => {
-  for (const element of props.elements) {
-    element.set('fontSize', fontSize.value)
-    if ((element as any).id) {
-      elementDataStore.patchElement(String((element as any).id), { fontSize: fontSize.value } as any)
-    }
+const updateFontSize = async () => {
+  const selectedSize = fontSize.value
+  const elements = [...props.elements]
+  for (const element of elements) {
+    await elementManager.updateElement(element, {
+      fontSize: selectedSize,
+      ...(element.eleType === 'icon' ? { iconSize: selectedSize } : {}),
+    })
   }
   baseStore.canvas?.renderAll()
   commitHistory('font-size')
@@ -455,15 +458,14 @@ watch(
   { immediate: true, deep: true },
 )
 
-const updatePrimaryColorBinding = (selection: ColorSelectionPayload) => {
+const updatePrimaryColorBinding = async (selection: ColorSelectionPayload) => {
   const patch = buildPrimaryColorBindingPatch(selection)
   textColor.value = patch.fill
   sharedFillProperty.value = patch.fillProperty ?? ''
 
-  for (const element of props.elements) {
-    element.set(patch)
-    const id = String((element as any).id || '')
-    if (id) elementDataStore.patchElement(id, patch as any)
+  const elements = [...props.elements]
+  for (const element of elements) {
+    await elementManager.updateElement(element, patch)
   }
   baseStore.canvas?.renderAll()
   commitHistory('text-color')
