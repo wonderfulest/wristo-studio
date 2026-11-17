@@ -75,7 +75,14 @@
                 <span class="metric-icon">{{ iconGlyph(option) }}</span>
                 <span :title="optionDisplayLabel(option)">{{ optionShortLabel(option) }}</span>
               </el-checkbox>
-
+              <el-tag v-if="formData.value === option.metricSymbol" size="small" class="default-action">
+                {{ t('property.default') }}
+              </el-tag>
+              <el-button v-else type="primary" link size="small" class="default-action"
+                :aria-label="t('property.setAsDefault') + ': ' + optionDisplayLabel(option)"
+                @click.stop="setDefaultOption(option.metricSymbol)">
+                {{ t('property.setAsDefault') }}
+              </el-button>
             </div>
           </div>
         </el-form-item>
@@ -215,6 +222,12 @@ const toggleOption = (symbol, checked) => {
     formData.metricSymbols = formData.metricSymbols.filter(value => value !== symbol)
   }
   formData.value = formData.metricSymbols[0]
+}
+
+const setDefaultOption = (symbol) => {
+  formData.metricSymbols = [symbol, ...formData.metricSymbols.filter(value => value !== symbol)]
+  formData.value = symbol
+  if (!extraOptionSymbols.value.includes(symbol)) extraOptionSymbols.value.push(symbol)
 }
 
 const clearOptionDrag = () => {
@@ -357,7 +370,7 @@ const restoreSystemDefaults = async () => {
         type: 'warning',
       }
     )
-    const restored = restoreSystemDataOptions(catalogOptions.value, formData.value)
+    const restored = restoreSystemDataOptions(catalogOptions.value, formData.value, formData.metricSymbols)
     formData.metricSymbols = restored.options.map(option => option.metricSymbol)
     formData.value = formData.metricSymbols[0]
   } catch {
@@ -386,8 +399,7 @@ defineExpose({
 .data-option-row.is-selected { background: var(--el-color-primary-light-9); border-color: var(--el-color-primary-light-5); }
 .data-option-row :deep(.el-checkbox) { margin-right: 0; min-width: 0; flex: 1; height: auto; }
 .data-option-row :deep(.el-checkbox__label) { display: flex; align-items: center; white-space: normal; min-width: 0; }
-.data-option-row :deep(.el-radio) { margin-right: 0; flex-shrink: 0; }
-.data-option-row :deep(.el-radio__label) { font-size: 12px; padding-left: 4px; }
+.default-action { flex-shrink: 0; }
 .metric-icon { font-family: var(--studio-data-icon-font), sans-serif !important; font-size: 16px; white-space: pre; width: 24px; flex-shrink: 0; text-align: center; margin-right: 6px; }
 @media (max-width: 1000px) { .data-options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .data-options-grid { grid-template-columns: 1fr; } }

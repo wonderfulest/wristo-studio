@@ -117,8 +117,19 @@ export function resolveDataOptionSettingsLabel(
 export function restoreSystemDataOptions(
   catalogOptions: readonly DataTypePropertyOption[],
   currentDefaultValue: unknown,
+  currentSymbols: readonly string[] = [],
 ): { options: DataPropertyOption[]; defaultValue: unknown } {
-  const options = createSystemDataOptions(catalogOptions)
+  const systemOptions = createSystemDataOptions(catalogOptions)
+  const remaining = new Map(systemOptions.map(option => [option.metricSymbol, option]))
+  const options: DataPropertyOption[] = []
+  for (const symbol of currentSymbols) {
+    const option = remaining.get(symbol)
+    if (option) {
+      options.push(option)
+      remaining.delete(symbol)
+    }
+  }
+  options.push(...remaining.values())
   const defaultValue = options.some((option) => option.value === currentDefaultValue)
     ? currentDefaultValue
     : options[0]?.value

@@ -11,7 +11,7 @@ function setup(appLanguage = 'eng') {
   const emit = vi.fn()
   const source = readFileSync(new URL('./DataPropertyDialog.vue', import.meta.url), 'utf8')
     .split('<script setup>')[1].split('</script>')[0].replace(/^import[\s\S]*?from [^\n]+\n/gm, '').replace(/^import [^\n]+\n/gm, '')
-  const state = runInNewContext(`${source}\n;({ formData, formRef, initFormData, visibleOptions, startOptionDrag, dropOption, toggleOption, handleConfirm, restoreSystemDefaults })`, {
+  const state = runInNewContext(`${source}\n;({ formData, formRef, initFormData, visibleOptions, optionsQuery, setDefaultOption, startOptionDrag, dropOption, toggleOption, handleConfirm, restoreSystemDefaults })`, {
     ...helpers, computed, reactive, ref, filterDataOptionsForAppLanguage,
     useDesignStore: () => ({ appLanguage }),
     useI18n: () => ({ locale: ref('en'), t: (key: string) => key }),
@@ -19,7 +19,7 @@ function setup(appLanguage = 'eng') {
     useDataCatalogStore: () => ({ options: catalog }),
     usePropertiesStore: () => ({ dataOptions: { ':FIELD_TYPE_LUNAR_DATE': catalog.at(-1) }, resolveDataOption: (symbol: string) => catalog.find(o => o.metricSymbol === symbol) }),
     getNextMetricPropertyDefaults: () => ({ title: 'Data', key: 'data_1' }),
-    resolveMetricIconGlyph: () => '', matchesDataOptionSearch: () => true,
+    resolveMetricIconGlyph: () => '', matchesDataOptionSearch: (option: any, query: string) => option.metricSymbol.includes(query),
     ElMessageBox: { confirm: vi.fn().mockResolvedValue(undefined) }, ElMessage: { error: vi.fn() },
     defineEmits: () => emit, defineExpose: vi.fn(), showErrorOnce: vi.fn(),
   })
@@ -41,6 +41,42 @@ describe('data option ordering', () => {
     expect(state.formData.metricSymbols).toEqual(['A', 'B'])
   })
 
+  it('sets a search result as default, selects it once and persists its order', async () => {
+    const state = setup()
+    state.initFormData({ metricSymbols: ['A', 'C'], value: 'A' })
+    state.optionsQuery.value = 'B'
+    expect(state.visibleOptions.value.map((o: any) => o.metricSymbol)).toEqual(['B'])
+    state.setDefaultOption('B')
+    state.setDefaultOption('B')
+    expect(state.formData.metricSymbols).toEqual(['B', 'A', 'C'])
+    expect(state.formData.value).toBe('B')
+    expect(state.optionsQuery.value).toBe('B')
+    state.formRef.value = { validate: vi.fn().mockResolvedValue(true) }
+    await state.handleConfirm()
+    expect(state.emit).toHaveBeenCalledWith('confirm', expect.objectContaining({
+      metricSymbols: ['B', 'A', 'C'], defaultValue: 'B',
+    }))
+    state.setDefaultOption('C')
+    expect(state.formData.metricSymbols).toEqual(['C', 'B', 'A'])
+    state.toggleOption('C', false)
+    expect(state.formData.value).toBe('B')
+  })
+
+  it('restores missing system options without resetting the chosen order or default', async () => {
+    const state = setup('zhs')
+    state.initFormData({ metricSymbols: ['C', ':FIELD_TYPE_LUNAR_DATE', 'A'], value: 'C' })
+    await state.restoreSystemDefaults()
+    expect(state.formData.metricSymbols).toEqual(['C', 'A', 'B', 'D'])
+    expect(state.formData.value).toBe('C')
+    await state.restoreSystemDefaults()
+    expect(state.formData.metricSymbols).toEqual(['C', 'A', 'B', 'D'])
+    state.formRef.value = { validate: vi.fn().mockResolvedValue(true) }
+    await state.handleConfirm()
+    expect(state.emit).toHaveBeenCalledWith('confirm', expect.objectContaining({
+      metricSymbols: ['C', 'A', 'B', 'D'], defaultValue: 'C',
+    }))
+  })
+
   it('emits the displayed order and first item as the generated project default', async () => {
     const state = setup()
     state.initFormData({ metricSymbols: ['C', 'A', 'B'], value: 'C' })
@@ -53,7 +89,7 @@ describe('data option ordering', () => {
     }))
     expect(state.emit.mock.calls[0][1].dataOptions.map((o: any) => o.metricSymbol)).toEqual(['A', 'C', 'B'])
     await state.restoreSystemDefaults()
-    expect(state.formData.metricSymbols).toEqual(['A', 'B', 'C', 'D'])
+    expect(state.formData.metricSymbols).toEqual(['A', 'C', 'B', 'D'])
     expect(state.formData.value).toBe('A')
   })
 })
