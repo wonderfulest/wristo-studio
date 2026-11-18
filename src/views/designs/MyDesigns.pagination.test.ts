@@ -76,6 +76,22 @@ describe('My Designs request coordination', () => {
     expect(wrapper.findAll('.design-selection')).toHaveLength(0)
     expect(wrapper.find('.batch-actions').exists()).toBe(false)
   })
+  it('applies IQ failure filtering across pages and clears it on reset', async () => {
+    await setup()
+    const vm = wrapper.vm as any
+    vm.currentPage = 2
+    await flushPromises()
+    vm.iqPackagingFailed = 'failed'
+    vm.handleStatusChange()
+    await flushPromises()
+    expect(mocks.get.mock.lastCall?.[0]).toMatchObject({ pageNum: 1, iqPackagingFailed: true })
+    vm.currentPage = 2
+    await flushPromises()
+    expect(mocks.get.mock.lastCall?.[0]).toMatchObject({ pageNum: 2, iqPackagingFailed: true })
+    vm.resetSearch()
+    await flushPromises()
+    expect(mocks.get.mock.lastCall?.[0].iqPackagingFailed).toBeUndefined()
+  })
   it('defaults to Grid and groups administrator controls', async () => {
     localStorage.removeItem('wristo-studio:design-view-mode')
     await setup()

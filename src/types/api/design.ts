@@ -170,6 +170,7 @@ export interface ProductPaymentUpdateParams {
 }
 
 export interface DesignPageParams {
+  iqPackagingFailed?: boolean
   dynamicImageKind?: 'all' | 'weekday' | 'weather'
   packagedVersion?: string
   packagedVersionOperator?: 'lt' | 'lte' | 'eq' | 'gte' | 'gt'

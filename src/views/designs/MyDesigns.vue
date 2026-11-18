@@ -81,6 +81,12 @@
             <el-option :label="t('payment.garminOfficial')" value="garmin" />
           </el-select>
         </div>
+        <div class="filter-field">
+          <span class="filter-label">{{ t('project.iqPackaging') }}</span>
+          <el-select v-model="iqPackagingFailed" :placeholder="t('project.iqPackaging')" clearable class="payment-filter" @change="handleStatusChange">
+            <el-option :label="t('project.iqPackagingFailed')" value="failed" />
+          </el-select>
+        </div>
         <el-button type="primary" :disabled="versionInvalid" @click="handleSearch">
           <Icon icon="material-symbols:search" />
           {{ t('common.search') }}
@@ -346,6 +352,7 @@ const deleteDesign = async (design: DesignListItem) => {
 // 搜索相关状态
 interface DesignSearchPreference {
   searchName: string
+  iqPackagingFailed: string
   packagedVersion: string
   packagedVersionOperator: VersionOperator
   searchAppId: string
@@ -383,6 +390,7 @@ const normalizeCreatorUserId = (value: unknown): number | undefined => {
 const defaultDesignSearchPreference = (): DesignSearchPreference => ({
   searchName: '',
   searchAppId: '',
+  iqPackagingFailed: '',
   packagedVersion: '',
   packagedVersionOperator: 'lt',
   selectedCreatorUserId: undefined,
@@ -403,6 +411,7 @@ const readDesignSearchPreference = (): DesignSearchPreference => {
 
     const parsed = JSON.parse(raw) as Partial<DesignSearchPreference>
     return {
+      iqPackagingFailed: parsed.iqPackagingFailed === 'failed' ? 'failed' : '',
       packagedVersion: typeof parsed.packagedVersion === 'string' && isPackagedVersion(parsed.packagedVersion) ? parsed.packagedVersion : '',
       packagedVersionOperator: versionOperators.some(option => option.value === parsed.packagedVersionOperator) ? parsed.packagedVersionOperator! : 'lt',
       searchName: typeof parsed.searchName === 'string' ? parsed.searchName : defaults.searchName,
@@ -434,6 +443,7 @@ const guidedList = onboarding.progress.status === 'active' && onboarding.progres
 const savedDesignSearch = guidedList ? defaultDesignSearchPreference() : readDesignSearchPreference()
 const initialSort = normalizeDesignSort(savedDesignSearch.sortField, savedDesignSearch.sortOrder, userStore.isAdminUser)
 const initialDesignSearch = { ...savedDesignSearch, sortField: initialSort.field, sortOrder: initialSort.order }
+const iqPackagingFailed = ref(initialDesignSearch.iqPackagingFailed)
 const packagedVersion = ref(initialDesignSearch.packagedVersion)
 const packagedVersionOperator = ref<VersionOperator>(initialDesignSearch.packagedVersionOperator)
 const versionInvalid = computed(() => !!packagedVersion.value.trim() && !isPackagedVersion(packagedVersion.value))
@@ -525,6 +535,7 @@ const resetSearch = () => {
   selectedStatus.value = ''
   selectedLaunchStatus.value = ''
   selectedPaymentMethod.value = ''
+  iqPackagingFailed.value = ''
   packagedVersion.value = ''
   packagedVersionOperator.value = 'lt'
   handleSearch()
@@ -581,9 +592,10 @@ watch(isAdminUser, (isAdmin) => {
 })
 
 watch(
-  [packagedVersion, packagedVersionOperator, searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, selectedPaymentMethod, sortField, sortOrder],
+  [iqPackagingFailed, packagedVersion, packagedVersionOperator, searchName, searchAppId, selectedCreatorUserId, selectedStatus, selectedLaunchStatus, selectedPaymentMethod, sortField, sortOrder],
   () => {
     writeDesignSearchPreference({
+      iqPackagingFailed: iqPackagingFailed.value,
       packagedVersion: packagedVersion.value,
       packagedVersionOperator: packagedVersionOperator.value,
       searchName: searchName.value,
@@ -643,6 +655,7 @@ watch(refreshVersion, () => {
   appliedFilters.value = {
     packagedVersion: isAdminUser.value ? packagedVersion.value.trim() || undefined : undefined,
     packagedVersionOperator: isAdminUser.value && packagedVersion.value.trim() ? packagedVersionOperator.value : undefined,
+    iqPackagingFailed: iqPackagingFailed.value === 'failed' || undefined,
     designStatus: selectedStatus.value || undefined,
     launchStatus: selectedLaunchStatus.value || undefined,
     paymentMethod: selectedPaymentMethod.value || undefined,
@@ -663,7 +676,7 @@ const requestParams = computed<DesignPageParams>(() => ({
 const batchContextKey = computed(() => JSON.stringify([
   requestParams.value, refreshVersion.value, searchName.value, searchAppId.value,
   packagedVersion.value, packagedVersionOperator.value, selectedCreatorUserId.value,
-  selectedStatus.value, selectedLaunchStatus.value, selectedPaymentMethod.value,
+  iqPackagingFailed.value, selectedStatus.value, selectedLaunchStatus.value, selectedPaymentMethod.value,
   sortField.value, sortOrder.value, designScope.value,
 ]))
 let requestVersion = 0
@@ -680,7 +693,7 @@ const fetchDesigns = async (params: DesignPageParams) => {
       total.value = response.data.total
 
       // 如果在第一页且没有任何设计，则提示用户前往 New Project 创建第一个应用
-      if (params.scope === 'mine' && !params.paymentMethod && !params.packagedVersion && !params.name && !params.appId && !params.creatorUserId && !params.designStatus && !params.launchStatus && currentPage.value === 1 && response.data.list.length === 0) {
+      if (params.scope === 'mine' && !params.iqPackagingFailed && !params.paymentMethod && !params.packagedVersion && !params.name && !params.appId && !params.creatorUserId && !params.designStatus && !params.launchStatus && currentPage.value === 1 && response.data.list.length === 0) {
         noDesignDialogVisible.value = true
       }
 
