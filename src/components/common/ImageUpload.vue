@@ -42,6 +42,13 @@
   </div>
 </template>
 
+<script>
+import { reactive } from 'vue'
+
+// Upload ownership survives property-panel unmounts; completed tasks are removed.
+const pendingUploads = reactive(new Set())
+</script>
+
 <script setup>
 import { showErrorOnce } from '@/utils/errorMessage'
 
@@ -63,6 +70,10 @@ const extractRatio = (it) => {
 }
 
 const props = defineProps({
+  uploadKey: { type: String, default: '' },
+  // A captured callback is deliberately used instead of an event: Vue ignores
+  // component emits after unmount, while the network request still completes.
+  completeUpload: { type: Function, default: undefined },
   modelValue: {
     type: Number,
     default: undefined,
@@ -83,7 +94,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'uploaded'])
 
-const uploading = ref(false)
+const localUploadKey = Symbol('image-upload')
+const uploading = computed(() => pendingUploads.has(props.uploadKey || localUploadKey))
 const preview = ref('')
 const dragOver = ref(false)
 
@@ -254,19 +266,24 @@ const beforeUpload = (file) => {
 const uploadRawFile = async (raw) => {
   if (!beforeUpload(raw)) return
 
-  const ok = await ensureAspectCodeValid()
-  if (!ok) return
-
-  const aspectOk = await ensureImageAspectValid(raw)
-  if (!aspectOk) return
-
-  uploading.value = true
+  const key = props.uploadKey || localUploadKey
+  if (pendingUploads.has(key)) return
+  const completeUpload = props.completeUpload
+  const aspectCode = props.aspectCode
+  pendingUploads.add(key)
   try {
-    const res = await uploadImage(raw, props.aspectCode)
+    const ok = await ensureAspectCodeValid()
+    if (!ok) return
+
+    const aspectOk = await ensureImageAspectValid(raw)
+    if (!aspectOk) return
+
+    const res = await uploadImage(raw, aspectCode)
     const img = res && res.data
     if (!img || !img.id) {
       throw new Error('Upload failed')
     }
+    if (completeUpload) await completeUpload(img)
     emit('update:modelValue', img.id)
     preview.value = img.previewUrl || (img.formats && img.formats.thumbnail && img.formats.thumbnail.url) || img.url || ''
     emit('uploaded', img)
@@ -274,7 +291,7 @@ const uploadRawFile = async (raw) => {
   } catch (e) {
     showErrorOnce(e, e && e.msg ? e.msg : t('image.uploadFailed'))
   } finally {
-    uploading.value = false
+    pendingUploads.delete(key)
   }
 }
 

@@ -9,7 +9,8 @@
         :preview-url="currentImageUrl"
         :aspect-code="IMAGE_ASPECT_CODE.BACKGROUND"
         @update:modelValue="handleImageIdChange"
-        @uploaded="handleImageUploaded"
+        :upload-key="uploadKey"
+        :complete-upload="completeUpload"
       />
     </div>
 
@@ -27,7 +28,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import type { FabricElement } from '@/types/element'
 import * as elementManager from '@/engine/managers/elementManager'
 import { IMAGE_ASPECT_CODE } from '@/stores/common'
@@ -41,6 +43,7 @@ import { DEFAULT_BACKGROUND_COLOR, isDefaultBackgroundUrl } from './background.c
 
 const baseStore = useBaseStore()
 const visualThemeStore = useVisualThemeStore()
+const elementDataStore = useElementDataStore()
 const { t } = useI18n()
 
 const props = defineProps<{
@@ -55,9 +58,7 @@ const currentModel = computed<any>(() => {
   return (props.config as any) ?? props.element ?? {}
 })
 
-onMounted(() => {
-  // no-op
-})
+const uploadKey = computed(() => `background:${baseStore.id}:${currentModel.value.id ?? props.element?.id}`)
 
 const applyUpdate = (patch: Record<string, any>) => {
   if (props.applyPatch && props.config) {
@@ -101,19 +102,29 @@ const handleImageIdChange = (id: any) => {
   }
 }
 
-const handleImageUploaded = (img: any) => {
-  if (!img) return
-  const url =
-    img.url || img.previewUrl || (img.formats && (img.formats.medium?.url || img.formats.thumbnail?.url)) || ''
-  applyUpdate({ imageUrl: url || '', imageId: img.id || null })
+// Capture the original target before the upload starts, rather than looking up
+// whichever element/theme is selected when the request finishes.
+const completeUpload = computed(() => {
+  const designId = baseStore.id
+  const element = props.element
+  const id = currentModel.value.id ?? element?.id
+  const applyPatch = props.config ? props.applyPatch : undefined
   const defaultThemeId = visualThemeStore.config?.defaultThemeId
-  if (defaultThemeId) {
-    visualThemeStore.updateAsset(defaultThemeId, 'background', {
-      assetId: img.id || null,
-      imageUrl: url || null,
-    })
+  return async (img: any) => {
+    if (!img || baseStore.id !== designId) return
+    if (id != null && !elementDataStore.getElementConfig(String(id))) return
+    const url = img.url || img.previewUrl || img.formats?.medium?.url || img.formats?.thumbnail?.url || ''
+    const patch = { imageUrl: url, imageId: img.id || null }
+    if (applyPatch) await applyPatch(patch)
+    else if (element) await elementManager.updateElement(element, patch)
+    if (baseStore.id === designId && defaultThemeId) {
+      visualThemeStore.updateAsset(defaultThemeId, 'background', {
+        assetId: img.id || null,
+        imageUrl: url || null,
+      })
+    }
   }
-}
+})
 
 </script>
 

@@ -1078,6 +1078,19 @@ describe('PublishForm points redemption', () => {
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ pointsRedemption: { enabled: true, points: 75 } }))
   })
 
+  it('rejects a legacy zero-point offer until corrected or disabled', async () => {
+    mocks.getPointsRedemption.mockResolvedValue({ code: 0, data: { enabled: true, points: 0, effectivePoints: 0, itemId: 1 } })
+    const wrapper = mountDialog()
+    await showDialog(wrapper)
+    await confirm(wrapper)
+    expect(mocks.publish).not.toHaveBeenCalled()
+    expect(mocks.messageError).toHaveBeenCalledWith('payment.pointsInvalid')
+    await wrapper.get('[data-testid="points-enabled"]').setValue(false)
+    await confirm(wrapper)
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ pointsRedemption: { enabled: false, points: 0 } }))
+    wrapper.unmount()
+  })
+
   it('preserves inherited settings when unchanged and saves a disabled switch', async () => {
     mocks.getPointsRedemption.mockResolvedValue({ code: 0, data: { enabled: true, points: null, effectivePoints: 50, itemId: 1 } })
     const wrapper = mountDialog()

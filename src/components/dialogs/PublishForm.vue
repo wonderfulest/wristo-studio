@@ -279,7 +279,7 @@
       </el-form-item>
       <el-form-item v-if="form.pointsEnabled" :label="t('payment.pointsRequired')" required>
         <el-input-number v-model="form.redemptionPoints" data-testid="redemption-points"
-          :disabled="loading || pointsLoading || pointsLoadFailed" :min="0" :max="100000" :precision="0" :step="1" />
+          :disabled="loading || pointsLoading || pointsLoadFailed" :min="1" :max="100000" :precision="0" :step="1" />
         <div class="form-tip">{{ t('payment.pointsTip') }}</div>
       </el-form-item>
       <el-form-item v-if="form.paymentMethod === 'wpay' || form.paymentMethod === 'free'" :label="t(form.paymentMethod === 'free' ? 'payment.codeDelayHours' : 'goLive.trialDurationHours')">
@@ -881,7 +881,7 @@ const handleConfirm = async (publish = true) => {
     messageStore.error(t('payment.pointsLoadFailed'))
     return
   }
-  if (form.pointsEnabled && (!Number.isInteger(form.redemptionPoints) || form.redemptionPoints! < 0 || form.redemptionPoints! > 100000)) {
+  if (form.pointsEnabled && (!Number.isInteger(form.redemptionPoints) || form.redemptionPoints! < 1 || form.redemptionPoints! > 100000)) {
     emit('section-change', 'distribution')
     messageStore.error(t('payment.pointsInvalid'))
     return

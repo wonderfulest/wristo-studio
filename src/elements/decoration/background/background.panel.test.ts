@@ -3,6 +3,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { shallowMount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useElementDataStore } from '@/stores/elementDataStore'
 import { useVisualThemeStore } from '@/stores/visualThemeStore'
 import BackgroundPanel from './background.panel.vue'
 
@@ -54,7 +55,8 @@ describe('background.panel', () => {
       },
     })
 
-    wrapper.findComponent({ name: 'ImageUpload' }).vm.$emit('uploaded', {
+    useElementDataStore().upsertElement(wrapper.props('config'))
+    await wrapper.findComponent({ name: 'ImageUpload' }).props('completeUpload')({
       id: 99,
       url: 'https://cdn.example/new-background.png',
     })
