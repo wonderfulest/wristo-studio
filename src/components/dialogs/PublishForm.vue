@@ -97,11 +97,12 @@
                 <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
-            <ImageUpload
-              v-model="form.heroImageId"
-              :aspect-code="IMAGE_ASPECT_CODE.HERO"
-              :preview-url="form.garminImageUrl"
-              @uploaded="onHeroImageUploaded"
+            <el-image
+              class="primary-image-preview"
+              :src="form.garminImageUrl"
+              :alt="t('goLive.cropImage')"
+              fit="cover"
+              draggable="false"
             />
           </div>
 
@@ -112,11 +113,12 @@
                 <el-icon class="tip-icon-inline"><QuestionFilled /></el-icon>
               </el-tooltip>
             </div>
-            <ImageUpload
-              v-model="form.rawImageId"
-              :aspect-code="IMAGE_ASPECT_CODE.GENERAL"
-              :preview-url="form.previewImageUrl || form.rawImageUrl"
-              @uploaded="onRawImageUploaded"
+            <el-image
+              class="primary-image-preview"
+              :src="form.previewImageUrl || form.rawImageUrl"
+              :alt="t('goLive.rawImage')"
+              fit="cover"
+              draggable="false"
             />
           </div>
         </div>
@@ -380,7 +382,6 @@ import { Plus, CopyDocument, Download, QuestionFilled, Refresh } from '@element-
 import { uploadBase64Image } from '@/utils/image'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import type { UploadFile } from 'element-plus'
-import { IMAGE_ASPECT_CODE } from '@/stores/common'
 import { useUserStore } from '@/stores/user'
 import type { ApiResponse } from '@/types/api/api'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -390,7 +391,6 @@ import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultCon
 import ProductTagSelector from '@/components/common/ProductTagSelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'
-import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useI18n } from '@/i18n'
 import {
   buildGenerateDescriptionPayload,
@@ -574,9 +574,6 @@ const form = reactive({
   paymentMethod: 'free',
   trialLasts: 0.25,
   price: 2.39,
-  // Hero / raw image ids from ImageUpload (for future use if needed)
-  heroImageId: undefined as number | undefined,
-  rawImageId: undefined as number | undefined,
   // productImages: keep id + imageUrl, used by ProductImagesEditor and goLive payload
   productImages: [] as ProductImageItem[]
 })
@@ -850,7 +847,6 @@ const loadDesign = (design: Design) => {
       : 'free'
     form.trialLasts = normalizeTrialLasts(form.paymentMethod, design.product.trialLasts ?? 0.25)
     form.price = form.paymentMethod === 'free' ? 0 : (design.product.payment?.price ?? 2.39)
-    // heroImageId/rawImageId 暂时没有后端字段，保持 undefined 即可
     const backendProductImages = (design.product as any).productImages as unknown[] | undefined
 
     form.productImages = Array.isArray(backendProductImages)
@@ -1056,22 +1052,6 @@ const copyDesignName = async (): Promise<void> => {
     showErrorOnce(caughtError, t('common.copyFailed'))
   }
 }
-// Hero / Raw image uploaded handlers from ImageUpload
-const onHeroImageUploaded = (img: any) => {
-  if (!img) return
-  form.heroImageId = typeof img.id === 'number' ? img.id : form.heroImageId
-  // 优先使用 previewUrl 或 thumbnail，其次原图
-  form.garminImageUrl =
-    img.previewUrl || img.formats?.thumbnail?.url || img.url || form.garminImageUrl
-}
-
-const onRawImageUploaded = (img: any) => {
-  if (!img) return
-  form.rawImageId = typeof img.id === 'number' ? img.id : form.rawImageId
-  form.rawImageUrl =
-    img.previewUrl || img.formats?.thumbnail?.url || img.url || form.rawImageUrl
-}
-
 const loadProductTags = async () => {
   try {
     loadingProductTags.value = true
@@ -1580,7 +1560,15 @@ defineExpose({
   vertical-align: middle;
 }
 
-/* Keep the two image uploaders side-by-side without wrapping */
+.primary-image-preview {
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  background: var(--studio-surface-soft);
+}
+
+/* Keep the two image previews side-by-side without wrapping */
 .image-pair {
   display: flex;
   flex-direction: row;
