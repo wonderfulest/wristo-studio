@@ -21,13 +21,15 @@
           <RouterLink v-else-if="summaryOnly" class="title" :to="detailsUrl">{{ design.name }}</RouterLink>
           <span v-else class="title" :title="design.name" @dblclick.stop="startRename">{{ design.name }}</span>
           <el-tooltip
-            v-if="isMerchantUser || isAdminUser"
-            :content="design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
+            v-if="hasNewRelease || isMerchantUser || isAdminUser"
+            :content="hasNewRelease ? t('card.unpublishedRelease') : design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
             placement="top"
           >
             <span
               class="status-dot"
-              :style="{ backgroundColor: statusColor }"
+              :style="{ backgroundColor: hasNewRelease ? '#f56c6c' : statusColor }"
+              role="img"
+              :aria-label="hasNewRelease ? t('card.unpublishedRelease') : statusText"
             />
           </el-tooltip>
         </div>

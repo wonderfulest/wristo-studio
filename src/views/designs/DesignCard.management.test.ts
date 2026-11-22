@@ -23,6 +23,16 @@ async function setup(extra: Record<string, unknown> = {}) {
   return { wrapper, router }
 }
 describe('design card management placement', () => {
+  it.each(['grid', 'list'])('prioritizes unpublished release over review status in %s view', async viewMode => {
+    const { wrapper } = await setup({ summaryOnly: true, viewMode, hasNewRelease: true })
+    expect(wrapper.get('.status-dot').attributes('aria-label')).toBe('card.unpublishedRelease')
+    expect(wrapper.get('.status-dot').attributes('style')).toContain('rgb(245, 108, 108)')
+    await wrapper.setProps({ hasNewRelease: false })
+    expect(wrapper.get('.status-dot').attributes('aria-label')).toBe('Draft')
+    expect(wrapper.get('.status-dot').attributes('style')).not.toContain('rgb(245, 108, 108)')
+    wrapper.unmount()
+  })
+
   it.each([
     ['owner', 7, false, false, true],
     ['merchant', 8, true, false, true],

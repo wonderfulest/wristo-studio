@@ -221,7 +221,7 @@
           :last-go-live-text="formatDateNullable(design.product?.lastGoLive)"
           :creator-name="getCreatorName(design)"
           :design-image-url="getDesignImageUrl(design)"
-          :has-new-release="false"
+          :has-new-release="hasUnpublishedRelease(design)"
           :has-downloadable-package="false"
         />
       </div>
@@ -265,6 +265,7 @@ import { Icon } from '@iconify/vue'
 import { designApi } from '@/api/wristo/design'
 import { useMessageStore } from '@/stores/message'
 import dayjs from 'dayjs'
+import { hasUnpublishedRelease } from './unpublishedRelease'
 import { useUserStore } from '@/stores/user'
 import type { ApiResponse, PageResponse } from '@/types/api/api'
 import DeviceDisplay from '@/components/common/DeviceDisplay.vue'
