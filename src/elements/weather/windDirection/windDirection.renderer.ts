@@ -38,6 +38,19 @@ function getImageNaturalSize(imgEl: HTMLImageElement): { width: number; height: 
   }
 }
 
+// Saved width/height are rendered dimensions, not a longest-edge target.
+function resolveImageScale(
+  width: number,
+  height: number,
+  config: Pick<WindDirectionElementConfig, 'width' | 'height'>,
+  fallbackSize = Math.max(width, height),
+): { scaleX: number; scaleY: number } {
+  const scaleX = config.width !== undefined ? config.width / width : undefined
+  const scaleY = config.height !== undefined ? config.height / height : undefined
+  const fallback = fallbackSize / Math.max(width, height)
+  return { scaleX: scaleX ?? scaleY ?? fallback, scaleY: scaleY ?? scaleX ?? fallback }
+}
+
 async function resolveWindSources(input: {
   imageUrl?: string
   imageSvg?: string
@@ -99,9 +112,7 @@ export async function createWindDirection(
   const originalW = natural.width
   const originalH = natural.height
 
-  const baseSize = Math.max(originalW, originalH) || 1
-  const targetSize = (config.width ?? config.height ?? baseSize) || baseSize
-  const scale = targetSize / baseSize
+  const scale = resolveImageScale(originalW, originalH, config)
 
   const image = new FabricImage(imgEl, {
     left: config.left ?? 0,
@@ -112,9 +123,7 @@ export async function createWindDirection(
 
     width: originalW,
     height: originalH,
-    // ✅ 等比缩放：以最长边为基准缩放到 targetSize，scaleX/scaleY 相同
-    scaleX: scale,
-    scaleY: scale,
+    ...scale,
 
     objectCaching: false,
   } as ImageProps) as WindDirectionElement
@@ -185,16 +194,13 @@ export async function updateWindDirection(
       const imgEl = await loadHtmlImage(nextImageUrl)
       const natural = getImageNaturalSize(imgEl)
 
-      const baseSize = Math.max(natural.width, natural.height) || 1
-      const targetSize = (config.width ?? config.height ?? prevTargetSize ?? baseSize) || baseSize
-      const scale = targetSize / baseSize
+      const scale = resolveImageScale(natural.width, natural.height, config, prevTargetSize)
 
       ;(obj as unknown as { setElement?: (el: HTMLImageElement) => void }).setElement?.(imgEl)
       obj.set({
         width: natural.width,
         height: natural.height,
-        scaleX: scale,
-        scaleY: scale,
+        ...scale,
       } as unknown as ImageProps)
 
       obj.imageUrl = nextImageUrl
@@ -205,10 +211,7 @@ export async function updateWindDirection(
     // 仅调整尺寸（不换图）
     const rawW = Number((obj as unknown as { width?: number }).width ?? 0)
     const rawH = Number((obj as unknown as { height?: number }).height ?? 0)
-    const baseSize = Math.max(rawW, rawH) || 1
-    const targetSize = (config.width ?? config.height ?? baseSize) || baseSize
-    const scale = targetSize / baseSize
-    obj.set({ scaleX: scale, scaleY: scale } as unknown as ImageProps)
+    obj.set(resolveImageScale(Math.max(1, rawW), Math.max(1, rawH), config) as ImageProps)
   }
 
   // 更新状态（不影响展示效果，但用于导出）
