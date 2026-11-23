@@ -64,6 +64,7 @@
             <el-option :label="t('project.launched')" value="launched" />
             <el-option :label="t('project.notLaunched')" value="not_launched" />
             <el-option :label="t('project.updateAvailable')" value="update_available" />
+            <el-option :label="t('project.awaitingLaunch')" value="awaiting_launch" />
           </el-select>
         </div>
 
@@ -372,7 +373,7 @@ const isDesignStatusValue = (value: unknown): value is DesignStatus | '' => {
 }
 
 const isLaunchStatusValue = (value: unknown): value is LaunchStatus | '' => {
-  return value === '' || value === 'launched' || value === 'not_launched' || value === 'update_available'
+  return value === '' || value === 'launched' || value === 'not_launched' || value === 'update_available' || value === 'awaiting_launch'
 }
 
 const isDesignSortField = (value: unknown): value is DesignSortField => {

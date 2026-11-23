@@ -116,7 +116,7 @@ export type DesignStatus =
   | 'approved'
   | 'rejected'
 
-export type LaunchStatus = 'launched' | 'not_launched' | 'update_available'
+export type LaunchStatus = 'launched' | 'not_launched' | 'update_available' | 'awaiting_launch'
 
 // 设计相关类型定义
 export interface DesignElement {
