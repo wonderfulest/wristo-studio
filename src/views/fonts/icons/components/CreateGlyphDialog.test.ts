@@ -25,7 +25,7 @@ const stubs = {
     template: '<div v-if="modelValue" class="dialog"><slot/><slot name="footer"/></div>',
   },
   ElInput: {
-    props: ['modelValue'],
+    props: ['modelValue', 'size'],
     emits: ['update:modelValue', 'blur'],
     template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
   },
@@ -117,5 +117,47 @@ describe('CreateGlyphDialog weather font automatic naming', () => {
     expect(wrapper.emitted('confirm')).toEqual([[
       expect.objectContaining({ glyphCode: 'icon-font-20260822-a3f2', fontType: 'icon_font' }),
     ]])
+  })
+})
+
+describe.each([
+  ['icon_font', mountOrdinaryDialog],
+  ['weather_font', mountWeatherDialog],
+] as const)('editable %s names', (fontType, mountDialog) => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mocks.generateSvgIconFontSlug.mockReturnValue('icon-font-default')
+    mocks.hasSlugConflict.mockResolvedValue(false)
+  })
+
+  it('submits the name entered by the user', async () => {
+    const wrapper = await mountDialog()
+    await wrapper.get('input').setValue('my-custom-icons')
+    await wrapper.findAll('button').at(-1)!.trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('confirm')).toEqual([[
+      expect.objectContaining({ glyphCode: 'my-custom-icons', fontType }),
+    ]])
+  })
+
+  it('preserves a custom name and reports a conflict instead of replacing it', async () => {
+    const wrapper = await mountDialog()
+    await wrapper.get('input').setValue('my-custom-icons')
+    mocks.hasSlugConflict.mockResolvedValue(true)
+    await wrapper.findAll('button').at(-1)!.trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(mocks.messageError).toHaveBeenCalledWith('font.iconSlugExists')
+    expect(wrapper.get('input').element.value).toBe('my-custom-icons')
+    expect(mocks.generateSvgIconFontSlug).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects an empty name', async () => {
+    const wrapper = await mountDialog()
+    await wrapper.get('input').setValue('')
+    await wrapper.findAll('button').at(-1)!.trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('confirm')).toBeUndefined()
+    expect(mocks.messageError).toHaveBeenCalledWith('font.enterValidName')
   })
 })

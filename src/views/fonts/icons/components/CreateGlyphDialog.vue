@@ -49,6 +49,7 @@ const localForm = reactive<IconGlyphCreateDTO>({ glyphCode: '', style: '', fontT
 
 const namingRef = ref<InstanceType<typeof FontNamingBar> | null>(null)
 const checkingSlug = ref(false)
+const generatedName = ref('')
 
 watch(() => props.form, (f) => {
   if (f) Object.assign(localForm, {
@@ -81,6 +82,7 @@ const generateAutomaticName = async () => {
       ElMessage.error(t(automaticNameFailureKey.value))
       return
     }
+    generatedName.value = candidate
     ;(namingRef.value as any)?.setName?.(candidate)
   } finally {
     checkingSlug.value = false
@@ -106,6 +108,10 @@ const onConfirm = async () => {
   try {
     checkingSlug.value = true
     if (await hasIconFontSlugConflict(code)) {
+      if (code !== generatedName.value) {
+        ElMessage.error(t('font.iconSlugExists'))
+        return
+      }
       code = await findAvailableName()
       if (!code) {
         ElMessage.error(t(automaticNameFailureKey.value))

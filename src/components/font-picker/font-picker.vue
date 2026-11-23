@@ -354,7 +354,8 @@ const updatePanelPosition = () => {
   const panelGap = 4
   const maxPanelHeight = 820
   const minUsefulHeight = 220
-  const desiredWidth = Math.min(560, window.innerWidth - viewportPadding * 2)
+  const preferredWidth = queryFontTypes.value.includes(FontTypes.WEATHER_FONT) ? 720 : 560
+  const desiredWidth = Math.min(preferredWidth, window.innerWidth - viewportPadding * 2)
   const left = Math.min(
     Math.max(viewportPadding, rect.right - desiredWidth),
     window.innerWidth - desiredWidth - viewportPadding,

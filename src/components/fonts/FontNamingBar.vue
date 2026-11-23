@@ -26,7 +26,7 @@
       <span class="naming-preview-value">{{ namingPreview || t('font.namePlaceholder') }}</span>
     </div>
 
-    <label v-if="isSimpleIconName && !automatic" class="naming-field naming-field--simple">
+    <label v-if="isSimpleIconName" class="naming-field naming-field--simple">
       <span>{{ t('font.iconSlugLabel') }}</span>
       <el-input
         v-model="fontName"
