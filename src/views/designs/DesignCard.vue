@@ -22,14 +22,14 @@
           <span v-else class="title" :title="design.name" @dblclick.stop="startRename">{{ design.name }}</span>
           <el-tooltip
             v-if="hasNewRelease || isMerchantUser || isAdminUser"
-            :content="hasNewRelease ? t('card.unpublishedRelease') : design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : statusText"
+            :content="!hasNewRelease && !isPublished && design.designStatus === 'rejected' && design.reviewComment ? design.reviewComment : publicationText"
             placement="top"
           >
             <span
               class="status-dot"
-              :style="{ backgroundColor: hasNewRelease ? '#f56c6c' : statusColor }"
+              :style="{ backgroundColor: publicationColor }"
               role="img"
-              :aria-label="hasNewRelease ? t('card.unpublishedRelease') : statusText"
+              :aria-label="publicationText"
             />
           </el-tooltip>
         </div>
@@ -567,6 +567,10 @@ const loadingStates = computed(() => props.loadingStates)
 const currentUserId = computed(() => props.currentUserId)
 const statusText = computed(() => props.statusText)
 const statusColor = computed(() => props.statusColor)
+const isPublished = computed(() => design.value.product?.status === 1 && !!(design.value.product.latestPublishedAt ?? design.value.product.lastGoLive))
+const publicationText = computed(() => props.hasNewRelease ? t('card.unpublishedRelease') : isPublished.value ? t('status.published') : statusText.value)
+const publicationColor = computed(() => props.hasNewRelease ? '#f56c6c' : isPublished.value ? '#67C23A' : statusColor.value)
+
 const lastGoLiveText = computed(() => props.lastGoLiveText)
 const creatorName = computed(() => props.creatorName)
 const paymentMethodLabel = computed(() => {

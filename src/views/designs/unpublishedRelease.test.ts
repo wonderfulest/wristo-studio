@@ -16,3 +16,10 @@ describe('unpublished release indicator', () => {
     expect(hasUnpublishedRelease(design)).toBe(expected)
   })
 })
+
+it('clears the indicator after republishing while preserving the first publication time', () => {
+  const design = { product: { lastGoLive: 1000, latestPublishedAt: 3000, release: { updatedAt: 2000 } } } as DesignListItem
+  expect(hasUnpublishedRelease(design)).toBe(false)
+  design.product!.release!.updatedAt = 4000
+  expect(hasUnpublishedRelease(design)).toBe(true)
+})

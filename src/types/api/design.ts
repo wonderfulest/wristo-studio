@@ -217,6 +217,8 @@ export interface DesignListItem {
     purchase?: number
     score?: number
     storeWeight?: number | null
+    latestPublishedAt?: number | string | null
+    status?: number
     lastGoLive?: number | string | null
     payment?: { paymentMethod: string; paymentMethodDesc?: string }
     release?: { id: number; packageUrl: string; releaseVersion?: string; updatedAt: number }
