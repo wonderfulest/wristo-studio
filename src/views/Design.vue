@@ -17,6 +17,7 @@
       <p v-else>Opening Studio…</p>
     </div>
     <AiWatchfaceDialog v-if="editorAiCapabilities.WATCHFACE" v-model="aiWatchfaceVisible" :project-id="baseStore.id || ''" :width="designStore.designSpec.width" :height="designStore.designSpec.height" :import-file="importAiWatchface" :canvas-version="() => draftRevision" />
+    <CreateProjectDialog ref="createProjectDialog" :error="entryError" @retry="openEditorEntry" @cancel="router.push('/designs')" :width="designStore.designSpec.width" :height="designStore.designSpec.height" :canvas-version="() => draftRevision" :import-file="importNewProjectAi" />
     <!-- 编辑器更新日志 -->
     <ChangelogDialog ref="changelogDialog" />
     <div class="editor-workspace">
@@ -127,7 +128,7 @@ import AiWatchfaceDialog from '@/views/design/AiWatchfaceDialog.vue'
 import AiAdjustmentPanel from '@/views/design/AiAdjustmentPanel.vue'
 import { useStudioAiCapabilities } from '@/views/design/useStudioAiCapabilities'
 import { useAiAdjustmentEditor } from '@/views/design/useAiAdjustmentEditor'
-import { chooseDesignVisibility } from '@/views/design/chooseDesignVisibility'
+import CreateProjectDialog from '@/views/design/CreateProjectDialog.vue'
 import { useEditorEntry } from '@/views/design/useEditorEntry'
 import {
   copySelectedElements,
@@ -182,7 +183,9 @@ const { capabilities: editorAiCapabilities, refresh: refreshEditorAiCapabilities
 const aiWatchfaceVisible = ref(false)
 const aiAdjustmentVisible = ref(false)
 const aiAdjustment = useAiAdjustmentEditor()
-let newAiProjectId = ''
+const createProjectDialog = ref<InstanceType<typeof CreateProjectDialog>>()
+let newProjectLanguage: 'eng' | 'zhs' = 'eng'
+let newProjectTargetId = ''
 const draftOwner = () => userStore.userInfo?.id ?? 'guest'
 const rememberDraft = (id: string, name = designStore.watchFaceName, savedAt = Date.now(), owner = draftOwner()) =>
   rememberUnsavedDesign(window.localStorage, owner, { designId: id, name: name || 'Untitled', savedAt })
@@ -453,12 +456,7 @@ const {
   resolveLoadedConfig: resolveLoadedDraft,
   onDesignLoaded: (id) => {
     startDraftTracking(id)
-    if (newAiProjectId === id) {
-      newAiProjectId = ''
-      void refreshEditorAiCapabilities().then(() => {
-        if (loadedDesignId === id && editorAiCapabilities.value.WATCHFACE && !onboarding.offered && onboarding.progress.status !== 'active') aiWatchfaceVisible.value = true
-      })
-    }
+
   },
   onDesignImported: () => {
     draftRevision += 1
@@ -474,12 +472,21 @@ watch(() => onboarding.offered || onboarding.progress.status === 'active', showi
 const { creating: entryCreating, error: entryError, open: openEditorEntry } = useEditorEntry({
   route,
   replace: (to) => router.replace(to),
-  load: loadDesign,
+  load: async id => {
+    await loadDesign(id)
+    if (loadedDesignId !== id) throw new Error('Unable to load the project. Please try again.')
+  },
   currentId: () => loadedDesignId,
   findUnsaved: () => readUnsavedDesigns(window.localStorage, draftOwner())[0],
   chooseUnsaved: chooseUnsavedDesign,
-  chooseVisibility: () => chooseDesignVisibility(t),
-  onCreated: (id, name) => { rememberDraft(id, name); newAiProjectId = id },
+  chooseProject: async () => (await createProjectDialog.value?.show()) ?? null,
+  onInitialized: async settings => {
+    newProjectTargetId = loadedDesignId
+    newProjectLanguage = settings.appLanguage
+    await createProjectDialog.value?.initialized()
+  },
+  onCreationError: () => createProjectDialog.value?.failed(),
+  onCreated: (id, name) => { rememberDraft(id, name) },
   flush: async () => {
     saveDirtyDraft()
     await draftWriteQueue
@@ -504,6 +511,17 @@ const importAiWatchface = async (file: File, automatic: boolean, projectId: stri
   await draftWriteQueue
   if (baseStore.designLoading || loadedDesignId !== projectId || (automatic && draftRevision !== revision)) return false
   return importWrtDesign(file)
+}
+
+const importNewProjectAi = async (file: File, automatic: boolean, _projectId: string, revision: number): Promise<boolean> => {
+  if (!newProjectTargetId || loadedDesignId !== newProjectTargetId) return false
+  const imported = await importAiWatchface(file, automatic, newProjectTargetId, revision)
+  if (imported) {
+    designStore.setAppLanguage(newProjectLanguage)
+    draftAutosave.markDirty()
+    saveDirtyDraft()
+  }
+  return imported
 }
 
 // 设置自动保存

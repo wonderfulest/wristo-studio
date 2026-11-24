@@ -4,8 +4,8 @@ import { useEditorEntry } from './useEditorEntry'
 import { onboarding, startOnboarding } from '@/features/onboarding/progress'
 import { freshProgress } from '@/features/onboarding/model'
 
-const mocks = vi.hoisted(() => ({ createDesign: vi.fn(), user: { canCreateDesign: true }, replace: vi.fn() }))
-vi.mock('@/api/wristo/design', () => ({ designApi: { createDesign: mocks.createDesign } }))
+const mocks = vi.hoisted(() => ({ createDesign: vi.fn(), updateDesign: vi.fn(), user: { canCreateDesign: true }, replace: vi.fn() }))
+vi.mock('@/api/wristo/design', () => ({ designApi: { createDesign: mocks.createDesign, updateDesign: mocks.updateDesign } }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 
 beforeEach(() => {
@@ -14,6 +14,7 @@ beforeEach(() => {
   mocks.user.canCreateDesign = true
   mocks.createDesign.mockResolvedValue({ code: 0, data: { designUid: 'created-design' } })
   mocks.replace.mockResolvedValue(undefined)
+  mocks.updateDesign.mockResolvedValue({ code: 0 })
 })
 function setup(id = '', recovery: Record<string, any> = {}) {
   const scope = effectScope()
@@ -174,5 +175,39 @@ it('does not create when the visibility prompt is cancelled', async () => {
   await s.open()
   expect(mocks.createDesign).not.toHaveBeenCalled()
   expect(mocks.replace).toHaveBeenCalledWith('/designs')
+  s.scope.stop()
+})
+
+const projectSettings = { name: '  My Watch  ', appLanguage: 'zhs' as const, publiclyVisible: false, allowRemix: true, useAi: true }
+it('persists all project options and loads the project before starting AI', async () => {
+  const initialized = vi.fn()
+  const s = setup('', { chooseProject: async () => projectSettings, onInitialized: initialized })
+  await s.open()
+  expect(mocks.createDesign).toHaveBeenCalledWith({ name: 'My Watch', description: '', originalType: 'original', publiclyVisible: false, allowRemix: true })
+  expect(mocks.updateDesign).toHaveBeenCalledWith({ uid: 'created-design', configJson: { localization: { appLanguage: 'zhs' } } })
+  expect(s.load).toHaveBeenCalledWith('created-design')
+  expect(initialized).toHaveBeenCalledWith(projectSettings)
+  expect(s.load.mock.invocationCallOrder[0]).toBeLessThan(initialized.mock.invocationCallOrder[0])
+  s.scope.stop()
+})
+it('does not create a project when unified creation is cancelled', async () => {
+  const s = setup('', { chooseProject: async () => null })
+  await s.open()
+  expect(mocks.createDesign).not.toHaveBeenCalled()
+  expect(mocks.updateDesign).not.toHaveBeenCalled()
+  s.scope.stop()
+})
+it('retries initialization without creating another cloud project or losing selected options', async () => {
+  mocks.updateDesign.mockResolvedValueOnce({ code: 1, msg: 'Save failed' })
+  const chooseProject = vi.fn().mockResolvedValue(projectSettings)
+  const initialized = vi.fn()
+  const s = setup('', { chooseProject, onInitialized: initialized })
+  await s.open()
+  expect(s.error.value).toBe('Save failed')
+  expect(initialized).not.toHaveBeenCalled()
+  await s.open()
+  expect(mocks.createDesign).toHaveBeenCalledOnce()
+  expect(chooseProject).toHaveBeenCalledOnce()
+  expect(initialized).toHaveBeenCalledOnce()
   s.scope.stop()
 })

@@ -7,6 +7,14 @@ import type { UnsavedDesign } from '@/engine/services/unsavedDesigns'
 import { BizErrorCode } from '@/config/errorCode'
 import { useUserStore } from '@/stores/user'
 
+export interface NewProjectOptions {
+  name: string
+  appLanguage: 'eng' | 'zhs'
+  publiclyVisible: boolean
+  allowRemix: boolean
+  useAi: boolean
+}
+
 const randomNameSuffix = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 6)
 
 export function useEditorEntry(options: {
@@ -17,12 +25,17 @@ export function useEditorEntry(options: {
   currentId: () => string
   findUnsaved?: () => UnsavedDesign | undefined
   chooseUnsaved?: (draft: UnsavedDesign) => Promise<'resume' | 'new' | 'dismiss'>
+  chooseProject?: () => Promise<NewProjectOptions | null>
+  onInitialized?: (settings: NewProjectOptions) => Promise<void>
+  onCreationError?: () => void
   chooseVisibility?: () => Promise<{ publiclyVisible: boolean; allowRemix: boolean } | null>
   onCreated?: (id: string, name: string) => void
 }) {
   const user = useUserStore()
   const creating = ref(false)
   const error = ref('')
+  let retrySettings: NewProjectOptions | undefined
+  let retryProject: { id: string; settings: NewProjectOptions } | undefined
   let active = true
   let generation = 0
   const routeId = () => {
@@ -45,7 +58,7 @@ export function useEditorEntry(options: {
         return
       }
       const startingGuide = onboarding.progress.status === 'active' && onboarding.progress.step === 'create' && !onboarding.progress.designId
-      const draft = startingGuide ? undefined : options.findUnsaved?.()
+      const draft = startingGuide || retrySettings ? undefined : options.findUnsaved?.()
       if (draft && options.chooseUnsaved) {
         const choice = await options.chooseUnsaved(draft)
         if (!active || current !== generation || options.route.path !== '/design') return
@@ -59,28 +72,48 @@ export function useEditorEntry(options: {
           return
         }
       }
-      if (!user.canCreateDesign) {
+      if (!retryProject && !user.canCreateDesign) {
         if (user.isStudioConsumer) window.dispatchEvent(new Event('studio-design-limit-reached'))
         await options.replace(user.isStudioConsumer ? '/designs' : '/design-slots')
         return
       }
-      const sharing = options.chooseVisibility ? await options.chooseVisibility() : { publiclyVisible: true, allowRemix: false }
+      const settings = retrySettings ?? (options.chooseProject ? await options.chooseProject() : undefined)
+      if (settings === null) {
+        if (active && current === generation) await options.replace('/designs')
+        return
+      }
+      retrySettings = settings
+      const sharing = settings ?? (options.chooseVisibility ? await options.chooseVisibility() : { publiclyVisible: true, allowRemix: false })
       if (!active || current !== generation || options.route.path !== '/design') return
       if (sharing === null) {
         await options.replace('/designs')
         return
       }
-      const name = `App${randomNameSuffix()}`
-      const response = await designApi.createDesign({ name, description: '', originalType: 'original', ...sharing })
+      const name = settings?.name.trim() || `App${randomNameSuffix()}`
+      const response = retryProject
+        ? { code: 0, data: { designUid: retryProject.id }, msg: '' }
+        : await designApi.createDesign({ name, description: '', originalType: 'original', publiclyVisible: sharing.publiclyVisible, allowRemix: sharing.allowRemix })
       if (response.code === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) throw response
       if (response.code !== 0 || !response.data?.designUid) throw new Error(response.msg || 'Unable to create a project. Please try again.')
+      if (settings) {
+        retryProject = { id: response.data.designUid, settings }
+        if (!active || current !== generation) return
+        const initialized = await designApi.updateDesign({ uid: response.data.designUid, configJson: { localization: { appLanguage: settings.appLanguage } } })
+        if (initialized.code !== 0) throw new Error(initialized.msg || 'Unable to save application language.')
+        await options.load(response.data.designUid)
+        if (!active || current !== generation) return
+      }
       setOnboardingOwner(String(user.userInfo?.id || ''))
       createdOnboardingDesign(response.data.designUid)
       options.onCreated?.(response.data.designUid, name)
       if (active && current === generation) {
         await options.replace({ path: '/design', query: { id: response.data.designUid } })
+        retryProject = undefined
+        retrySettings = undefined
+        if (settings && active) await options.onInitialized?.(settings)
       }
     } catch (cause) {
+      options.onCreationError?.()
       const failure = cause as { code?: number; response?: { data?: { code?: number } } } | null
       if ((failure?.code ?? failure?.response?.data?.code) === BizErrorCode.STUDIO_CREATE_LIMIT_REACHED) {
         if (active && current === generation) await options.replace(user.isStudioConsumer ? '/designs' : '/design-slots')

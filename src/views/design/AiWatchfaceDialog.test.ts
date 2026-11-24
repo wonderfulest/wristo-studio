@@ -8,6 +8,7 @@ vi.mock('@/api/wristo/studioAi', () => ({ getAiCapabilities: mocks.capabilities,
 vi.mock('@/api/wristo/studioCredits', () => ({ studioCreditsApi: mocks }))
 vi.mock('@/stores/user', () => ({ useUserStore: () => mocks.user }))
 vi.mock('./referenceImage', () => ({ prepareReferenceImage: mocks.prepareImage }))
+vi.mock('@/i18n', () => ({ useI18n: () => ({ locale: { value: 'en' } }) }))
 import AiWatchfaceDialog from './AiWatchfaceDialog.vue'
 const wrappers: any[] = []
 const job = (status = 'running') => ({ id: 'test-job', status, creditCost: 20, createdAt: '2026-10-04T12:00:00Z' })
@@ -70,7 +71,7 @@ it('shows refunded failure and does not retry the provider automatically', async
   mocks.status.mockResolvedValue({ data: job('failed') })
   const s = setup(); await flushPromises(); await s.wrapper.find('textarea').setValue('Orange sports')
   await s.generate().trigger('click'); await flushPromises(); await vi.advanceTimersByTimeAsync(2000); await flushPromises()
-  expect(s.wrapper.text()).toContain('Your credits have been returned'); expect(mocks.start).toHaveBeenCalledOnce()
+  expect(s.wrapper.text()).toContain('Your AI points have been returned'); expect(mocks.start).toHaveBeenCalledOnce()
 })
 it('keeps polling the active task when older results exist', async () => {
   mocks.list.mockResolvedValue({ data: [{ ...job('succeeded'), id: 'older-result' }] })
