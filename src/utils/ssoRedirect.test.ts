@@ -69,6 +69,26 @@ describe('Studio login redirect', () => {
     expect(getPendingStudioPath()).toBeNull()
   })
 
+  it('allows one automatic recovery across page loads until manual sign-in', async () => {
+    const replace = vi.fn()
+    Object.assign(window.location, { replace })
+    const recover = () => redirectToSsoLogin('studio', 1000, undefined, { recoverUnauthorized: true })
+    await Promise.all([recover(), recover()])
+    await vi.runAllTimersAsync()
+    expect(new URL(window.location.href).searchParams.has('force_login')).toBe(false)
+    cancelPendingSsoRedirect()
+    await recover()
+    expect(replace).toHaveBeenCalledWith('/auth/signed-out')
+    cancelPendingSsoRedirect()
+    await redirectToSsoLogin('studio', 0, undefined, { allowFromSignedOut: true, forceLogin: true })
+    await vi.runAllTimersAsync()
+    expect(new URL(window.location.href).searchParams.get('force_login')).toBe('1')
+    cancelPendingSsoRedirect()
+    await recover()
+    await vi.runAllTimersAsync()
+    expect(replace).toHaveBeenCalledTimes(1)
+  })
+
   it('uses the configured SSO origin', async () => {
     vi.stubEnv('VITE_WRISTO_SSO_URL', 'https://sso.staging.wristo.io/')
     const url = new URL(await buildSsoLoginUrl('studio'))

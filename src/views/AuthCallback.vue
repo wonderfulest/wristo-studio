@@ -13,7 +13,7 @@ import type { ApiResponse } from '@/types/api/api'
 import type { SsoTokenResponseData } from '@/types/sso'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from '@/i18n'
-import { clearPendingStudioPath, getPendingStudioPath, getSsoRedirectUri } from '@/utils/ssoRedirect'
+import { clearPendingStudioPath, getPendingStudioPath, getSsoRedirectUri, hasAttemptedSsoRecovery } from '@/utils/ssoRedirect'
 import { consumeStudioLoginTransaction, isValidPendingStudioPath } from '@/utils/studioPkce'
 
 const loading = ref(true)
@@ -43,6 +43,10 @@ onMounted(async () => {
     await router.replace(pendingPath)
   } catch (e: any) {
     userStore.clearAuth()
+    if (hasAttemptedSsoRecovery()) {
+      await router.replace('/auth/signed-out')
+      return
+    }
     error.value = e?.response?.data?.msg || e?.msg || e.message || t('auth.requestFailed')
   } finally {
     loading.value = false

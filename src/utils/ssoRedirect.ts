@@ -8,12 +8,18 @@ let ssoRedirectTimer: number | null = null
 
 const STUDIO_LOCALE_KEY = 'wristo-studio-locale'
 const SHARED_LOCALE_KEY = 'wristo-locale'
+const SSO_RECOVERY_KEY = 'wristo-studio-sso-recovery'
 const PENDING_STUDIO_PATH_KEY = 'wristo-studio-pending-path'
 const SSO_SUPPORTED_LOCALES = ['en', 'zh', 'de', 'es', 'fr', 'it'] as const
 type SsoLocale = typeof SSO_SUPPORTED_LOCALES[number]
 interface RedirectToSsoLoginOptions {
+  recoverUnauthorized?: boolean
   allowFromSignedOut?: boolean
   forceLogin?: boolean
+}
+
+export function hasAttemptedSsoRecovery() {
+  return sessionStorage.getItem(SSO_RECOVERY_KEY) === '1'
 }
 
 export function clearLocalAuthState() {
@@ -121,6 +127,10 @@ export async function redirectToSsoLogin(
     await prepareStudioLogin()
     const nextPath = pendingPath || `${window.location.pathname}${window.location.search}${window.location.hash}`
     rememberPendingStudioPath(nextPath)
+    if (hasAttemptedSsoRecovery() && !options.forceLogin) {
+      window.location.replace('/auth/signed-out')
+      return
+    }
     const url = await buildSsoLoginUrl(client, options, nextPath)
     if (!isRedirectingToSso) return
     ssoRedirectTimer = window.setTimeout(() => {
@@ -129,6 +139,8 @@ export async function redirectToSsoLogin(
         isRedirectingToSso = false
         return
       }
+      if (options.forceLogin) sessionStorage.removeItem(SSO_RECOVERY_KEY)
+      if (options.recoverUnauthorized) sessionStorage.setItem(SSO_RECOVERY_KEY, '1')
       clearLocalAuthState()
       window.location.href = url
     }, delay)

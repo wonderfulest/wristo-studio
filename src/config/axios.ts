@@ -33,7 +33,7 @@ const redirectToLogin = (error: unknown, message = getFallbackMessage('auth.sess
   userStore.clearAuth()
   showErrorOnce(error, message)
   if (!window.location.pathname.startsWith('/auth/')) {
-    void redirectToSsoLogin('studio', 1000).catch(error => showErrorOnce(error, String(error)))
+    void redirectToSsoLogin('studio', 1000, undefined, { recoverUnauthorized: true }).catch(error => showErrorOnce(error, String(error)))
   }
 }
 
