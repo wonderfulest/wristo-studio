@@ -123,7 +123,9 @@ export async function parseFontSource(file: File): Promise<ParsedFontSource> {
       family,
       unitsPerEm: font.unitsPerEm,
       ascender: font.ascender,
-      descender: font.descender,
+      // Some uploaded fonts (e.g. Coiny Regular) store descent as a positive
+      // magnitude. Layout uses y-up metrics; keep the original font/bytes intact.
+      descender: font.descender > 0 ? -font.descender : font.descender,
       glyphCount: font.glyphs.length,
       sourceWeight: sourceWeight(font),
       sourceItalic: detectFontSourceItalic(font.tables, font.names.fontSubfamily),

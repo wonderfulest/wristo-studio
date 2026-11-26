@@ -10,6 +10,10 @@ import {
   selectLocalizedName,
 } from './fontSource'
 
+import { BITMAP_FONT_SIZES, normalizeBitmapFontRecipe } from './contracts'
+import { renderGlyphs } from './glyphRenderer'
+import { writeBmFontText } from './bmFontWriter'
+
 const fixtureUrl = new URL('./__fixtures__/minimal-latin.ttf', import.meta.url)
 
 async function fixtureFile(name = 'minimal-latin.ttf'): Promise<File> {
@@ -18,6 +22,27 @@ async function fixtureFile(name = 'minimal-latin.ttf'): Promise<File> {
 }
 
 describe('parseFontSource', () => {
+  it('exports valid metrics for fonts with a positive hhea descender without altering source bytes', async () => {
+    const bytes = await readFile(fileURLToPath(fixtureUrl))
+    for (let i = 0; i < bytes.readUInt16BE(4); i++) {
+      const entry = 12 + i * 16
+      if (bytes.toString('ascii', entry, entry + 4) === 'hhea') {
+        const offset = bytes.readUInt32BE(entry + 8)
+        bytes.writeInt16BE(750, offset + 4)
+        bytes.writeInt16BE(250, offset + 6)
+      }
+    }
+    const source = await parseFontSource(new File([bytes], 'positive-descender.ttf'))
+    const recipe = normalizeBitmapFontRecipe({ schemaVersion: 1, rendererVersion: '1', fontWeight: 400, italicAngle: 0, outlineWidthEm: 0, outlineMode: 'fill' })
+    for (const size of BITMAP_FONT_SIZES) {
+      const rendered = renderGlyphs(source, [65], size, recipe)
+      expect(() => writeBmFontText({ slug: 'positive-descender', face: source.family, size, lineHeight: rendered.lineHeight, base: rendered.baseline, scaleW: 1, scaleH: 1, chars: [] })).not.toThrow()
+      if (size === 48) expect(rendered).toMatchObject({ lineHeight: 48, baseline: 36 })
+    }
+    expect(source.bytes).toEqual(new Uint8Array(bytes))
+    expect(source.font.descender).toBe(250)
+  })
+
   it('extracts font metadata and every required Latin fixture glyph', async () => {
     const source = await parseFontSource(await fixtureFile())
 
