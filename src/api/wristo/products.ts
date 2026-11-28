@@ -108,6 +108,10 @@ export const productsApi = {
   /**
    * Generate product description from template
    */
+  explainDescription(data: { productId: number; english: string }): Promise<ApiResponse<string>> {
+    return instance.post('/dsn/products/explain-description', data, { timeout: 160000 })
+  },
+
   generateDescription(data: GenerateDescriptionDto): Promise<ApiResponse<string>> {
     return instance.post('/dsn/products/generate-description', data, { timeout: 65000 })
   },

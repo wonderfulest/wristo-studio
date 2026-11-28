@@ -47,6 +47,7 @@
           <CopyGarminDescriptionButton :text="activeDescription" />
           <el-button v-if="canGenerateDescription" size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
         </div>
+        <DescriptionExplanation :key="currentDesign?.designUid" :product-id="currentDesign?.product?.id" :text="activeDescription" :enabled="!!aiCapabilities.DESCRIPTION && !loading" />
         <div v-if="descriptionConfigLoaded && !hasDescriptionTemplate" class="form-tip" role="status">{{ t('descriptionLanguages.missingTemplate') }}</div>
         <div class="form-tip">
           {{ t('goLive.descriptionConsistencyTip') }}
@@ -371,6 +372,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
 import type { DesignerDefaultConfigVO } from '@/types/api/designer-default-config'
 import DesignerDefaultConfigDialog from '@/components/dialogs/DesignerDefaultConfigDialog.vue'
+import DescriptionExplanation from '@/components/common/DescriptionExplanation.vue'
 import ProductTagSelector from '@/components/common/ProductTagSelector.vue'
 import BundleSelector from '@/components/common/BundleSelector.vue'
 import ProductImagesEditor from '@/components/common/ProductImagesEditor.vue'

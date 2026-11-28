@@ -44,6 +44,7 @@ declare module 'vue' {
     DataPropertyDialog: typeof import('./src/components/properties/dialogs/DataPropertyDialog.vue')['default']
     DatePropertyDialog: typeof import('./src/components/properties/dialogs/DatePropertyDialog.vue')['default']
     DefaultTextField: typeof import('./src/components/properties/common/DefaultTextField.vue')['default']
+    DescriptionExplanation: typeof import('./src/components/common/DescriptionExplanation.vue')['default']
     DescriptionLanguageTabs: typeof import('./src/components/common/DescriptionLanguageTabs.vue')['default']
     DesignerDefaultConfigDialog: typeof import('./src/components/dialogs/DesignerDefaultConfigDialog.vue')['default']
     DesignerFontList: typeof import('./src/components/font-picker/DesignerFontList.vue')['default']
