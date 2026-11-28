@@ -25,17 +25,13 @@
       </el-form-item>
       <el-form-item :label="t('designerSettings.descriptionTemplate')">
         <div class="template-payment-tip">{{ t('designerSettings.templatePaymentTip') }}</div>
-        <DescriptionLanguageTabs v-model="descriptionLanguage" :languages="templateLanguages" :fixed-languages="['en', 'zh']" @add="addTemplateLanguage" @remove="removeTemplateLanguage">
-          <template #default="{ language }">
-            <TemplateTextEditor
-              :model-value="getDescriptionTemplate(form, templatePaymentMethod, language)"
-              @update:model-value="setDescriptionTemplate(form, templatePaymentMethod, language, $event)"
-              :user-id="userStore.userInfo?.id || 0"
-              :product-id="previewProductId"
-              :placeholder="t('designerSettings.descriptionPlaceholder')"
-            />
-          </template>
-        </DescriptionLanguageTabs>
+        <TemplateTextEditor
+          :model-value="getDescriptionTemplate(form, templatePaymentMethod, 'en')"
+          @update:model-value="setDescriptionTemplate(form, templatePaymentMethod, 'en', $event)"
+          :user-id="userStore.userInfo?.id || 0"
+          :product-id="previewProductId"
+          :placeholder="t('designerSettings.descriptionPlaceholder')"
+        />
       </el-form-item>
       <el-form-item :label="t('designerSettings.autoPublish')">
         <el-switch v-model="autoPublish" disabled/>
@@ -59,7 +55,6 @@ import { useUserStore } from '@/stores/user'
 import { designerDefaultConfigApi } from '@/api/wristo/designerDefaultConfig'
 import type { DesignerDefaultConfigVO, DesignerDefaultConfigUpdateDTO, DesignerDefaultConfigCreateDTO } from '@/types/api/designer-default-config'
 import { useI18n } from '@/i18n'
-import DescriptionLanguageTabs from '@/components/common/DescriptionLanguageTabs.vue'
 import { getDescriptionTemplate, setDescriptionTemplate } from '@/utils/descriptionTemplateLanguage'
 
 const TemplateTextEditor = defineAsyncComponent(() => import('@/components/inputs/TemplateTextEditor.vue'))
@@ -88,22 +83,10 @@ const form = reactive<DesignerDefaultConfigVO>({
 
 const autoPublish = ref(true)
 const active = ref(true)
-const descriptionLanguage = ref('en')
 const templatePaymentMethod = computed(() => {
   const method = form.defaultPaymentMethod
   return method === 'garmin' ? 'garmin' : (method === 'none' || method === 'free') ? 'free' : 'wpay'
 })
-const templateLanguages = computed(() => ['en', 'zh', ...Object.keys(form.descriptionTemplates || {}).filter(language => language !== 'en' && language !== 'zh')])
-const addTemplateLanguage = (language: string) => {
-  form.descriptionTemplates ??= {}
-  form.descriptionTemplates[language] ??= {}
-}
-const removeTemplateLanguage = (language: string) => {
-  if (language === 'en' || language === 'zh') return
-  delete form.descriptionTemplates?.[language]
-  if (descriptionLanguage.value === language) descriptionLanguage.value = 'en'
-}
-
 const userStore = useUserStore()
 const { t } = useI18n()
 
@@ -205,11 +188,9 @@ const handleSave = async () => {
 }
 
 const previewProductId = ref<number>()
-const show = async (productId?: number, paymentMethod?: string, language = 'en') => {
+const show = async (productId?: number, paymentMethod?: string) => {
   previewProductId.value = productId
   await load()
-  if (language !== 'en' && language !== 'zh') addTemplateLanguage(language)
-  descriptionLanguage.value = language
   if (paymentMethod != null) {
     form.defaultPaymentMethod = paymentMethod === 'free' ? 'none' : paymentMethod
   }
@@ -229,11 +210,6 @@ defineExpose({ show })
 .currency-label {
   color: var(--studio-text-muted);
   font-weight: 600;
-}
-
-.description-template-tabs {
-  width: 100%;
-  min-width: 0;
 }
 
 /* Dialog responsive layout */

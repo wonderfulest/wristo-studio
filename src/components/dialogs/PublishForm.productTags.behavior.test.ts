@@ -683,30 +683,7 @@ it('cancels paid text generation without dispatch and lets tags be retried', asy
 })
 
 
-describe('multilingual descriptions', () => {
-  it('restores, edits and removes translated names independently from English', async () => {
-    const wrapper = mountDialog()
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' }, descriptions: { fr: 'Bonjour' } } })
-    await flushPromises()
-    wrapper.findAllComponents({ name: 'ElDropdown' })[0]!.vm.$emit('command', 'fr')
-    await flushPromises()
-    const french = wrapper.get<HTMLInputElement>('.product-name-input input')
-    expect(french.element.value).toBe('Nom français')
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('Bonjour')
-    expect(wrapper.find('.publish-header').exists()).toBe(true)
-    await french.setValue(' Nouveau nom ')
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { fr: 'Nouveau nom' } }))
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nouveau nom' } } })
-    await flushPromises()
-    wrapper.findAllComponents({ name: 'ElDropdown' })[0]!.vm.$emit('command', 'fr')
-    await flushPromises()
-    wrapper.findAllComponents({ name: 'ElDropdown' })[0]!.vm.$emit('command', 'remove')
-    await flushPromises()
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ names: {} }))
-  })
-
+describe('English-only descriptions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: false, DESCRIPTION: true, BANNER: false } })
@@ -718,262 +695,28 @@ describe('multilingual descriptions', () => {
     mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
       descriptionTemplate: 'English template', descriptionTemplateZh: '中文模板', descriptionTemplates: { fr: { wpay: 'French template' } },
     } })
-    mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Generated French' })
+    mocks.generateDescription.mockResolvedValue({ code: 0, data: 'Generated English' })
     mocks.generateDescriptions.mockReset().mockImplementation(async ({ languages }) => ({ code: 0, data: {
       id: 'batch', status: 'succeeded', result: { descriptions: Object.fromEntries(languages.map((language: string) => [language, `Generated ${language}`])), failedLanguages: [] },
     } }))
   })
 
-  it('generates only English and Chinese even when other languages are configured', async () => {
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    mocks.getAiPrices.mockClear()
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    await flushPromises()
-    expect(mocks.generateDescriptions).toHaveBeenCalledWith({ productId: 20, languages: ['en', 'zh'], paymentMethod: 'wpay', expectedCreditCost: 0 })
-    expect(mocks.generateDescription).not.toHaveBeenCalled()
-    expect(mocks.getAiPrices).not.toHaveBeenCalled()
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ name: design.product.name, names: { zh: design.product.name }, description: expect.stringContaining('Generated en'), descriptions: { zh: 'Generated zh' } }))
-  })
 
-  it('generates only English and Chinese free descriptions even when AI is disabled', async () => {
-    const translations = ['fr', 'de', 'es', 'it', 'pt']
-    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
-      descriptionTemplateFree: 'Free English', descriptionTemplateFreeZh: '免费中文',
-      descriptionTemplates: Object.fromEntries(translations.map(language => [language, {
-        free: `Free ${language}`, wpay: `Paid ${language}`,
-      }])),
-    } })
-    mocks.getAiCapabilities.mockResolvedValue({ code: 0, data: { TAGS: false, DESCRIPTION: false, BANNER: false } })
-    mocks.generateDescriptions.mockImplementation(async ({ languages }) => ({ code: 0, data: {
-      id: 'batch', status: 'succeeded', result: { descriptions: Object.fromEntries(languages.map((language: string) => [language, `Free ${language}`])), failedLanguages: [] },
-    } }))
+  it('only edits and generates English while preserving historical translations', async () => {
     const wrapper = mountDialog()
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, payment: { paymentMethod: 'free', price: 0 } } })
+    ;(wrapper.vm as any).show({ ...design, configJson: { localization: { appLanguage: 'zhs' } }, product: { ...design.product, names: { fr: 'Nom' }, descriptions: { fr: 'Bonjour', zh: '中文' } } })
     await flushPromises()
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    await flushPromises()
-    expect(mocks.generateDescriptions).toHaveBeenCalledWith({ productId: 20, languages: ['en', 'zh'], paymentMethod: 'free', expectedCreditCost: 0 })
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({
-      payment: expect.objectContaining({ paymentMethod: 'free', price: 0 }),
-      description: expect.stringContaining('Free en'),
-      descriptions: { zh: 'Free zh' },
-    }))
-    expect(mocks.confirmCost).not.toHaveBeenCalled()
-  })
-
-  it('preserves existing other-language names and descriptions during bulk generation', async () => {
-    const wrapper = mountDialog()
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, names: { fr: 'Nom français' }, descriptions: { fr: 'Bonjour' } } })
-    await flushPromises()
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    await flushPromises()
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ names: { fr: 'Nom français', zh: design.product.name }, descriptions: { fr: 'Bonjour', zh: 'Generated zh' } }))
-  })
-
-  it('marks descriptions by actual content and updates when edited', async () => {
-    const wrapper = mountDialog()
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, descriptions: { fr: 'Bonjour', de: '   ' } } })
-    await flushPromises()
-    expect(wrapper.get('[data-language="fr"]').text()).toBe('descriptionLanguages.hasDescription')
-    expect(wrapper.get('[data-language="de"]').text()).toBe('descriptionLanguages.emptyDescription')
-    const languageOrder = wrapper.findAll('.listing-language-status').map(item => item.attributes('data-language'))
-    expect(languageOrder.indexOf('fr')).toBeLessThan(languageOrder.indexOf('zh-TW'))
-    expect(languageOrder.indexOf('fr')).toBeLessThan(languageOrder.indexOf('de'))
-    wrapper.findAllComponents({ name: 'ElDropdown' })[0]!.vm.$emit('command', 'fr')
-    await flushPromises()
-    await wrapper.get('.product-description-input input').setValue('   ')
-    expect(wrapper.get('[data-language="fr"]').text()).toBe('descriptionLanguages.emptyDescription')
-  })
-
-  it('continues after a failed language and retains successful results', async () => {
-    mocks.generateDescriptions.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { zh: 'Chinese result' }, failedLanguages: ['en'] } } })
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    await flushPromises()
-    expect(mocks.generateDescriptions).toHaveBeenCalledTimes(1)
-    expect(mocks.messageWarning).toHaveBeenCalledWith('goLive.descriptionsPartial')
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ descriptions: { zh: 'Chinese result' } }))
-  })
-
-  it('confirms one description price including translations before generating all templates', async () => {
-    mocks.getDescriptionConfig.mockResolvedValue({ code: 0, data: {
-      descriptionTemplate: '[[${app_ai_description}]]',
-      descriptionTemplates: { fr: { wpay: '[[${app_ai_description}]]' } },
-    } })
-    mocks.confirmCost.mockResolvedValue('confirm')
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    mocks.getAiPrices.mockClear()
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    await flushPromises()
-    expect(mocks.getAiPrices).toHaveBeenCalledTimes(1)
-    expect(mocks.confirmCost).toHaveBeenCalledTimes(1)
-    expect(mocks.generateDescriptions).toHaveBeenCalledWith(expect.objectContaining({ expectedCreditCost: 8 }))
-    expect(mocks.generateDescriptions).toHaveBeenCalledTimes(1)
-  })
-
-  it('preserves manual edits made while bulk generation is in flight', async () => {
-    let resolve!: (value: unknown) => void
-    mocks.generateDescriptions.mockImplementationOnce(() => new Promise(r => { resolve = r }))
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    await wrapper.get('.product-description-input input').setValue('Manual English')
-    resolve({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { en: 'Stale English', zh: 'Chinese result' }, failedLanguages: [] } } })
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('Manual English')
-    expect(mocks.generateDescriptions).toHaveBeenCalledTimes(1)
-  })
-
-  it('polls the batch without dispatching more generations and stops when it completes', async () => {
-    vi.useFakeTimers()
-    try {
-      mocks.generateDescriptions.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'running', result: null } })
-      mocks.getDescriptionGeneration.mockResolvedValueOnce({ code: 0, data: { id: 'batch', status: 'succeeded', result: {
-        descriptions: { en: 'English result', zh: 'Chinese result' }, failedLanguages: [],
-      } } })
-      const wrapper = mountDialog()
-      await showDialog(wrapper)
-      await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-      await flushPromises()
-      expect(mocks.getDescriptionGeneration).not.toHaveBeenCalled()
-      await vi.advanceTimersByTimeAsync(1500)
-      await flushPromises()
-      expect(mocks.generateDescriptions).toHaveBeenCalledTimes(1)
-      expect(mocks.generateDescription).not.toHaveBeenCalled()
-      expect(mocks.getDescriptionGeneration).toHaveBeenCalledWith(20, 'batch')
-      expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toContain('English result')
-      await vi.advanceTimersByTimeAsync(3000)
-      expect(mocks.getDescriptionGeneration).toHaveBeenCalledTimes(1)
-    } finally { vi.useRealTimers() }
-  })
-
-  it('ignores an old batch after another product is opened', async () => {
-    let resolve!: (value: unknown) => void
-    mocks.generateDescriptions.mockImplementationOnce(() => new Promise(r => { resolve = r }))
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateAllDescriptions')!.trigger('click')
-    ;(wrapper.vm as any).show({ ...design, product: { ...design.product, id: 21, description: 'Other product' } })
-    resolve({ code: 0, data: { id: 'batch', status: 'succeeded', result: { descriptions: { en: 'Stale English' }, failedLanguages: ['fr'] } } })
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toContain('Other product')
-    expect(mocks.messageWarning).not.toHaveBeenCalled()
-  })
-
-  it('defaults to English even on a Chinese watchface and restores independent drafts', async () => {
-    const wrapper = mountDialog()
-    ;(wrapper.vm as any).show({ ...design, configJson: { localization: { appLanguage: 'zhs' } }, product: { ...design.product, descriptions: { fr: 'Bonjour' } } })
-    await flushPromises()
-    const tabs = wrapper.findAllComponents({ name: 'ElDropdown' })[0]!
-    expect(tabs.text()).toContain('English')
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('Bonjour')
-    await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('Description'), descriptions: { fr: 'Bonjour' } }))
-  })
-
-  it('adds, generates and removes a language without changing English or charging for a plain template', async () => {
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    const tabs = wrapper.findAllComponents({ name: 'ElDropdown' })[0]!
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
+    expect(wrapper.find('.language-menu').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('goLive.generateAllDescriptions')
     await wrapper.findAll('button').find(button => button.text() === 'goLive.generateDescription')!.trigger('click')
     await flushPromises()
-    expect(mocks.generateDescription).toHaveBeenCalledWith({ userId: 10, productId: 20, language: 'fr', paymentMethod: 'wpay' })
-    expect(mocks.confirmCost).not.toHaveBeenCalled()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('Generated French')
-
-    tabs.vm.$emit('command', 'remove')
-    await flushPromises()
-    expect(tabs.text()).toContain('English')
+    expect(mocks.generateDescription).toHaveBeenCalledWith({ userId: 10, productId: 20, language: 'en', paymentMethod: 'wpay' })
+    expect(mocks.generateDescriptions).not.toHaveBeenCalled()
+    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toContain('Generated English')
     await confirm(wrapper)
-    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ descriptions: {} }))
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ names: { fr: 'Nom' }, descriptions: { fr: 'Bonjour', zh: '中文' }, description: expect.stringContaining('Generated English') }))
   })
-
-  it('shows missing-template guidance and does not offer generation for that language', async () => {
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    const tabs = wrapper.findAllComponents({ name: 'ElDropdown' })[0]!
-    tabs.vm.$emit('command', 'ja')
-    await flushPromises()
-    expect(wrapper.text()).toContain('descriptionLanguages.missingTemplate')
-    expect(wrapper.findAll('button').some(button => button.text() === 'goLive.generateDescription')).toBe(false)
-    expect(mocks.generateDescription).not.toHaveBeenCalled()
-  })
-
-  it('writes an in-flight result only to its original language after switching tabs', async () => {
-    let resolve!: (value: unknown) => void
-    mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    const tabs = wrapper.findAllComponents({ name: 'ElDropdown' })[0]!
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateDescription')!.trigger('click')
-    await flushPromises()
-    tabs.vm.$emit('command', 'en')
-    resolve({ code: 0, data: 'French result' })
-    await flushPromises()
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('French result')
-
-  })
-
-  it('does not restore a removed language when a generation response arrives', async () => {
-    let resolve!: (value: unknown) => void
-    mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    const tabs = wrapper.findAllComponents({ name: 'ElDropdown' })[0]!
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    await wrapper.findAll('button').find(button => button.text() === 'goLive.generateDescription')!.trigger('click')
-    await flushPromises()
-    tabs.vm.$emit('command', 'remove')
-    resolve({ code: 0, data: 'Stale result' })
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toContain('Description')
-    expect(wrapper.text()).not.toContain('Stale result')
-  })
-  it('keeps an in-flight language result when another language is removed', async () => {
-    let resolve!: (value: unknown) => void
-    mocks.generateDescription.mockImplementationOnce(() => new Promise(r => { resolve = r }))
-    const wrapper = mountDialog()
-    await showDialog(wrapper)
-    const tabs = wrapper.findAllComponents({ name: 'ElDropdown' })[0]!
-    tabs.vm.$emit('command', 'fr')
-    tabs.vm.$emit('command', 'de')
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    const generate = wrapper.findAll('button').find(button => button.text() === 'goLive.generateDescription')!
-    await generate.trigger('click')
-    await flushPromises()
-    tabs.vm.$emit('command', 'de')
-    tabs.vm.$emit('command', 'remove')
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    await generate.trigger('click')
-    await flushPromises()
-    expect(mocks.generateDescription).toHaveBeenCalledTimes(1)
-    resolve({ code: 0, data: 'French result' })
-    await flushPromises()
-    tabs.vm.$emit('command', 'fr')
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('.product-description-input input').element.value).toBe('French result')
-  })
-
 })
-
 
 it('keeps all publishing fields inline and stays open after a successful save', async () => {
   mocks.getProductTagsPage.mockResolvedValue({ code: 0, data: { list: apiTags } })

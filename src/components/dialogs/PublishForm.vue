@@ -3,22 +3,6 @@
     <template #header>
       <div class="publish-header">
         <div><span class="publish-title">{{ activeSection ? publishSectionCopy[activeSection].title : t('goLive.title') }}</span><p v-if="activeSection" class="section-intro">{{ publishSectionCopy[activeSection].description }}</p></div>
-        <el-dropdown v-show="!activeSection || activeSection === 'listing'" trigger="click" :disabled="loading" @command="selectLanguage">
-          <el-button size="small" :disabled="loading">{{ descriptionLanguageLabel(descriptionLanguage) }} ▾</el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item v-for="language in sortedDescriptionLanguages" :key="language.code" :command="language.code">
-                <span class="listing-language-option">
-                  <span>{{ language.code === descriptionLanguage ? '✓ ' : '' }}{{ language.label }}</span>
-                  <span class="listing-language-status" :class="{ 'has-description': readDescription(language.code).trim() }" :data-language="language.code">
-                    {{ t(readDescription(language.code).trim() ? 'descriptionLanguages.hasDescription' : 'descriptionLanguages.emptyDescription') }}
-                  </span>
-                </span>
-              </el-dropdown-item>
-              <el-dropdown-item v-if="descriptionLanguage !== 'en'" divided command="remove">{{ t('common.delete') }} · {{ descriptionLanguageLabel(descriptionLanguage) }}</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
       </div>
     </template>
     <p v-show="!activeSection || activeSection === 'listing'" v-if="aiPrices && (aiCapabilities.TAGS || aiCapabilities.DESCRIPTION || aiCapabilities.BANNER)" class="ai-credit-hint">{{ t('credits.aiCost', { tags: aiPrices.TAGS, description: aiPrices.DESCRIPTION, banner: aiPrices.BANNER }) }}</p>
@@ -62,7 +46,6 @@
         <div class="description-actions">
           <CopyGarminDescriptionButton :text="activeDescription" />
           <el-button v-if="canGenerateDescription" size="small" type="primary" :loading="generatingDescription" @click="refreshDescription">{{ t('goLive.generateDescription') }}</el-button>
-          <el-button v-if="availableDescriptionLanguages.length" size="small" type="primary" :loading="generatingDescription" :disabled="loading" @click="generateAllDescriptions">{{ t('goLive.generateAllDescriptions') }}</el-button>
         </div>
         <div v-if="descriptionConfigLoaded && !hasDescriptionTemplate" class="form-tip" role="status">{{ t('descriptionLanguages.missingTemplate') }}</div>
         <div class="form-tip">
@@ -397,7 +380,6 @@ import {
   descriptionTemplateUsesAi,
   getDescriptionTemplate,
   descriptionLanguageLabel,
-  DESCRIPTION_LANGUAGES,
   type DescriptionTemplateLanguage,
 } from '@/utils/descriptionTemplateLanguage'
 import { isGarminPayment, isPaymentMethodLocked, normalizeTrialLasts } from '@/utils/paymentMethod'
@@ -537,7 +519,7 @@ const rules: FormRules = {
 
 const openSettings = (): void => {
   if (designerConfigDialog.value && typeof designerConfigDialog.value.show === 'function') {
-    designerConfigDialog.value.show(currentDesign.value?.product?.id, form.paymentMethod, descriptionLanguage.value)
+    designerConfigDialog.value.show(currentDesign.value?.product?.id, form.paymentMethod)
   }
 }
 
@@ -583,13 +565,6 @@ const writeName = (language: string, value: string) => {
   if (language === 'en') form.name = value
   else form.names[language] = value
 }
-const addNameLanguage = (language: string) => {
-  if (language !== 'en' && !(language in form.names)) form.names[language] = ''
-}
-const removeNameLanguage = (language: string) => {
-  if (language === 'en') return
-  delete form.names[language]
-}
 const descriptionLanguage = ref('en')
 const descriptionRevisions: Record<string, number> = {}
 const descriptionLanguages = computed(() => ['en', ...Object.keys(form.descriptions)])
@@ -599,42 +574,10 @@ const writeDescription = (language: string, value: string) => {
   if (language === 'en') form.description = value
   else form.descriptions[language] = value
 }
-const sortedDescriptionLanguages = computed(() => [...DESCRIPTION_LANGUAGES].sort((a, b) =>
-  Number(!!readDescription(b.code).trim()) - Number(!!readDescription(a.code).trim()),
-))
-const activeDescription = computed(() => readDescription(descriptionLanguage.value))
-const addDescriptionLanguage = (language: string) => {
-  if (language !== 'en' && !(language in form.descriptions)) form.descriptions[language] = ''
-}
-const removeDescriptionLanguage = (language: string) => {
-  if (language === 'en') return
-  delete form.descriptions[language]
-  descriptionRevisions[language] = (descriptionRevisions[language] || 0) + 1
-  if (descriptionLanguage.value === language) descriptionLanguage.value = 'en'
-}
-const selectLanguage = (language: string) => {
-  if (loading.value) return
-  if (language === 'remove') {
-    const active = descriptionLanguage.value
-    removeNameLanguage(active)
-    removeDescriptionLanguage(active)
-    return
-  }
-  if (!DESCRIPTION_LANGUAGES.some(item => item.code === language)) return
-  addNameLanguage(language)
-  addDescriptionLanguage(language)
-  descriptionLanguage.value = language
-}
+const activeDescription = computed(() => form.description)
 const hasDescriptionTemplate = computed(() => !!getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value).trim())
 const selectedTemplateUsesAi = computed(() => descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, descriptionLanguage.value as DescriptionTemplateLanguage))
 const canGenerateDescription = computed(() => descriptionConfigLoaded.value && hasDescriptionTemplate.value && (!selectedTemplateUsesAi.value || aiCapabilities.value.DESCRIPTION))
-const availableDescriptionLanguages = computed(() => descriptionConfigLoaded.value ? DESCRIPTION_LANGUAGES.filter(({ code }) =>
-  (code === 'en' || code === 'zh') &&
-  getDescriptionTemplate(descriptionConfig.value || {}, form.paymentMethod, code).trim() &&
-  (!descriptionTemplateUsesAi(descriptionConfig.value || {}, form.paymentMethod, code) || aiCapabilities.value.DESCRIPTION)
-) : [])
-
-
 const productImageItems = computed({
   get: () => groupProductImages(form.productImages).product,
   set: (items: ProductImageItem[]) => {
@@ -1309,73 +1252,6 @@ const refreshDescription = async () => {
   }
 }
 
-const generateAllDescriptions = async () => {
-  if (!currentDesign.value || generatingDescription.value || loading.value || !availableDescriptionLanguages.value.length) return
-  const uid = userStore.userInfo?.id
-  if (!uid) { ElMessage.error(t('auth.userNotLoggedIn')); return }
-  const pid = currentDesign.value.product.id
-  const paymentMethod = form.paymentMethod
-  const version = ++descriptionGenerationVersion
-  const jobs = availableDescriptionLanguages.value.map(({ code }) => ({
-    language: code,
-    template: getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, code),
-    original: readDescription(code),
-    revision: descriptionRevisions[code] || 0,
-    usesAi: descriptionTemplateUsesAi(descriptionConfig.value || {}, paymentMethod, code),
-  }))
-  const isCurrent = () => version === descriptionGenerationVersion && formReady.value &&
-    currentDesign.value?.product.id === pid && form.paymentMethod === paymentMethod
-  const isUnchanged = (job: typeof jobs[number]) => isCurrent() &&
-    (descriptionRevisions[job.language] || 0) === job.revision && readDescription(job.language) === job.original &&
-    getDescriptionTemplate(descriptionConfig.value || {}, paymentMethod, job.language) === job.template
-  generatingDescription.value = true
-  const failed: string[] = []
-  let completed = 0
-  try {
-    const aiCount = jobs.filter(job => job.usesAi).length
-    if (aiCount && !await confirmTextGenerationCost('DESCRIPTION', isCurrent)) return
-    if (!isCurrent()) return
-    let response = await productsApi.generateDescriptions({
-      productId: pid,
-      languages: jobs.map(job => job.language),
-      paymentMethod,
-      expectedCreditCost: aiCount ? aiPrices.value!.DESCRIPTION : 0,
-    })
-    if (!isCurrent()) return
-    const deadline = Date.now() + 7 * 60 * 1000
-    while (response.code === 0 && response.data?.status === 'running') {
-      if (Date.now() > deadline) throw new Error('Description generation timed out')
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      if (!isCurrent()) return
-      response = await productsApi.getDescriptionGeneration(pid, response.data.id)
-      if (!isCurrent()) return
-    }
-    if (response.code !== 0 || response.data?.status !== 'succeeded' || !response.data.result) throw new Error('Invalid descriptions response')
-    const result = response.data.result
-    for (const job of jobs) {
-      if (!isCurrent()) return
-      if (!isUnchanged(job)) continue
-      try {
-        const description = result.descriptions[job.language]
-        if (typeof description !== 'string' || result.failedLanguages.includes(job.language)) throw new Error('Invalid description response')
-        writeDescription(job.language, description)
-        if (!readName(job.language).trim()) writeName(job.language, readName('en'))
-        if (job.language === 'en') updateProductTags(form.tagIds)
-        completed += 1
-      } catch {
-        if (!isCurrent()) return
-        failed.push(descriptionLanguageLabel(job.language))
-      }
-    }
-    if (failed.length) messageStore.warning(t('goLive.descriptionsPartial', { count: completed, languages: failed.join(', ') }))
-    else if (completed) ElMessage.success(t('goLive.descriptionsGenerated', { count: completed }))
-  } catch (error) {
-    if (isCurrent()) showErrorOnce(error, t('goLive.generateDescriptionFailed'))
-  } finally {
-    if (version === descriptionGenerationVersion) generatingDescription.value = false
-  }
-}
-
 // 定义 show 方法
 const show = (design: Design) => {
   invalidateBannerGeneration()
@@ -1403,9 +1279,6 @@ defineExpose({
 <style scoped src="@/assets/styles/image-remove.css"></style>
 
 <style scoped>
-.listing-language-option { display: flex; align-items: center; justify-content: space-between; gap: 20px; width: 100%; }
-.listing-language-status { color: var(--studio-text-muted); font-size: 12px; }
-.listing-language-status.has-description { color: var(--el-color-success); font-weight: 500; }
 
 .media-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
 .media-section-heading .product-image-download-row { margin: 0; }
